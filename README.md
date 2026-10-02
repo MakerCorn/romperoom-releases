@@ -1,23 +1,152 @@
-# Romperoom releases
+# Romperoom
 
-Downloads for **Romperoom**, a ROM library manager for retro gamers: scan your collection,
-browse it as a cover-art wall, tidy duplicates safely, and fill handheld SD cards.
+Romperoom organizes a retro game library: it finds the games in your ROM folders, shows them as
+a wall of covers, one shelf per console, and checks the library's health. It runs entirely on
+your computer. Romperoom never includes or downloads games.
 
-This repository holds release downloads only. The application's source is private.
+This repository holds the **releases only**: installers, checksums and release notes. There is
+no source code here.
+
+## Contents
+
+- [Download](#download)
+- [Using Romperoom](#using-romperoom)
+- [Check your download](#check-your-download)
+- [Install](#install)
+- [Opening a build that is not code-signed](#opening-a-build-that-is-not-code-signed)
+- [Your data and uninstalling](#your-data-and-uninstalling)
+- [Reporting a problem](#reporting-a-problem)
+- [Privacy](#privacy)
+- [License](#license)
 
 ## Download
 
-No release has been published yet. The first one will appear on the
-[Releases](../../releases) page, with installers for macOS (Apple silicon) and Windows (x64).
+The latest version is **0.1.0** (beta). Every version is on the
+[releases page](https://github.com/MakerCorn/romperoom-releases/releases); the newest is
+[here](https://github.com/MakerCorn/romperoom-releases/releases/latest).
 
-| Platform | File | Status |
-| --- | --- | --- |
-| macOS (Apple silicon) | `.dmg` | not yet published |
-| Windows (x64) | `.exe` installer | not yet published |
+| Computer                       | Download                                                        |
+| ------------------------------ | --------------------------------------------------------------- |
+| Mac with Apple silicon         | `Romperoom-0.1.0-mac-arm64.dmg` (or the `.zip` of the same app) |
+| Windows 10 or 11, 64-bit (x64) | `Romperoom-0.1.0-win-x64.exe` (installer) or the `.zip`         |
 
-## Before you install
+Requirements: macOS 12 or later on Apple silicon; Windows 10 or 11 on a 64-bit Intel or AMD
+processor. Intel Macs and Linux are not supported yet.
 
-- Early releases are **not code-signed**. macOS and Windows will warn that the app is from an
-  unidentified publisher; you choose whether to open it anyway.
-- Romperoom never includes or downloads ROMs or BIOS files. It only organizes files you own.
-- Terms of use are still to be published with the first release.
+## Using Romperoom
+
+The [user guide](docs/user-guide.md) walks through every screen: setting up your library,
+browsing, library health, putting games on an SD card, and tidying up.
+
+## Check your download
+
+Each release has a `SHA256SUMS.txt` that lists the SHA-256 checksum of every file. Download it
+into the same folder as your download, then compare.
+
+macOS (Terminal, in the download folder):
+
+```sh
+shasum -a 256 -c SHA256SUMS.txt --ignore-missing
+```
+
+Each file you downloaded must say `OK`.
+
+Windows (PowerShell, in the download folder):
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\Romperoom-0.1.0-win-x64.exe
+```
+
+The `Hash` it prints must equal the line for that file in `SHA256SUMS.txt` (PowerShell prints
+it in upper case; the file lists it in lower case: compare them ignoring case).
+
+If a checksum does not match, do not open the file: download it again, and report it if it
+still does not match.
+
+## Install
+
+- **macOS:** open the `.dmg` and drag **Romperoom** onto **Applications**. Then open it once the
+  way [below](#opening-a-build-that-is-not-code-signed) describes.
+- **Windows:** run the installer. It installs for your user only and needs no administrator
+  rights. It asks where to install (by default `%LOCALAPPDATA%\Programs\Romperoom`) and adds
+  Start menu and desktop shortcuts. The `.zip` holds the same app without an installer: unzip it
+  anywhere and run `Romperoom.exe`.
+
+## Opening a build that is not code-signed
+
+The beta builds are **not code-signed**. Code signing needs paid certificates (an Apple
+Developer ID, and a Windows code-signing certificate), and Romperoom does not have them yet.
+The builds are checked in other ways: every file has a published checksum, and each build is
+made and tested by an automated pipeline before it is released. Because the builds are
+unsigned, macOS and Windows warn you the first time you open them.
+
+**macOS** says Romperoom cannot be opened (or that Apple cannot check it for malicious
+software). To open it anyway
+([Apple's instructions](https://support.apple.com/guide/mac-help/mh40616/mac)):
+
+1. Try to open Romperoom once, and close the warning.
+2. Open **System Settings**, then **Privacy & Security**, and scroll to **Security**.
+3. Next to the message about Romperoom, click **Open Anyway** (it is offered for about an hour
+   after you tried to open the app), and confirm with your login password.
+
+After that it opens normally. On older macOS versions you can instead Control-click (or
+right-click) Romperoom in Applications, choose **Open**, and confirm.
+
+If macOS still refuses, or says the app is damaged, remove the download's quarantine flag in
+Terminal, then open it again:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Romperoom.app
+```
+
+Only do this for a download whose checksum matched.
+
+**Windows** may show "Windows protected your PC" (Microsoft Defender SmartScreen) because the
+installer is new and unsigned. Click **More info**, check that the file is the Romperoom
+installer you downloaded, then click **Run anyway**.
+
+## Your data and uninstalling
+
+Romperoom keeps its catalogue (what it found in your library, your settings) in one folder:
+
+| System  | Data folder                               |
+| ------- | ----------------------------------------- |
+| macOS   | `~/Library/Application Support/Romperoom` |
+| Windows | `%APPDATA%\Romperoom`                     |
+
+Your ROM library is never stored there, and Romperoom does not change your game files.
+
+To uninstall:
+
+- **macOS:** quit Romperoom and drag it from Applications to the Bin.
+- **Windows:** Settings, Apps, Installed apps, Romperoom, **Uninstall** (or the unzipped folder,
+  if you used the `.zip`).
+
+Uninstalling keeps the data folder, so a reinstall picks up where you left off. Delete the
+folder too to remove everything.
+
+## Reporting a problem
+
+Please [open an issue](https://github.com/MakerCorn/romperoom-releases/issues) in this repository. Say which
+version you use (it is in the release you downloaded), your computer (macOS or Windows
+version), what you did and what happened. Leave out personal file paths and folder names you
+would rather not share.
+
+Security problems: please do **not** open a public issue; see [SECURITY.md](SECURITY.md).
+
+## Privacy
+
+Romperoom works offline. It sends nothing about you or your library anywhere: no accounts, no
+telemetry, no analytics, no crash reports. It does not connect to the internet at all, and it
+does not update itself: new versions are published here.
+
+## License
+
+**All rights reserved.** Romperoom is proprietary software. No license is granted to copy,
+modify or redistribute it, and its source code is not public.
+
+Romperoom includes third-party open-source software, Electron among it, each under its own
+license. The list and the license texts ship inside the app in `THIRD_PARTY_NOTICES.txt`
+(macOS: `Romperoom.app/Contents/Resources`; Windows: the `resources` folder of the
+installation). Chromium's own notices are in `LICENSES.chromium.html` (macOS: the same folder;
+Windows: the installation folder).
