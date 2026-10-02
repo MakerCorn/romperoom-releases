@@ -4,6 +4,12 @@ Romperoom organizes a retro game library: it finds the games in your ROM folders
 a wall of covers, one shelf per console, and checks the library's health. It runs entirely on
 your computer. Romperoom never includes or downloads games.
 
+| Light | Dark |
+| --- | --- |
+| ![The library, one shelf per console](docs/screenshots/library-console-shelf-light.png) | ![The library, dark](docs/screenshots/library-console-shelf-dark.png) |
+
+More screens, step by step, are in the [user guide](docs/user-guide.md).
+
 This repository holds the **releases only**: installers, checksums and release notes. There is
 no source code here.
 
