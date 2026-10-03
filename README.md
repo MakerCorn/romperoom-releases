@@ -27,17 +27,19 @@ no source code here.
 
 ## Download
 
-The latest version is **0.1.0** (beta). Every version is on the
+The latest version is **0.2.0** (beta). Every version is on the
 [releases page](https://github.com/MakerCorn/romperoom-releases/releases); the newest is
 [here](https://github.com/MakerCorn/romperoom-releases/releases/latest).
 
-| Computer                       | Download                                                        |
-| ------------------------------ | --------------------------------------------------------------- |
-| Mac with Apple silicon         | `Romperoom-0.1.0-mac-arm64.dmg` (or the `.zip` of the same app) |
-| Windows 10 or 11, 64-bit (x64) | `Romperoom-0.1.0-win-x64.exe` (installer) or the `.zip`         |
+| Computer                       | Download                                                              |
+| ------------------------------ | --------------------------------------------------------------------- |
+| Mac with Apple silicon         | `Romperoom-0.2.0-mac-arm64.dmg` (or the `.zip` of the same app)       |
+| Windows 10 or 11, 64-bit (x64) | `Romperoom-0.2.0-win-x64.exe` (installer) or the `.zip`               |
+| Linux, 64-bit (x64)            | `Romperoom-0.2.0-linux-amd64.deb` (Ubuntu, Debian) or the `.AppImage` |
 
 Requirements: macOS 12 or later on Apple silicon; Windows 10 or 11 on a 64-bit Intel or AMD
-processor. Intel Macs and Linux are not supported yet.
+processor; a 64-bit Linux with a desktop (the `.deb` for Ubuntu 22.04+ or Debian 12+). Intel Macs
+are not supported yet.
 
 ## Using Romperoom
 
@@ -60,7 +62,7 @@ Each file you downloaded must say `OK`.
 Windows (PowerShell, in the download folder):
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Romperoom-0.1.0-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\Romperoom-0.2.0-win-x64.exe
 ```
 
 The `Hash` it prints must equal the line for that file in `SHA256SUMS.txt` (PowerShell prints
@@ -77,6 +79,12 @@ still does not match.
   rights. It asks where to install (by default `%LOCALAPPDATA%\Programs\Romperoom`) and adds
   Start menu and desktop shortcuts. The `.zip` holds the same app without an installer: unzip it
   anywhere and run `Romperoom.exe`.
+- **Linux (Ubuntu, Debian):** install the `.deb`, for example
+  `sudo apt install ./Romperoom-0.2.0-linux-amd64.deb`, then open Romperoom from your
+  applications. Other distributions: make the `.AppImage` executable
+  (`chmod +x Romperoom-*.AppImage`) and run it. On Ubuntu 23.10 and later the AppImage may refuse
+  to start because of a system restriction on Electron's sandbox; use the `.deb` there, and never
+  run Romperoom with `--no-sandbox`.
 
 ## Opening a build that is not code-signed
 
@@ -119,6 +127,7 @@ Romperoom keeps its catalogue (what it found in your library, your settings) in 
 | ------- | ----------------------------------------- |
 | macOS   | `~/Library/Application Support/Romperoom` |
 | Windows | `%APPDATA%\Romperoom`                     |
+| Linux   | `~/.config/Romperoom`                     |
 
 Your ROM library is never stored there, and Romperoom does not change your game files.
 
@@ -127,6 +136,7 @@ To uninstall:
 - **macOS:** quit Romperoom and drag it from Applications to the Bin.
 - **Windows:** Settings, Apps, Installed apps, Romperoom, **Uninstall** (or the unzipped folder,
   if you used the `.zip`).
+- **Linux:** `sudo apt remove romperoom` for the `.deb`, or delete the `.AppImage`.
 
 Uninstalling keeps the data folder, so a reinstall picks up where you left off. Delete the
 folder too to remove everything.

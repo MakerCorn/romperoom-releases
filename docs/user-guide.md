@@ -374,4 +374,5 @@ copying is slow, see troubleshooting.
 Yes: **Cancel scan**. The next scan continues close to where it stopped.
 
 **Is there a Windows or Linux version?**
-Not yet. Romperoom has only been tried on macOS.
+Yes: Windows 10 or 11 (64-bit), and Linux x64 (a `.deb` for Ubuntu and Debian, and an AppImage).
+Both are new: they pass automated tests on real machines but have had little use by people yet.
