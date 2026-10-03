@@ -38,9 +38,13 @@ placeholder covers.
 The first time you open Romperoom, it asks for your ROM folder. Press **Choose your ROM
 folder** and pick the folder that holds your console folders.
 
-Romperoom then counts your games. It reads every file once to fingerprint it (a hash), so a
-large collection on a NAS can take a while. You can press **Cancel scan** at any time. A later
-scan skips the files it has already read, so it picks up close to where it stopped.
+Romperoom then counts your games in two steps. First it finds them: every game is in your
+library within minutes, even on a NAS. Then it reads every file once to fingerprint it (a
+hash), which is how it spots exact copies; on a NAS that can take hours for a large collection.
+While it checks, press **Go to my library** to start browsing: checking carries on in the
+background, and Health says how many files are still waiting. You can press **Cancel scan** at
+any time. A later scan skips the files it has already read, so it picks up close to where it
+stopped.
 
 | Light                                                           | Dark                                                                 |
 | --------------------------------------------------------------- | -------------------------------------------------------------------- |
