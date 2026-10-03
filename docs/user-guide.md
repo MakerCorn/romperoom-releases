@@ -15,6 +15,10 @@ placeholder covers.
 - [Browse your games](#browse-your-games)
 - [Game details](#game-details)
 - [Library health](#library-health)
+- [Add a game database](#add-a-game-database)
+- [Identify your games](#identify-your-games)
+- [What the labels mean](#what-the-labels-mean)
+- [Check name matches](#check-name-matches)
 - [When folders look empty or gone](#when-folders-look-empty-or-gone)
 - [Files that couldn't be read](#files-that-couldnt-be-read)
 - [Settings and themes](#settings-and-themes)
@@ -89,9 +93,12 @@ Select a cover to open its details: the console, the region, whether the game is
 how many files it has, its size on disk, its size unzipped, and its cover art. Close the panel
 with its close button or Escape.
 
-**Identified** says "Unidentified" for every game in this version. Romperoom does not yet
-compare games with lists of known good copies. That comes with a later version (see the
-roadmap). The games still play as usual.
+**Identified** is one of the three labels in [What the labels mean](#what-the-labels-mean).
+**Identified by** names the game database and version that matched it, and that database's own
+title for the game (which can differ from the file name). Some databases, such as FinalBurn
+Neo's, file games under a short code; that code is shown too, as "DAT entry". It says "Not
+identified yet" until you import a database and identify (see
+[Identify your games](#identify-your-games)).
 
 | Light                                                           | Dark                                                                 |
 | --------------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -106,7 +113,8 @@ roadmap). The games still play as usual.
   **Tidy up…** sets the extra copies aside (see [Tidy up your library](#tidy-up-your-library)).
   It checks each copy first and leaves the files of a multi-file game alone, so it may offer
   fewer than Health counts.
-- **Unidentified games.**
+- **Unidentified games**, from the last time you identified (see
+  [Identify your games](#identify-your-games) below).
 - **Folders without a console**, with a link to choose a console for each one in setup.
 - **Files that couldn't be read** (below).
 
@@ -115,6 +123,98 @@ Press **Scan again** after you change your files.
 | Light                                                         | Dark                                                               |
 | ------------------------------------------------------------- | ------------------------------------------------------------------ |
 | ![Library health](screenshots/health-console-shelf-light.png) | ![Library health, dark](screenshots/health-console-shelf-dark.png) |
+
+## Add a game database
+
+Romperoom ships with no game databases (DAT files) of its own. Get them from the groups that
+make them, for free:
+
+- [No-Intro](https://datomatic.no-intro.org/) (cartridge-based consoles and handhelds)
+- [Redump](http://redump.org/) (disc-based consoles)
+- [libretro-database](https://github.com/libretro/libretro-database) (copies of both, in one
+  place, handy for trying several consoles at once)
+
+Open **Settings** (top right) and switch to the **Game databases** tab. **Console** lets you
+say which console the file is for; leave it at **Work it out from the file** and Romperoom reads
+it from the file itself. Press **Import a DAT file** and choose the file in the dialog that
+opens. If Romperoom can't tell the console from the file, it asks you to choose one before it
+imports anything — when it has a guess, that guess is already chosen, for you to confirm. Once
+an import is done, **Console** goes back to **Work it out from the file**, so the next file is
+never tied to the console you chose for the last one.
+
+Each imported database is listed with its console, its name, where it came from, its version,
+the day you imported it, its number of games and its size. **Remove**
+asks you to confirm in place before it takes a database off the list. Games it had named go back
+to their file names until you identify again with the remaining databases.
+
+| Light                                                            | Dark                                                                  |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ![Game databases](screenshots/databases-console-shelf-light.png) | ![Game databases, dark](screenshots/databases-console-shelf-dark.png) |
+
+## Identify your games
+
+Once you have imported a game database, Health shows an **Identify your games** card. Press
+**Identify games** to compare every file against the databases you imported for its console. It
+shows the phase it is in (reading your games, matching them, grouping discs and versions, then
+linking cover art) and how far it has gotten; **Stop** stops it there. Your files are never
+changed, but labels it had already worked out before you stopped it stay, with their cover art;
+the next run picks up where this one left off.
+
+A scan that finds a game database already imported identifies your library on its own once it
+finishes, so you rarely need to press the button yourself after the first time. When you scan
+several libraries at once, each one is identified in turn as the one before it finishes.
+
+Identifying never changes the files in your library: it only reads them. When it cannot finish
+(the library drive was disconnected, or many files in a row could not be read), it changes
+nothing it could not check and says so, rather than showing a count of zero; the next run carries
+on from where this one stopped. The card also flags when your databases changed since the last
+identify, so you know the labels may be out of date until you identify again.
+
+| Light                                                          | Dark                                                                |
+| --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| ![Identify your games](screenshots/identify-console-shelf-light.png) | ![Identify your games, dark](screenshots/identify-console-shelf-dark.png) |
+
+## What the labels mean
+
+Identifying says how sure Romperoom is about each game, the same words wherever they appear (the
+card above, and a game's own details):
+
+- **Verified:** the file matches a known good copy of the game.
+- **Name match:** its name matches a game in your databases, but its contents don't match any
+  known copy (it was read and checked, and differs: a hack, a translation, a bad copy or a
+  different version).
+- **Unidentified:** Romperoom doesn't recognize this game yet. It still plays as usual.
+
+An unidentified file says why:
+
+- **Not read yet:** Romperoom couldn't read this file. Scan again, then identify.
+- **In another console's database:** the file matches a game in another console's database. Move
+  it to that console's folder to identify it.
+- **No database for this console:** you have not imported a database for its console.
+- **Not in your databases:** the console's databases don't list this exact file, or you rejected
+  every match they offered for it. It may be a hack, a translation or a bad copy.
+
+Files a scan hasn't finished reading yet are skipped; they are identified once a later scan has
+read them. Files a scan has read but no identify has looked at since (for example after you
+removed a database) are counted as not identified yet: press **Identify games**. **Why each game is unidentified** lists every one of them by name, with its reason (for
+"In another console's database", the console it matches).
+
+A verified file the database itself flags as a bad dump still plays, but says so under
+**Identified by**: it may not be a clean copy.
+
+## Check name matches
+
+A name match, or a file that matches several games at once, is offered for review on the same
+card, named by the database's title and the file it matches. **Accept** it to keep it. **Reject**
+asks you to confirm, since Romperoom never offers that pairing again; once confirmed, it tries the
+next match, or puts the file back under its own file name once you have rejected every match it
+had (the file then leaves the list). **Accept all on this page** and
+**Reject all on this page** decide everything currently loaded at once (Reject all asks first,
+too). **Show more** loads further matches when there are many.
+
+| Light                                                    | Dark                                                          |
+| --------------------------------------------------------- | ---------------------------------------------------------------- |
+| ![Check name matches](screenshots/review-console-shelf-light.png) | ![Check name matches, dark](screenshots/review-console-shelf-dark.png) |
 
 ## When folders look empty or gone
 
@@ -143,7 +243,8 @@ changes your files. Press **Try again** to read every one of them again now.
 
 ## Settings and themes
 
-**Settings** (top right) changes how Romperoom looks:
+**Settings** (top right) has two tabs: **Appearance** and **Game databases** (see
+[Add a game database](#add-a-game-database)). Appearance changes how Romperoom looks:
 
 - **Theme:** Console shelf (warm and cosy), CRT neon (glowing arcade colours) or Clean modern
   (quiet, so the cover art stands out).
@@ -229,6 +330,9 @@ once you are sure. Files you put on the card yourself are never replaced or move
 - **Two games with the same name on the card.** When two games would end up with one file
   name, each gets a short code from its own file, such as `Game (3fa9c1).nes`. Adding or
   removing one of them does not rename the other.
+- **Identified games.** Once a game is identified, its name on the card comes from the game
+  database, not the file name; two revisions of one identified game still count as one game for
+  **One version of each game**.
 
 [deploy-device-lt]: screenshots/deploy-device-console-shelf-light.png
 [deploy-device-dk]: screenshots/deploy-device-console-shelf-dark.png
@@ -361,9 +465,10 @@ In a folder of its own, not in your ROM folder (see
 [configuration.md](../README.md#your-data-and-uninstalling)). To start over, quit Romperoom and delete
 that folder. Your games are not touched.
 
-**Why does every game say "Unidentified"?**
-Identifying games against lists of known good copies is the next milestone. See the
-roadmap.
+**Why does a game say "Unidentified"?**
+You have not imported a game database for its console, or have not pressed **Identify games**
+yet, or the file does not match what is in the databases you imported. See
+[What the labels mean](#what-the-labels-mean) for every reason and what to do about it.
 
 **Why are some games missing?**
 Their folder may not match a console: look under **Folders without a console** on Health. A
