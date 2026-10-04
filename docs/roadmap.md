@@ -6,7 +6,9 @@ download when you ask, the first part of Milestone 3: Tidy up, which sets aside 
 leftover artwork, and the first part of Milestone 4: copying games to an SD card. Everything
 marked planned is not built yet, and plans change as each milestone starts. Next come a first
 release, then the rest of Organize. The detailed plans, with their tests, are in the design
-history (foundation, identify, game database downloads).
+history (foundation,
+identify,
+game database downloads).
 
 ## Contents
 

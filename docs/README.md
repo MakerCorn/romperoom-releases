@@ -35,11 +35,11 @@ README is listed here; a test fails if one is not.
 
 | Package                                                     | What it is                                      |
 | ----------------------------------------------------------- | ----------------------------------------------- |
-| `packages/engine`                                            | Catalog, scanner, hash pool, file operations and identify |
-| `packages/profiles`                                          | The systems catalog and device profiles (data)  |
-| `packages/ui`                                                | Themes, tokens and primitives                   |
-| `apps/desktop`                                               | The Electron app                                |
-| `packages/ui/THIRD_PARTY.md`                                 | Bundled fonts and their licences                |
+| `packages/engine`                                           | Catalog, scanner, hash pool, file operations and identify |
+| `packages/profiles`                                         | The systems catalog and device profiles (data)  |
+| `packages/ui`                                               | Themes, tokens and primitives                   |
+| `apps/desktop`                                              | The Electron app                                |
+| `packages/ui/THIRD_PARTY.md`                                | Bundled fonts and their licences                |
 
 ## Public releases repository
 

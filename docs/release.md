@@ -170,8 +170,9 @@ run artifacts, without drafting anything.
    notes, and keeps everything as the `release` artifact. On a tag it creates the draft release
    in this repository, or refreshes the files of an existing draft. It refuses to touch a
    release that is already published.
-3. **publish-public**. Only on **Run workflow** for a tag with **publish** ticked; otherwise it
-   writes the manual steps to the run summary
+3. **publish-public**. Only on **Run workflow** for a tag with **publish** ticked: it syncs the
+   documentation and drafts the release in the public repository, pushing the docs only after
+   the draft exists. Otherwise it writes the manual steps to the run summary
    ([below](#publishing-to-the-public-repository)).
 
 Every third-party action in `release.yml` and `ci.yml` is pinned to a full commit SHA with the
@@ -182,7 +183,8 @@ not pinned that way (local `./` actions excepted). To update one, look up the ta
 `object.url` to the commit) and change the SHA and the comment together.
 
 Permissions are `contents: read` except the release job (`contents: write`, its own
-repository) and the publish job (none: it uses its own token). Runs for the same ref queue
+repository). The publish job reads this repository with its own token and writes to the public
+repository only with `PUBLIC_RELEASES_TOKEN`. Runs for the same ref queue
 rather than cancel. CI's `package` job (`ci.yml`) runs the same `package:dir`,
 `verify:package` and `e2e:packaged` on every push and pull request, so a packaging regression
 shows up before a release.
@@ -196,7 +198,8 @@ table, install help and checksum instructions; `SECURITY.md`). It holds no sourc
 
 1. Create the repository, public, with the contents of `releases-repo-template/` as its first
    commit (the `scripts/` folder can stay in the source repository). Replace the README's
-   `OWNER/REPO` placeholders.
+   `OWNER/REPO` placeholders. Then run the documentation sync once (the by-hand steps below):
+   until it runs, the README's Documentation links point to `../docs/` and are broken.
 2. Check its visibility anonymously:
    `curl -s -o /dev/null -w '%{http_code}' https://api.github.com/repos/OWNER/REPO` must print
    200 for the public repository and 404 for `MakerCorn/romperoom` (a known public repository
@@ -208,13 +211,74 @@ table, install help and checksum instructions; `SECURITY.md`). It holds no sourc
    secret store and copied into the repository secret, never into a file or a chat.
 
 **Each release, automated:** **Run workflow** on the tag `vX.Y.Z` with **publish** ticked. The
-job checks the sums again and creates a **draft** in the public repository with the same files
-and notes. It stops if that repository already has the release. Then update the README's
-download table and version, and publish the draft.
+job checks the sums again, then syncs the documentation: it clones the public repository's
+`main` with the token and runs `scripts/publish-docs.mjs` over the clone. If the sync finds a
+problem, the job stops there and nothing reaches the public repository. Then it creates a
+**draft** in the public repository with the same files and notes; it stops if that repository
+already has the release. Only once the draft exists does it commit any documentation change as
+`docs: sync documentation for vX.Y.Z` and push it to `main`, so a failed draft leaves the public
+docs untouched. Then update the README's download table and version, and publish the draft.
 
-**Each release, by hand:** download the run's `release` artifact, create the release `vX.Y.Z`
-in the public repository, attach every file in `dist/`, paste `dist-notes.md`, update the README
-table, publish.
+If the push fails after the draft exists (`main` moved between the clone and the push, or a new
+protection rule), a re-run stops at the existing draft. Push the documentation by hand instead
+(below), from a checkout of the same tag; the draft is unaffected.
+
+**Each release, by hand:** sync the documentation from a checkout of the tag, review the
+change, then commit and push it:
+
+```sh
+git clone https://github.com/OWNER/REPO.git /tmp/rr-public
+node scripts/publish-docs.mjs --src . --dest /tmp/rr-public
+git -C /tmp/rr-public diff --stat
+git -C /tmp/rr-public add -A -- docs README.md
+git -C /tmp/rr-public commit -m "docs: sync documentation for vX.Y.Z"
+git -C /tmp/rr-public push origin main
+```
+
+Then download the run's `release` artifact, create the release `vX.Y.Z` in the public
+repository, attach every file in `dist/`, paste `dist-notes.md`, update the README table,
+publish.
+
+**What the documentation sync does** (`scripts/publish-docs.mjs`, the same on both paths):
+
+- It copies every `docs/*.md` except `docs/superpowers/**` (the design specs and plans stay
+  private) into the public `docs/`, with every picture and file they link, inline
+  (`![alt](path)`) or reference-style (`![alt][label]` and `[label]: path`). Containment is
+  checked on the real path, not the link's text: a file is refused if it or any folder on its
+  way is a symbolic link, or if its real path (in the disk's own letter case) is outside `docs/`
+  or inside `docs/superpowers`. A refused file stops the run before anything is written. Public
+  `docs/` files the source no longer has are removed. Nothing outside `docs/` is touched except one section of
+  the README; `SECURITY.md` and the README's download table never change.
+- Links into private material (`docs/superpowers/`, `packages/`, `apps/`, `.github/`, `scripts/`
+  and `ci/`) become their visible text, a path as inline code. A different letter case of those
+  paths (`SuperPowers/`) is not converted: the check below fails it. A link to a heading in a private
+  document names the section instead ("design spec (Live verification section)"). Links to
+  `releases-repo-template/README.md` and `SECURITY.md` point to the public repository's own
+  `README.md` and `SECURITY.md`; links to the source's root `README.md` already land on the
+  public one. Links between published documents, anchors included, stay as they are.
+- The README's **Documentation** section, between its `docs-index` markers, is replaced by the
+  block between the same markers in `releases-repo-template/README.md`: edit the table there,
+  with links relative to the template (`../docs/user-guide.md`, so this repository's docs tests
+  check them); they are published relative to the README. On a README without markers, the
+  first run converts its existing Documentation section.
+- Then it checks the public tree and exits non-zero, listing every failure: each local link,
+  anchor (GitHub's heading slugs, one hyphen per space) and picture in `docs/` and the README
+  resolves; no link is left into private material, in any letter case; no raw HTML link or
+  picture (`<img src>`, `<a href>`) has a local target, since the sync neither rewrites nor
+  resolves HTML: use Markdown; nothing under `docs/` is a symbolic link; the README section links
+  every published document; PNGs carry no text metadata (`tEXt`, `zTXt`, `iTXt`, `eXIf`) and
+  other picture formats are refused (their metadata cannot be checked); and every other
+  published file, whatever its type, passes a privacy scan. The scan's patterns
+  (`PRIVACY_PATTERNS` in `scripts/lib/publish-docs.mjs`; written out only there, since this page
+  is published and would fail them) cover the three private IPv4 ranges, home-folder paths on
+  macOS, Linux and Windows, macOS volume paths, email addresses, ssh key use, every GitHub token
+  prefix, AWS access keys, private key blocks and the name of the private repository. They catch
+  the common shapes, not every secret. Known mentions are allowed only by their exact text in
+  their own file (`PRIVACY_ALLOW`): the runner registration path and the runner's Docker volume
+  in [ci-runners.md](ci-runners.md), and the visibility check above.
+- A source problem (a refused file, no README block in the template) means nothing is written.
+- `--check --dest <clone>` runs the checks without writing; with `--src .` it also lists what a
+  sync would change.
 
 ## Unsigned and signed builds
 

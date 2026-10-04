@@ -49,6 +49,8 @@ browsing, library health, putting games on an SD card, and tidying up.
 
 ## Documentation
 
+<!-- docs-index:start (generated on each release from the source repository; edits here are replaced) -->
+
 Everything below lives in [docs/](docs/); the [documentation index](docs/README.md) links all of
 it in one place. Most of it is written for players, but a few pages are for the technically
 curious.
@@ -69,6 +71,8 @@ curious.
 | [CI runners](docs/ci-runners.md) | The computers that build and test Romperoom automatically. |
 | [Security](docs/security.md) | What Romperoom protects, and how it is locked down. |
 | [Decisions](docs/decisions.md) | Short notes on some of the bigger choices behind how Romperoom works, and why. |
+
+<!-- docs-index:end -->
 
 ## Check your download
 

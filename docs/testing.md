@@ -24,7 +24,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 
 | Layer            | Tool                        | Where                                 | What it proves                                                             |
 | ---------------- | --------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
-| Engine           | Vitest, Node, real SQLite   | `packages/engine/test`                | Scanning, guards, hashing, journaled operations, deploy plans, on real temp folders |
+| Engine           | Vitest, Node, real SQLite   | `packages/engine/test`                | Scanning, guards, hashing, journaled operations, deploy plans, the repository scripts, on real temp folders |
 | Profiles         | Vitest                      | `packages/profiles/test`              | Schema rules, shipped profiles, `systems.json`, the generated `systems.md` |
 | UI primitives    | Vitest, jsdom, axe          | `packages/ui/test`                    | Primitive behaviour, the token contract, no raw values in feature styles   |
 | Desktop main     | Vitest, Electron mocked     | `apps/desktop/test`                   | Security policy, protocols, IPC contract, lifecycle, recovery              |
