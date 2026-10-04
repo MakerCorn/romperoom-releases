@@ -28,15 +28,15 @@ no source code here.
 
 ## Download
 
-The latest version is **0.4.0** (beta). Every version is on the
+The latest version is **0.5.0** (beta). Every version is on the
 [releases page](https://github.com/MakerCorn/romperoom-releases/releases); the newest is
 [here](https://github.com/MakerCorn/romperoom-releases/releases/latest).
 
 | Computer                       | Download                                                              |
 | ------------------------------ | --------------------------------------------------------------------- |
-| Mac with Apple silicon         | `Romperoom-0.4.0-mac-arm64.dmg` (or the `.zip` of the same app)       |
-| Windows 10 or 11, 64-bit (x64) | `Romperoom-0.4.0-win-x64.exe` (installer) or the `.zip`               |
-| Linux, 64-bit (x64)            | `Romperoom-0.4.0-linux-amd64.deb` (Ubuntu, Debian) or the `.AppImage` |
+| Mac with Apple silicon         | `Romperoom-0.5.0-mac-arm64.dmg` (or the `.zip` of the same app)       |
+| Windows 10 or 11, 64-bit (x64) | `Romperoom-0.5.0-win-x64.exe` (installer) or the `.zip`               |
+| Linux, 64-bit (x64)            | `Romperoom-0.5.0-linux-amd64.deb` (Ubuntu, Debian) or the `.AppImage` |
 
 Requirements: macOS 12 or later on Apple silicon; Windows 10 or 11 on a 64-bit Intel or AMD
 processor; a 64-bit Linux with a desktop (the `.deb` for Ubuntu 22.04+ or Debian 12+). Intel Macs
@@ -90,7 +90,7 @@ Each file you downloaded must say `OK`.
 Windows (PowerShell, in the download folder):
 
 ```powershell
-Get-FileHash -Algorithm SHA256 .\Romperoom-0.4.0-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\Romperoom-0.5.0-win-x64.exe
 ```
 
 The `Hash` it prints must equal the line for that file in `SHA256SUMS.txt` (PowerShell prints
@@ -108,7 +108,7 @@ still does not match.
   Start menu and desktop shortcuts. The `.zip` holds the same app without an installer: unzip it
   anywhere and run `Romperoom.exe`.
 - **Linux (Ubuntu, Debian):** install the `.deb`, for example
-  `sudo apt install ./Romperoom-0.4.0-linux-amd64.deb`, then open Romperoom from your
+  `sudo apt install ./Romperoom-0.5.0-linux-amd64.deb`, then open Romperoom from your
   applications. Other distributions: make the `.AppImage` executable
   (`chmod +x Romperoom-*.AppImage`) and run it. On Ubuntu 23.10 and later the AppImage may refuse
   to start because of a system restriction on Electron's sandbox; use the `.deb` there, and never
