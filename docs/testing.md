@@ -17,6 +17,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Running against a real library safely](#running-against-a-real-library-safely)
 - [Live identification run](#live-identification-run)
 - [Live game database download run](#live-game-database-download-run)
+- [Live cover art run](#live-cover-art-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -278,7 +279,10 @@ them are listed, with whether a packaged build honours them, in
 - `ROMPEROOM_TEST_TIDY_DELAY_MS` slows each file a tidy job moves, so a test can cancel or
   crash mid-run.
 - `ROMPEROOM_TEST_DAT_FIXTURES` swaps the game database transport for one that serves synthetic
-  DATs from a folder, so the end-to-end suite never contacts GitHub.
+  DATs from a folder, so the end-to-end suite never contacts GitHub. It also serves cover art:
+  thumbnail listings from `art/trees/<repo>.json`, pictures from `art/raw/<repo>/<folder>/` and
+  GitHub's rate reading from `api/rate-limit.json`, through the real allowlist, size and git SHA
+  checks and request log (the stand-in GitHub of `e2e/cover-art.spec.ts`).
 - `ROMPEROOM_TEST_OPEN_EXTERNAL` records each URL the host would open in the browser instead of
   opening it.
 
@@ -539,6 +543,71 @@ What it measured:
 - offline (sandboxed) the job stopped with the offline message in 0.25 s, nothing imported,
   `downloads/` empty;
 - the fingerprint of about 15,000 entries was identical before and after.
+
+## Live cover art run
+
+CI never talks to GitHub for cover art either: the end-to-end suite serves listings and
+pictures from the fixture transport (`ROMPEROOM_TEST_DAT_FIXTURES`) and poses a folder as the
+card (`ROMPEROOM_TEST_VOLUME`). Only a live run shows GitHub's real tree listings, rate headers
+and TLS, real libretro pictures matching real No-Intro file names, and the `main`-branch
+repositories. Run it before a release that changes anything under
+`apps/desktop/src/main/art-download/` or `packages/engine/src/art/`, and after re-recording
+`thumbnails.json`. It is driven by hand with a throwaway Playwright script over the built app
+(`npm run build`), in the manner of `e2e/support.ts`, with no test transport:
+
+1. **Library.** Copy two or three console folders from your library's share into a scratch
+   library outside the share (never writing to the share), or make a scratch library of small
+   files named with exact No-Intro titles that libretro-thumbnails has pictures for, plus a few
+   it has none for. Include a console whose repository is on `main` (NAOMI, CD-i). Fingerprint
+   the share's folders before and after (they must be identical), and the scratch library
+   outside `.romperoom` (paths, sizes and content hashes).
+2. **Capture.** Poll `lsof -nP -i -a -p <pids>` about every 100 ms over the app's main process
+   and all its helpers (`pgrep -P`, recursively). Run the positive control first: a `curl`
+   download held open for a second or more (`--limit-rate`) under the same poller; a control the
+   poller does not see makes the capture "not evaluated", never "clean". Resolve
+   `api.github.com` and `raw.githubusercontent.com` during the run; only their addresses and
+   loopback may appear.
+3. **Idle.** Set up the library (a fresh `ROMPEROOM_DATA_DIR`, the scratch library through
+   `ROMPEROOM_TEST_PICK_FOLDER`) and stay 60 s on Health without pressing anything: no connection
+   but loopback, `network-log.json` absent.
+4. **Get cover art.** Only `api.github.com`, one `art-listing` request per console; the review's
+   "used N GitHub requests" equals the log's count. Cancel and press it again: 0 requests.
+5. **Download.** Only `raw.githubusercontent.com`; every `art_added` row's file has its recorded
+   size and SHA-1, its git blob SHA equals the listing's (checked against a listing fetched
+   independently) and it starts with the PNG signature. The library shows the covers without a
+   rescan; a drawer shows a screenshot and a title screen. **Scan again**: every picture stays
+   linked and `health().art` does not change.
+6. **Remove downloaded art.** Every recorded file and every folder Romperoom made is gone, and
+   the scratch library's fingerprint equals the one taken before.
+7. **Card.** Relaunch with `ROMPEROOM_TEST_VOLUME` naming a fixture card folder in a device
+   profile's layout (ES-DE: `ES-DE/downloaded_media/<console>/covers` and `titlescreens`), holding
+   two pictures named after two library ROMs; import them through Import art from an SD card.
+   Both are saved with the source `sd:es-de` and the card is unchanged. The card's id is
+   `test:<real path>`, and ids over 100 characters are refused, so keep the folder's path short.
+
+What it cannot observe: DNS queries without root; GitHub's rate limiting (never provoked on
+purpose); system proxies, PAC files and private certificate authorities (not supported);
+Windows and Linux; other devices' real cards (the card is a folder); and connections shorter
+than the polling interval (the request log is the complete record; the capture corroborates it).
+
+**Last run: 2026-10-04,** macOS, the built app, a scratch library of 22 small files named with
+real No-Intro titles across Game Boy, Game Gear and NAOMI (`main`), three of them with no
+picture upstream. Your library's share was not mounted, so the share run (copying real folders
+and fingerprinting the share) was **not evaluated**. What it measured:
+
+- the `lsof` control caught a held `curl` download (28 samples); boot, the scan and the idle
+  minute on Health showed loopback only, the request log was empty and `network-log.json` absent;
+- Get cover art made 3 requests (Game Boy 2.0 MB, Game Gear 0.9 MB, NAOMI 0.1 MB, 1.8 s in
+  all), all to one `api.github.com` address; the review read "used 3 GitHub requests, 57 of 60
+  left", and GitHub's own rate endpoint agreed (3 used); a second review made none;
+- Download saved 57 of 57 pictures (13.6 MB, 10.8 s), all from one `raw.githubusercontent.com`
+  address; every file matched its SHA-1, its listed git blob SHA and the PNG signature; covers
+  showed at once and the Tetris drawer showed its screenshot and title screen; after Scan again
+  all 57 stayed linked;
+- Remove downloaded art removed 57 pictures and `.romperoom` with them; the library's
+  fingerprint was identical to the one before;
+- the ES-DE fixture card imported its 2 pictures (`sd:es-de`), with no connection but loopback,
+  and the card was unchanged.
 
 ## Real-card run
 

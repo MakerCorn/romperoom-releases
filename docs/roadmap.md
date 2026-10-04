@@ -2,13 +2,15 @@
 
 Romperoom is built in four milestones. **Milestone 1, Foundation, is complete,** and so are the
 DAT part of Milestone 2: identifying games against DAT files you import or have Romperoom
-download when you ask, the first part of Milestone 3: Tidy up, which sets aside duplicates and
-leftover artwork, and the first part of Milestone 4: copying games to an SD card. Everything
-marked planned is not built yet, and plans change as each milestone starts. Next come a first
-release, then the rest of Organize. The detailed plans, with their tests, are in the design
-history (foundation,
+download when you ask, and cover art from libretro-thumbnails and SD cards, the first part of
+Milestone 3: Tidy up, which sets aside duplicates and leftover artwork, and the first part of
+Milestone 4: copying games to an SD card. Everything marked planned is not built yet, and plans
+change as each milestone starts. Next come a first release, then the rest of Organize. The
+detailed plans, with their tests, are in the design history
+(foundation,
 identify,
-game database downloads).
+game database downloads,
+cover art).
 
 ## Contents
 
@@ -59,8 +61,16 @@ Tell you which game each file really is.
 - **Cards named by DAT titles:** an identified game shows the DAT's title (its description
   when it has one, as FinalBurn Neo's set-id names need, else its name), on the wall and on a
   card. Revisions are separate games in the library; a card gets the newest of them.
+- **Cover art from libretro-thumbnails and SD cards (done):** Health › Games without cover art
+  lists the pictures libretro-thumbnails on GitHub has for the games missing box art,
+  screenshots or title screens, matched by DAT name or exact file name, and downloads them into
+  the library's `.romperoom/media` folder after a review, never replacing a picture; or imports
+  the art a device already keeps on an SD card. Remove downloaded art takes them out again.
+  Nothing goes online until you press Get cover art
+  ([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)).
 
-**Deferred:** scrapers and artwork; see [Open questions](#open-questions). The
+**Deferred:** scrapers (ScreenScraper and other account-based services); see
+[Open questions](#open-questions). The
 design spec keeps the research.
 
 ## Milestone 3: Organize (Tidy up done)
@@ -140,8 +150,9 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 1. **A first release:** publish the unsigned beta the release workflow drafts, then signing
    and updates (see [release.md](release.md)).
 2. **[Milestone 3, Organize](#milestone-3-organize-tidy-up-done):** folder standardisation.
-3. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** scrapers and
-   artwork, once the owner decisions in [Open questions](#open-questions) are made.
+3. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** scrapers
+   (ScreenScraper, its own spec), once the owner decisions in [Open questions](#open-questions)
+   are made.
 
 ## Must-fix before later milestones
 
@@ -179,8 +190,8 @@ The full list of current behaviour limits is in
 
 ## Open questions
 
-- Which DAT sources and scraping services to use, and their terms and rate limits.
-- The owner decisions the online part needs (services, where art lives, what a lookup sends, the
-  network stack).
+- Which scraping services to use, and their terms and rate limits.
+- The owner decisions a scraper needs (accounts, what a lookup sends). Where art lives and the
+  network stack were decided for cover art (ADR 41).
 - A source for BIOS hashes that can be verified.
 - Signing identities, and who provisions them.

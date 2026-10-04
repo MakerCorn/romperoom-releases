@@ -41,6 +41,12 @@ Game databases add three entries to the same folder, never to a library:
 | `network-log.json`  | The newest 500 request attempts (Network activity). Never headers, bodies or library data.      |
 | `downloads/`        | Temporary: each file is downloaded and verified here, then imported. Emptied at every start.    |
 
+Get cover art adds `art-listings/`: each console's last libretro-thumbnails listing (names, sizes,
+git SHAs and its tree SHA), or GitHub's "not found" for it, one file per repository, reused for 24
+hours so a second review asks GitHub nothing. Failures that may pass (offline, rate limiting, a
+server error, a malformed answer) are never kept. The pictures themselves go into the library's
+own `.romperoom/media` folder.
+
 ## Environment variables
 
 Every variable whose name starts with `ROMPEROOM_` and that the code reads is listed here. A
@@ -61,7 +67,7 @@ not list, or if this page lists one the code never mentions.
 | `ROMPEROOM_TEST_DEPLOY_DELAY_MS` | `src/main/security.ts` | Ignored | Each chunk a deploy writes waits this long (1 to 5000 ms), so a test can cancel mid-copy. |
 | `ROMPEROOM_TEST_VOLUME_BYTES` | `src/main/security.ts` | Ignored | The test volume reports at most this many bytes (from 4096), to fill a small card. |
 | `ROMPEROOM_TEST_TIDY_DELAY_MS` | `src/main/security.ts` | Ignored | Each file a tidy job moves waits this long first (1 to 5000 ms), so a test can cancel or crash mid-run. |
-| `ROMPEROOM_TEST_DAT_FIXTURES` | `src/main/security.ts` | Ignored | An absolute folder the game database download serves from instead of GitHub: `listing.json`, `metadat/`, `api/` and an optional `hold.json`. |
+| `ROMPEROOM_TEST_DAT_FIXTURES` | `src/main/security.ts` | Ignored | An absolute folder the game database download and cover art serve from instead of GitHub: `listing.json`, `metadat/`, `api/`, `art/trees/`, `art/raw/` and an optional `hold.json`. |
 | `ROMPEROOM_TEST_OPEN_EXTERNAL` | `src/main/security.ts` | Ignored | An absolute file the host appends each URL it would open in the browser to, instead of opening it. |
 | `ROMPEROOM_REAL_CARD` | `packages/engine/test/real-card.test.ts` | Not in the app | The mount of a FAT32 disk image. Turns on the real-card tests (macOS). |
 | `ROMPEROOM_REAL_CARD_DEVICE` | `packages/engine/test/real-card.test.ts` | Not in the app | The image's whole-disk device (`/dev/diskN`): the only one the test detaches. |
@@ -101,8 +107,13 @@ Details:
   with), `api/branch.json`, `api/no-intro.json` and `api/redump.json` (the answers "Check for
   updates" gets) and, optionally, `hold.json`: a JSON list of file names held, writing nothing,
   until the job is stopped (so a test can stop mid-job without a delay). A missing file answers
-  like a 404. A relative path stops startup with "ROMPEROOM_TEST_DAT_FIXTURES must be an
-  absolute path".
+  like a 404. It also stands in for GitHub's cover art: `art/trees/<repo>.json` answers a
+  repository's whole-tree listing and `art/trees/<repo>/<Named_X>.json` one kind's (a folder per
+  repository, so no file name holds the URL's `:`), `art/raw/<repo>/<Named_X>/<name>` holds the
+  pictures (names decoded, also held by `hold.json`), and an optional `api/rate-limit.json`
+  (`{ "limit": 60, "remaining": 41, "reset": <epoch seconds> }`) is the budget every API answer
+  reports. Repositories and branches pass the same allowlist as real requests. A relative path
+  stops startup with "ROMPEROOM_TEST_DAT_FIXTURES must be an absolute path".
 - **`ROMPEROOM_TEST_OPEN_EXTERNAL`** stands in for the browser: "Open download page", "Licence"
   and "Source" append the exact URL and a newline to that file. A relative path stops startup
   with "ROMPEROOM_TEST_OPEN_EXTERNAL must be an absolute path".

@@ -8,12 +8,13 @@ The short version:
 
 - Scans are read-only.
 - The window cannot reach the network.
-- Romperoom itself goes online only when you press Download for me or Check for updates, and
-  then only to two GitHub hosts.
+- Romperoom itself goes online only when you press Download for me, Check for updates or Get
+  cover art, and then only to two GitHub hosts.
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
 - Only Tidy up moves files in a library, and only into its set-aside folder, after a preview.
-  Deleting them forever needs typed words, and is the only deletion.
+  Deleting them forever needs typed words, and is the only deletion of the player's files. Cover
+  art adds pictures only under `.romperoom/media`, never replacing a file.
 
 ## Contents
 
@@ -229,8 +230,9 @@ both handlers.
 ## IPC channels
 
 The page reaches the host only through `window.romperoom`. That object has one function per
-channel in the `IPC` table (`src/shared/ipc.ts`), plus five push listeners (`onScanProgress`,
-`onDeployProgress`, `onTidyProgress`, `onIdentifyProgress` and `onDatsProgress`). Raw
+channel in the `IPC` table (`src/shared/ipc.ts`), plus six push listeners (`onScanProgress`,
+`onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress` and
+`onArtProgress`). Raw
 `ipcRenderer` and IPC event objects never cross the bridge. `IPC_MATCHES_API` makes the type
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
@@ -306,6 +308,14 @@ test checks that this table lists exactly the channels in `IPC`.
 | `dats:checkForUpdates` | page → host | Asks GitHub for a newer listing and moves the pin forward | data folder (pin) |
 | `dats:networkLog` | page → host | Every request attempt, newest first | no |
 | `dats:progress` | host → page | Download progress, then the result, to the window that started it | no |
+| `art:review` | page → host | Lists the libretro-thumbnails pictures for consoles with gaps (GitHub listings; cached a day) and returns a review | data folder (listing cache) |
+| `art:download` | page → host | Downloads, verifies and saves the reviewed pictures; plan id, console ids and kinds only | library (`.romperoom/media`) and catalog |
+| `art:cancel` | page → host | Stops this window's cover art run | no |
+| `art:status` | page → host | This window's running or last cover art run (a reloaded page adopts it) | no |
+| `art:cardReview` | page → host | Reads a listed card's art through a device profile; volume id and profile id only | no |
+| `art:importCard` | page → host | Saves the reviewed card pictures | library (`.romperoom/media`) and catalog |
+| `art:remove` | page → host | Deletes the pictures cover art added that are unchanged | library and catalog |
+| `art:progress` | host → page | Cover art progress, then the result, to the window that started it | no |
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
 
@@ -347,8 +357,23 @@ opens in the Downloads folder, preselecting the newest `.dat`, `.zip` or `.xml` 
 official page was opened (`main/downloads.ts`: `lstat` only, no link followed, at most 2,000
 entries looked at). It never passes an origin from the page to the engine.
 
+The `art:` channels are handled by the art host (`src/main/art-host.ts`). The page sends console
+ids (1 to 1,000 distinct, each `^[a-z0-9-]{1,64}$`), kind names from the closed set `box`,
+`screenshot` and `title` (each once), a volume id from the host's own drive listing (at most
+100 characters), a device profile id the host knows, and back the review's plan id. It never
+sends a URL, a path, a repository or a file name. The plan id must be a lower-case UUID, the
+shape the service hands out, and one the host gave to that same window (at most 8 are kept);
+anything else is refused with `ArtsArgumentError` before the service is called, and the service
+uses the id only as a key into its own reviews. A card review is bound to the card's id and
+mount path: at import the host lists the drives again and refuses the import ("the card changed
+since it was reviewed") when the card is gone or mounted elsewhere, and only then passes the
+mount path, which the page never sees. One cover art job (a review, a run or a removal) runs at
+a time, and any other is refused with `ArtBusyError`; a run binds to the window that started
+it, its progress and result go only to that window, only it can stop it, and closing that window
+or quitting stops it (each saved picture stays).
+
 The engine members that are _not_ exposed are `close`, `lastScan`, `resolveMedia`,
-`recoverJournals`, `resolveJournal` and the `tidy` and `identify` facades themselves
+`recoverJournals`, `resolveJournal` and the `tidy`, `identify` and `art` facades themselves
 (host-only). The operation
 engine (`applyPlan`, `undoJournal` and the rest) has no channel at all: the page reaches tidy
 runs only through the tidy host's ids.
@@ -366,7 +391,8 @@ Adding a channel: add the `Engine` method and its `IPC` entry together, since
 ## Network isolation
 
 Romperoom makes no network request unless the user presses Download for me or Check for updates
-under Game databases, and the page cannot make one at all. The CSP stops `fetch`, XHR and
+under Game databases, or Get cover art under Health (and then Download in its review), and the
+page cannot make one at all. The CSP stops `fetch`, XHR and
 sockets. Three more layers cover what CSP does not govern.
 
 WebRTC is outside CSP: `connect-src 'none'` does not stop a peer connection. Also, any
@@ -428,8 +454,10 @@ rules (ADR 40).
 
 `main/dat-download/transport.ts` is the only module that opens a socket (enforced twice: the
 import list and the lint rules under "Static tests" and "Lint rules" below). It requests nothing
-on its own: its only callers are the game database download and "Check for updates", each
-started by a press.
+on its own: its only callers are the game database download, "Check for updates" and Get cover
+art (its listings, then its review's Download), each started by a press. Cover art shares the
+game database download's one transport, so the allowlist, the transport rules and the request
+log below apply to it unchanged.
 
 **Allowlist** (`main/dat-download/allowlist.ts`). `checkDatUrl` runs before every request; a
 refused URL never reaches a socket and is logged as `refused`. A URL passes only when all of
@@ -446,7 +474,21 @@ these hold:
   alternative escapes), and there is no query;
 - on `api.github.com`: exactly `/repos/libretro/libretro-database/branches/master` with no
   query, or `/repos/libretro/libretro-database/contents/metadat/(no-intro|redump)` with the
-  query exactly `ref=<40 lower-case hex>`.
+  query exactly `ref=<40 lower-case hex>`;
+- for cover art, on `api.github.com`: a thumbnail tree,
+  `/repos/libretro-thumbnails/<repo>/git/trees/<branch>` with the query exactly `recursive=1`,
+  or, with no query, `/repos/libretro-thumbnails/<repo>/git/trees/<branch>:Named_Boxarts` (or
+  `Named_Snaps`, `Named_Titles`) for a listing GitHub cut short;
+- for cover art, on `raw.githubusercontent.com`:
+  `/libretro-thumbnails/<repo>/<branch>/Named_(Boxarts|Snaps|Titles)/<name>`, with no query,
+  where `<name>` is one safe picture name (one segment, no `..`, no separator or control
+  character, `.png`, at most 255 bytes) in exactly the percent-encoding the app builds.
+
+In both cover art shapes, `<repo>` and `<branch>` must be a pair from the shipped measured list
+(`packages/profiles/data/thumbnails.json`, 131 repositories): each repository's branch is the
+one that list records for it (`master`, or `main` for 12), never taken from the page or from a
+listing. A repository with the right shape but not on the list, or a listed repository at the
+other branch, is refused. `thumbnails.libretro.com` is never contacted.
 
 The four web pages the app may open in the browser (DAT-o-MATIC, Redump, the CC BY-SA 4.0 deed
 and the repository) are a separate closed map, `DAT_LINKS`. The browser requests those, never
@@ -479,18 +521,32 @@ no https; the host allows http for that one exact URL and refuses any other non-
 - No redirect is followed: any `3xx` ends the request with reason `redirect`.
 - Timeouts: 20 s to the response headers, 30 s without a byte, 300 s for a whole response. Each
   destroys the request with reason `timeout`.
-- Caps: API answers at most 1 MiB. A file must be exactly its listed size: a `content-length`
-  over it ends the request before the body, and a body that passes it is aborted at that byte.
-  The git blob SHA-1 is computed while streaming and must match the listing; a file that fails
-  any check is removed. A file that already exists is never overwritten.
+- Caps: API answers at most 1 MiB, except thumbnail tree listings, at most 32 MiB
+  (`MAX_TREE_JSON_BYTES`; a whole repository's recursive tree can pass 1 MiB).
+- A game database file must be exactly its listed size: a `content-length` over it ends the
+  request before the body, and a body that passes it is aborted at that byte. The git blob
+  SHA-1 is computed while streaming and must match the listing; a file that fails any check is
+  removed. A file that already exists is never overwritten.
+- A cover art picture is read by `getBytes` into memory, at most 16 MiB (`MAX_ART_BYTES`, or
+  less when the run's remaining total is smaller): a picture listed over the cap is not
+  requested ("too large"); any other length than the listed one, declared or read, ends the
+  request as changed, and reading stops at the listed size, so the cap holds on bytes read. Its
+  git blob SHA-1 is computed while streaming and must match the listing, and the bytes must
+  start with the PNG signature before the engine sees them.
 - Every request takes an `AbortSignal`; cancel destroys the socket. No telemetry, no analytics,
   no update ping.
+- One rate reading. The transport keeps the `x-ratelimit-*` headers of the last `api.github.com`
+  answer, whichever feature asked. GitHub allows 60 unauthenticated API requests an hour per
+  address, shared by "Check for updates" and Get cover art, so a cover art review lists only as
+  many consoles as that reading says fit, and says when the rest can continue. Pictures come
+  from `raw.githubusercontent.com` and use none of it.
 
 **Request log** (`main/dat-download/request-log.ts`). Every attempt, refused and cancelled ones
-included: time, purpose (`check` or `download`), host, path, the address connected to, outcome,
-HTTP status, bytes received, duration and failure reason. Never headers, bodies or anything
-about the library. The newest 500 are kept in `<dataDir>/network-log.json`, written to a
-temporary file and renamed; an unreadable log is ignored with a warning.
+included: time, purpose (`check`, `download`, `art-listing` or `art-download`), host, path, the
+address connected to, outcome, HTTP status, bytes received, duration and failure reason. Never
+headers, bodies or anything about the library. The newest 500 are kept in
+`<dataDir>/network-log.json`, written to a temporary file and renamed; an unreadable log is
+ignored with a warning.
 
 **Static tests** (`test/security.test.ts`). One lists every import of `node:http`, `node:https`,
 `node:http2`, `node:net`, `node:tls`, `node:dns` (with or without the `node:` prefix, static,
@@ -547,7 +603,9 @@ for the download (the official-site path still works).
   Chromium's cookie store is not encrypted (the `EnableCookieEncryption` fuse is off): the app
   sets no cookies and keeps no secrets there.
 - **Nothing is written to the library** by a scan. Romperoom's own media store
-  (`.romperoom/media`) is only read in Milestone 1. Nothing creates it yet.
+  (`.romperoom/media`) is written only by cover art, when the player confirms a review (see
+  [Filesystem safety](#filesystem-safety)); each picture it adds is recorded in the catalog
+  (`art_added`, with its size, SHA-1, source and pin, and `art_dir` for the folders it made).
 - **Logs** go to the terminal (stdout and stderr). Messages may hold library paths. They never
   hold file contents. The one log file is `network-log.json` (below).
 - **Game database files** (see [configuration.md](configuration.md#data-folder)):
@@ -555,6 +613,10 @@ for the download (the official-site path still works).
   outcome, status, bytes, duration, reason; never headers, bodies or library data).
   `libretro-pin.json` holds the listing "Check for updates" last stored. `downloads/` holds a
   file only while it is downloaded and verified, and is emptied at every start.
+  `art-listings/` keeps each console's last thumbnail listing (names, sizes, git SHAs and the
+  tree SHA), or GitHub's 404 for it in its own strict shape, for 24 hours, one file per
+  repository named only from the shipped list. Transient failures are never kept, and a file in
+  neither shape is ignored with a warning.
 
 ## Filesystem safety
 
@@ -586,6 +648,36 @@ for the download (the official-site path still works).
   before it moves the other one, and fails if that copy is gone or changed, reached through a
   link, or the same file (device and inode) as the one to move. A purge checks the kept copy
   again before deleting its extra.
+- **Cover art writes only under `.romperoom/media` and `.romperoom/tmp`**
+  ([decision 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up),
+  `packages/engine/src/art/writer.ts`). The rules:
+  - Only the engine writes; the host and the page pass no path. A picture's place is
+    `.romperoom/media/<system>/<box|screenshot|title>/<name>`, where `<name>` is built by the
+    engine from the game's own ROM file stem and checked: one segment, no `..`, no separator or
+    control character, `.png` (or `.jpg` from a card), at most 255 bytes. A game whose name
+    would not pass is never offered.
+  - Never through a link: every component of `.romperoom/media` or `.romperoom/tmp`, and of the
+    target's own folders, must be a real folder to `lstat` whose real path lies inside the
+    library's real path (`isRealFolderChain`), or nothing is written.
+  - Never over a file: the run holds the library's `art` work lock (no scan, Tidy up, identify
+    or deploy runs alongside it); each picture goes to a random part file in `.romperoom/tmp`,
+    is fsynced and closed, then hard-linked into place (an exclusive create), or, where the file
+    system has no hard links (SMB shares, FAT, exFAT), renamed into place after `lstat` finds the
+    target absent. It is never copied in place, so no half-written picture is visible at its
+    name. A target that exists is counted "already present".
+  - Remove downloaded art deletes only what cover art recorded (`art_added`): a file at exactly
+    a shape the writer makes, whose size and SHA-1 still match, through the same real-folder
+    check; it then removes only the empty folders it recorded making (`art_dir`). Anything else
+    is left and counted.
+  - Two windows remain (see [Gaps](#gaps)): a folder swapped for a link between the check and
+    the write, and, without hard links, a file another program drops at the target between the
+    absence check and the rename.
+- **Import art from an SD card reads, then saves.** It reads only the card the host listed and
+  the review was made from, through the device profile's art folders. Each reviewed picture is
+  read again at import as a regular file (no final link, no FIFO), at most 16 MiB, below folders
+  checked to be a real chain inside the reviewed card, and skipped ("couldn't read this picture
+  from the card") unless its size and format still match the review. The check and the read are
+  two steps (see [Gaps](#gaps)).
 
 ## Emptying the quarantine
 
@@ -776,13 +868,18 @@ somehow became markup.
 - Delete set-aside files forever: it can type `DELETE FOREVER` as well as a person can. The
   words stop accidents, not script. Only files a tidy run set aside, unchanged since (same
   SHA1, a regular file inside the quarantine folder by real path), can be deleted.
+- Make the app list cover art pictures on GitHub (spending GitHub's hourly budget of 60 API
+  requests, shared with "Check for updates"), and download the pictures a review found for the
+  library's own gaps into `.romperoom/media`. It can import pictures from a card the host lists,
+  and remove the pictures cover art added that are unchanged.
 
 **It cannot:**
 
 - Run Node.js, require a module, or reach `ipcRenderer` directly.
-- Create or change any file, or move or delete one outside the tidy rules. Outside
-  [Tidying up](#tidying-up) no channel writes anything but the catalog, and the operation
-  engine has no channel.
+- Create or change any file, or move or delete one outside the tidy and cover art rules. Outside
+  [Tidying up](#tidying-up) and cover art no channel writes anything to a library, and the
+  operation engine has no channel. Cover art writes only new pictures under `.romperoom/media`
+  (and part files in `.romperoom/tmp`), never over a file.
 - Read a file's contents. It sees hashes and sizes, never bytes, except images through the
   media scheme.
 - Load `file://` or another origin, or navigate the window away.
@@ -793,6 +890,10 @@ somehow became markup.
   data to GitHub beyond the fixed URLs; make the host follow a redirect; or reach any other
   host. The commit it sends back is only compared with the pin, and a different one refuses
   the job.
+- Name a URL, a path, a repository, a branch or a file name for cover art, or make the app write
+  anywhere but the store. It sends console ids, kind names, a listed volume id, a profile id and
+  plan ids the host gave to its own window; the pictures, their names and their places come
+  from the review the host made.
 
 It can also make the host download mapped DATs from `raw.githubusercontent.com` at the current
 pin and import them (which can replace a same-named DAT and so revert its matches, as an import
@@ -802,8 +903,9 @@ four fixed web pages in the browser, and read the network log.
 What it can gather still cannot leave through Romperoom: the only requests the app makes go to
 the two allowlisted GitHub hosts, at fixed paths, with fixed headers and no data from the
 library. Those requests are not invisible, though. GitHub (and anyone who can see the
-connection's metadata) learns which consoles' DATs were fetched, from which address, and when, as
-it would for any download. If a future feature opens another network path, that feature must be
+connection's metadata) learns which consoles' DATs and pictures were fetched, from which address,
+and when, as it would for any download. Picture names are game titles, so GitHub can see which
+games a library lacks art for. If a future feature opens another network path, that feature must be
 reviewed against this list.
 
 ## Deploying to a card
@@ -882,6 +984,17 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
   writer checks the card file is still the one it wrote, then renames over it. A file a user
   writes in the instant between is overwritten. A file not the writer's is never replaced this
   way: new names use a no-clobber rename.
+- **Cover art checks its folders, then writes.** Node has no no-follow open for folders, so a
+  folder in `.romperoom/media` or `.romperoom/tmp` swapped for a link between the real-folder
+  check and the write would be written through. Where hard links are unavailable (SMB shares,
+  FAT, exFAT), a file another program drops at the target between the `lstat` absence check
+  and the rename, while the lock is held, would be replaced. Both need another program changing
+  the store at that instant
+  ([decision 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)).
+- **Importing art from a card checks, then reads.** A card folder swapped for a link between
+  the real-chain check and the open would be read through, and a picture replaced since the
+  review by another of the same size and format is imported as found. The checks narrow both to
+  that instant; the bytes saved are still only a picture of at most 16 MiB in the store.
 - **Emptying the quarantine checks a file, then deletes it.** A file replaced between its final
   hash and its `unlink` is deleted. The window is one system call, inside a folder only the app
   writes to ([emptying the quarantine](#emptying-the-quarantine)).

@@ -46,6 +46,7 @@ design history.
 38. [DATs are parsed by streaming, with refusals rather than guesses](#38-dats-are-parsed-by-streaming-with-refusals-rather-than-guesses)
 39. [A game's identity is its DAT name, and a match never leaves its system](#39-a-games-identity-is-its-dat-name-and-a-match-never-leaves-its-system)
 40. [Game databases can be downloaded from one pinned source, only when asked](#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)
+41. [A library gains one writer outside Tidy up](#41-a-library-gains-one-writer-outside-tidy-up)
 
 ## 1. One repository, four workspaces
 
@@ -127,7 +128,8 @@ design history.
 - **Why:** a ROM library is private. CSP alone does not stop WebRTC or DNS lookups.
 - **Cost:** each later network feature must allowlist its one host, from the main process.
 
-Superseded by ADR 40 for downloading game databases only; every other part stands.
+Superseded by ADR 40 for downloading game databases and by ADR 41 for cover art; every other part
+stands.
 
 ## 11. One typed IPC table
 
@@ -525,3 +527,37 @@ Superseded by ADR 40 for downloading game databases only; every other part stand
 - **Cost:** the first network code. No system proxy or private certificate authority for
   "Download for me" (the official-site path still works). libretro's copies can lag behind the
   official sites.
+
+## 41. A library gains one writer outside Tidy up
+
+- **Decision:** Cover art writes pictures into a library, only into Romperoom's own
+  `.romperoom/media/<system>/<box|screenshot|title>/` (and its part files in `.romperoom/tmp`),
+  only when the user presses Get cover art or Import art from an SD card and confirms a review.
+  The engine's writer holds the library's `art` work lock, writes a part file in
+  `.romperoom/tmp`, fsyncs and closes it, then hard-links it into place (an exclusive create), or,
+  where the file system has no hard links (SMB shares, FAT, exFAT), checks that the target is
+  absent and renames it into place. A picture is never written at its final name, so no
+  half-written file is ever visible there. It never overwrites a file it has seen, and it
+  writes only below folders it has checked are real folders inside the library, never links.
+  Every file and folder it adds is recorded (`art_added`, `art_dir`), so Remove downloaded art
+  deletes exactly those whose size and SHA-1 still match.
+- **Why:** pictures are what a library without art lacks most, and the scanner already reads and
+  prefers `.romperoom/media`; a separate store would need a second scanner and would not travel
+  with the library to another computer.
+- **Cost:** the library is no longer read-only outside Tidy up; the promise narrows to "never
+  changes your games". A picture is named after the game's ROM file, so renaming the ROM leaves
+  the picture unlinked until it is renamed too (the same rule the scanner applies to all art).
+  Two windows cannot be closed from user space (Node has no `openat` or no-follow for folders):
+  a folder swapped for a link between the check and the write would be written through, and,
+  without hard links, a file dropped at the target between the absence check and the rename,
+  while the lock is held, would be replaced. The checks narrow both windows to the moment of the
+  write; another program changing the store at that instant is outside what the lock can
+  exclude. Import art from an SD card has the same window on its reading side: each reviewed
+  picture is read again at import as a regular file, never through a final link, below folders
+  checked to be a real chain inside the reviewed card, and skipped unless its size and format
+  still match the review; but a card folder swapped for a link between that check and the open
+  would be read through, and a picture replaced since the review by another of the same size and
+  format is imported as found.
+- **Network:** Get cover art lists and downloads pictures from `api.github.com` and
+  `raw.githubusercontent.com` through the game database transport (ADR 40's rules), only when
+  pressed; nothing else changes in ADR 10.

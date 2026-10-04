@@ -99,6 +99,20 @@ listing shows "Not available at this version" until the mapping is fixed). A dif
 `recordedAt` alone means nothing changed upstream; it need not be committed. The listing is
 metadata only (names, sizes, git SHAs), never a DAT.
 
+Then re-record the cover art repository list the same way:
+
+```sh
+npm run record:thumbnails
+git diff packages/profiles/data/thumbnails.json
+```
+
+It asks `api.github.com` (one unauthenticated request per 100 repositories: two today) for the
+libretro-thumbnails organisation's repositories and their default branches, and rewrites
+`thumbnails.json`. Review the diff: a repository added or removed, or one whose branch moved
+between `master` and `main` (cover art asks only for the recorded branch, so a moved one shows
+"not available" until this list is updated). Then run the
+[live cover art run](testing.md#live-cover-art-run) if anything under the art code changed.
+
 Then two checks for identify, run on the packaged app
 (`npm run package:dir -w @romperoom/desktop`) and recorded with the release:
 
@@ -376,8 +390,8 @@ Cut from the first beta, on purpose:
 
 Not built. When it is: electron-updater, reading the public releases repository anonymously (the
 app holds no token). The mac `zip` target already exists because Squirrel.Mac needs it. Today the
-app goes online only when the user presses Download for me or Check for updates, and then only
-to GitHub, through the main process's own allowlisted client
+app goes online only when the user presses Download for me, Check for updates or Get cover art,
+and then only to GitHub, through the main process's own allowlisted client
 ([security.md](security.md#network-isolation)). An updater must add its host the same way or
 through the recipe in security.md (both allowlists, a dedicated session), fetch from the main
 process, verify signatures, and so needs signed builds first.

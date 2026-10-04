@@ -1,7 +1,8 @@
 # Troubleshooting
 
-Problems you might meet, and what to do. Only Tidy up changes your library, and it only sets
-files aside, where you can put them back. None of these problems can harm your collection.
+Problems you might meet, and what to do. Only Tidy up changes your games, and it only sets
+files aside, where you can put them back; cover art only adds pictures to Romperoom's own
+`.romperoom/media` folder, when you ask. None of these problems can harm your collection.
 
 ## Contents
 
@@ -12,6 +13,9 @@ files aside, where you can put them back. None of these problems can harm your c
 - [Some games stay unidentified](#some-games-stay-unidentified)
 - [A game database won't download](#a-game-database-wont-download)
 - [A console says "Not available at this version"](#a-console-says-not-available-at-this-version)
+- [Cover art won't download](#cover-art-wont-download)
+- [A picture didn't appear](#a-picture-didnt-appear)
+- [The card's art wasn't imported](#the-cards-art-wasnt-imported)
 - [Some game folders look empty or gone](#some-game-folders-look-empty-or-gone)
 - [Files that couldn't be read](#files-that-couldnt-be-read)
 - [The scan is slow](#the-scan-is-slow)
@@ -122,12 +126,75 @@ been renamed or removed upstream). Press **Check for updates**; if the console s
 the next Romperoom release will update the mapping. Meanwhile, get its database from the
 official site.
 
+## Cover art won't download
+
+**Get cover art** (Health › Games without cover art) and its review's **Download** are the only
+things that take cover art online, and only to GitHub. Each request is listed under **Network
+activity**. A picture that fails is never kept half-written, and one failure never undoes the
+pictures already saved. The review or the results say what happened:
+
+| The message starts with                      | What to do                                    |
+| -------------------------------------------- | --------------------------------------------- |
+| Romperoom couldn't reach GitHub              | You're offline, or GitHub can't be reached.   |
+| GitHub is limiting requests right now        | Wait until the time it gives, then retry.     |
+| This picture changed on GitHub               | Review again: the collection was just edited. |
+| Not enough space in the library              | Free space on the library's drive.            |
+| Romperoom can't write to the library folder  | Check that the folder or share allows writes. |
+
+**A console says "not available".** Either Romperoom has no libretro system for that console
+(it can't know which picture collection is the right one, so it never guesses), or
+libretro-thumbnails has no repository for it. Nothing is downloaded for that console; the next
+Romperoom release may add it. Consoles GitHub's limit didn't leave room for also show "not
+available", with the time to try again.
+
+**A console's row ends "· 3 not available".** That many pictures (one game and one kind each)
+are missing and won't come from this download: the collection has no picture with that game's
+name, or the game can't take one (see [A picture didn't appear](#a-picture-didnt-appear)). The
+results count them under "not available" too, but not in "Saved 5 of 5 pictures", which counts
+only the pictures Romperoom tried.
+
+**Rate limits.** Each console's picture list costs one GitHub request (a very large one, a few
+more), out of the 60 an hour GitHub allows per address without signing in, shared with Check for
+updates and with others on the same network. A second review within a day reuses the lists and
+asks nothing. Downloading the pictures themselves never counts.
+
+**Proxies and filtered networks.** As for game databases, cover art connects to GitHub directly
+and trusts only the certificate authorities built into Romperoom (see
+[A game database won't download](#a-game-database-wont-download)).
+
+## A picture didn't appear
+
+- **The ROM was renamed after its picture was saved.** A picture is named after the ROM file
+  (without its extension), and a scan links pictures to games by that name. Rename the picture
+  in `.romperoom/media/<console>/<kind>/` to match, or remove it and get cover art again.
+- **Two games share a file name.** When two games of one console in one library have the same
+  file name in different folders, Romperoom can't tell which one a picture belongs to, so
+  neither is offered a picture. Rename one of them.
+- **The file name starts with a dot, or is very long.** A picture named after it would be hidden
+  (a scan skips names starting with a dot), or longer than file systems allow, so the game is
+  shown as not available. Rename the ROM.
+- **There is no picture for that game.** Games without a DAT match are matched by their exact
+  file name, never a similar one. A file named differently from the collection's No-Intro name
+  gets nothing; identifying the game first (Settings › Game databases) matches it by its DAT name.
+
+## The card's art wasn't imported
+
+- **The device's folders.** Romperoom reads the art folders the chosen device keeps (for
+  example ES-DE's `ES-DE/downloaded_media/<console>/covers`). Choose the device the card was
+  made for; pictures in other folders aren't seen. A device that keeps no box art, screenshots
+  or title screens has nothing to import.
+- **Unmatched names.** A picture is matched to a game first by the ROM's SHA-1, when the card
+  was made by Romperoom (its manifest records each ROM's), then by the game's title, then by the
+  ROM's file name. The review counts the pictures it couldn't match for each console.
+- **The game already has that kind.** Import never replaces a picture you have, from any source.
+
 ## Some game folders look empty or gone
 
 Romperoom never takes games off its list on its own when whole folders seem to vanish, because a
 drive that is only partly connected looks the same. If the drive was disconnected, reconnect it
 and press **Scan again**. If you removed those games on purpose, press **It's OK — they were
-removed**. Only Romperoom's list changes. The same goes for **Some cover art is missing**.
+removed**. Only Romperoom's list changes. The same goes for **Some cover art folders look empty
+or gone**.
 
 ## Files that couldn't be read
 
@@ -202,7 +269,7 @@ A greyed-out card says why under its name:
   Romperoom never writes there, on purpose. Choose the SD card.
 - **A network drive:** copy to a card plugged into this computer instead.
 - **Your game library or BIOS files are on it,** or **it's inside your game library:** Romperoom
-  never writes into your library. Use a separate card.
+  never copies games into your library. Use a separate card.
 - A disk inside your computer isn't greyed out, but you have to type its name to use it. That
   check is there so a wrong click can't fill the wrong disk.
 

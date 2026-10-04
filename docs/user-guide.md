@@ -1,8 +1,9 @@
 # Using Romperoom
 
 Romperoom shows your ROM collection as a shelf of games, copies the games you pick to an SD
-card, and tidies up duplicates and leftover artwork. Only Tidy up changes your library, and only
-after you have seen what it will do. This guide walks through every screen.
+card, and tidies up duplicates and leftover artwork. Only Tidy up changes your games, and only
+after you have seen what it will do; cover art only adds pictures to Romperoom's own folder,
+when you ask. This guide walks through every screen.
 
 The pictures come from a small made-up test library, so the sizes are tiny and most games have
 placeholder covers.
@@ -15,6 +16,7 @@ placeholder covers.
 - [Browse your games](#browse-your-games)
 - [Game details](#game-details)
 - [Library health](#library-health)
+- [Cover art](#cover-art)
 - [Getting game databases](#getting-game-databases)
 - [Identify your games](#identify-your-games)
 - [What the labels mean](#what-the-labels-mean)
@@ -90,8 +92,9 @@ The same game in two regions, such as USA and Europe, shows as two covers.
 ## Game details
 
 Select a cover to open its details: the console, the region, whether the game is identified,
-how many files it has, its size on disk, its size unzipped, and its cover art. Close the panel
-with its close button or Escape.
+how many files it has, its size on disk, its size unzipped, and its cover art. When the game has
+a screenshot or a title screen, **Screens** shows them side by side. Close the panel with its
+close button or Escape.
 
 **Identified** is one of the three labels in [What the labels mean](#what-the-labels-mean).
 **Identified by** names the game database and version that matched it, and that database's own
@@ -117,12 +120,71 @@ identified yet" until you import a database and identify (see
   [Identify your games](#identify-your-games) below).
 - **Folders without a console**, with a link to choose a console for each one in setup.
 - **Files that couldn't be read** (below).
+- **Games without cover art**, with ways to fill the gaps (see [Cover art](#cover-art)).
 
 Press **Scan again** after you change your files.
 
 | Light                                                         | Dark                                                               |
 | ------------------------------------------------------------- | ------------------------------------------------------------------ |
 | ![Library health](screenshots/health-console-shelf-light.png) | ![Library health, dark](screenshots/health-console-shelf-dark.png) |
+
+## Cover art
+
+The **Games without cover art** card on **Health** counts the games missing a picture, and how
+many miss box art, screenshots and title screens. It fills gaps only: Romperoom never replaces a
+picture you already have, and goes online only when you press **Get cover art**, and then only
+to GitHub.
+
+| Light                                                 | Dark                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------- |
+| ![Cover art](screenshots/art-console-shelf-light.png) | ![Cover art, dark](screenshots/art-console-shelf-dark.png) |
+
+**Get cover art** first asks GitHub for the list of pictures for each console with gaps (one request
+per console, usually), then shows a review before anything is downloaded: each console with how many
+pictures it found, for how many games, how many of those pictures were matched by the game's file
+name, their size, and how many pictures are not available (for example "Game Boy Advance: 2 pictures
+for 2 games (2 matched by file name) · 138 B · 3 not available"). Each picture not available is one
+game and one kind this download can't fill: the collection has no picture by that game's name, or
+the game can't take one (see [Troubleshooting](troubleshooting.md#a-picture-didnt-appear)). Then
+come the kinds (box art, screenshots, title screens); the total; the source and its terms; and how
+many of GitHub's hourly requests the review used and how many are left. Untick any console or kind
+you don't want. The terms read: "Pictures from libretro-thumbnails, a community collection used by
+RetroArch. The pictures are box and screen images of commercial games; the collection declares no
+licence." A console Romperoom can't fetch for (no collection for it, or GitHub's hourly limit
+reached) is shown with how many of its games go without ("Super Nintendo: not available for 1
+game"), but can't be chosen. Above 2 GB the review warns that the download may take a while; it
+never refuses. While a scan runs, **Download** waits for it to finish. **Cancel** backs out without
+downloading anything.
+
+| Light                                                                  | Dark                                                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| ![Get these pictures?](screenshots/art-review-console-shelf-light.png) | ![Get these pictures?, dark](screenshots/art-review-console-shelf-dark.png) |
+
+**Download** shows its progress picture by picture, with **Stop**: pictures saved before you
+press it are kept. The results start with what changed ("Saved 5 of 5 pictures", and how many
+failed, if any), then list, for each console you chose, how many pictures were saved, already
+present, not available, and any that failed with the reason ("Game Boy Advance: 2 saved, 0
+already present, 3 not available"). Not available includes the pictures the review already
+counted so, in the kinds you chose; "Saved 5 of 5" counts only the pictures Romperoom tried. The
+covers show in the library at once, without a scan.
+
+| Light                                                                 | Dark                                                                       |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| ![Cover art results](screenshots/art-results-console-shelf-light.png) | ![Cover art results, dark](screenshots/art-results-console-shelf-dark.png) |
+
+**Import art from an SD card** takes pictures from a card you used with a device (choose the
+card and the device, as when you put games on a card). Romperoom only reads the card: it reviews
+the pictures that fill a gap, per console and kind, and imports the ones you keep. It never adds
+a picture for a game that already has that kind.
+
+**Remove downloaded art** deletes the pictures Romperoom added, and only those still exactly as
+it saved them; it asks first, in place, saying how many there are and their size. A picture you
+changed, or one you added yourself, stays.
+
+Pictures go in your library's own `.romperoom/media` folder, one folder per console and kind.
+Each is written first to a temporary folder beside it, `.romperoom/tmp`, and moved into place
+once complete. Romperoom never changes your games, and writes nowhere else in your library for
+this.
 
 ## Getting game databases
 
@@ -179,7 +241,7 @@ already up to date, or why one failed — with **Identify now** offered when som
 to the button, or says why it couldn't check. **Network activity**, below both sections, lists
 every request Romperoom has made for this feature — when, where to, what happened and how many
 bytes — so you can see for yourself that it only ever goes to GitHub, and only when you pressed
-Download or Check for updates.
+Download, Check for updates or Get cover art.
 
 ### Managing what you have imported
 
@@ -261,7 +323,7 @@ too). **Show more** loads further matches when there are many.
 If a console's folder, or its cover art, seems to have vanished since the last scan, Romperoom
 does **not** take those games off your list straight away. A drive that is only partly
 connected looks just like deleted games. Instead it shows **Some game folders look empty or
-gone** or **Some cover art is missing**, with the folders named.
+gone** or **Some cover art folders look empty or gone**, with the folders named.
 
 - If the drive was disconnected, reconnect it and press **Scan again**.
 - If you removed the games on purpose, press **It's OK — they were removed**. Romperoom takes
@@ -495,11 +557,13 @@ Only when you ask it to in Tidy up, after a preview. Even then it only sets file
 your library, where you can put them back; deleting them forever needs you to type
 `DELETE FOREVER`. Scanning and copying to a card only read your library. Confirming that games
 were removed only changes Romperoom's own list. On a card, it only replaces or moves files it
-put there itself.
+put there itself. Cover art never changes a game file: it only adds pictures to the library's
+own `.romperoom/media` folder when you ask, and removes only the ones it added.
 
 **Does it go online?**
 Only if you ask. Under Settings › Game databases, Download for me and Check for updates contact
-GitHub, and Network activity lists every request. Everything else works offline. See
+GitHub, and so do Get cover art and its Download under Health; Network activity lists every
+request. Everything else, importing art from an SD card included, works offline. See
 [security.md](security.md).
 
 **Where does it keep its data?**

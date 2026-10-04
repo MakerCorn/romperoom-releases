@@ -10,9 +10,10 @@
   means where ROMs, BIOS files and media go, and which folder and extensions each system uses.
 
 It also ships `data/libretro.json`, the recorded libretro-database listing and system mapping
-used by the "get game databases" feature. It is neither a systems catalog entry nor a device
-profile: `loadShippedProfiles()` skips it by name, the same way it skips `systems.json` (see
-[libretro.json](#libretrojson) below).
+used by the "get game databases" feature, and `data/thumbnails.json`, the recorded
+libretro-thumbnails repository list used by the cover art feature. Neither is a systems catalog
+entry or a device profile: `loadShippedProfiles()` skips both by name, the same way it skips
+`systems.json` (see [libretro.json](#libretrojson) and [thumbnails.json](#thumbnailsjson) below).
 
 **Status:** four profiles ship: `batocera`, `es-de`, `muos` and `onion`. All are `community`.
 The [deploy planner](architecture.md#deploy-planner) reads them to lay
@@ -31,13 +32,14 @@ was set up from what other players shared and has not been tested by us yet.
 - [The systems catalog](#the-systems-catalog)
 - [Adding a system](#adding-a-system)
 - [libretro.json](#libretrojson)
+- [thumbnails.json](#thumbnailsjson)
 
 ## Profile fields
 
 `profileSchema` (`packages/profiles/src/schema.ts`) validates every profile.
-`loadShippedProfiles()` loads every `.json` in `data/` except `systems.json`, sorted by name,
-and names the file in any error. A docs test checks that this table lists every key of the
-schema.
+`loadShippedProfiles()` loads every `.json` in `data/` except `systems.json`, `libretro.json` and
+`thumbnails.json`, sorted by name, and names the file in any error. A docs test checks that this
+table lists every key of the schema.
 
 | Key                            | Type                                                                        | Meaning                                                                                                               |
 | ------------------------------ | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -65,8 +67,9 @@ schema.
 | `naming.stripRegionTags`       | true or false                                                               | Whether file names should drop tags such as `(USA)`.                                                                  |
 | `naming.maxPathLength`         | whole number                                                                | The longest path the device handles.                                                                                  |
 
-`<kind>` is one of `box`, `screenshot`, `marquee`, `video`, `manual` or `wheel`. Each is
-optional. Leave a system out rather than guess a folder name the documentation does not state.
+`<kind>` is one of `box`, `screenshot`, `marquee`, `video`, `manual`, `wheel` or `title` (title
+screens). Each is optional. Leave a system out rather than guess a folder name the documentation
+does not state.
 
 ### Templates
 
@@ -133,7 +136,7 @@ ever sees files the catalog classified.
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `muos`     | `ROMS/<folder>`, `MUOS/bios`, art in `MUOS/info/catalogue/<catalogue name>/box` and `/preview`, named like the ROM. No game list. Folders are muOS's own short names (`nes`, `genesis`), the catalogue names its own. | MustardOS `internal`: `share/info/manifest/libretro.json` (folder keys and catalogue names), `script/device/storage.sh` (`ROMS`), `script/device/bind.sh` (`MUOS/bios`, `MUOS/info/catalogue`), `script/system/catalogue.sh`; muos.dev artwork. |
 | `batocera` | `roms/<folder>`, `bios`, art in `roms/<folder>/images/<stem>-image`, `-thumb` and `-marquee`, `videos/<stem>-video.mp4`, `manuals/<stem>-manual.pdf`, and `roms/<folder>/gamelist.xml`. Genesis is `megadrive`.       | `es_systems.yml` (folder = system key, `FORMATS.md`), the bundled `roms/` tree, batocera-emulationstation `Scraper.cpp` (`getSaveAsPath`), `MetaData.cpp` (tags), `Settings.cpp` (defaults), and wiki.batocera.org system pages (formats).       |
-| `es-de`    | `ROMs/<folder>`, art in `ES-DE/downloaded_media/<folder>/covers`, `screenshots`, `marquees`, `videos` and `manuals`, and `ES-DE/gamelists/<folder>/gamelist.xml`. No BIOS folder of its own.                          | The ES-DE user guide (media folders, game list location, the `./` path rule) and `es_systems.xml` (folders and extensions).                                                                                                                       |
+| `es-de`    | `ROMs/<folder>`, art in `ES-DE/downloaded_media/<folder>/covers`, `screenshots`, `marquees`, `videos`, `manuals` and `titlescreens`, and `ES-DE/gamelists/<folder>/gamelist.xml`. No BIOS folder of its own.          | The ES-DE user guide (media folders, game list location, the `./` path rule) and `es_systems.xml` (folders and extensions).                                                                                                                       |
 | `onion`    | `Roms/<FOLDER>` (upper case, such as `FC` and `SFC`), `BIOS`, box art in `Roms/<FOLDER>/Imgs/<stem>.png` at most 250 wide. FAT32 only. No game list written.                                                          | Onion's docs (rom folders, BIOS in the root `/BIOS`, the scraping guide, FAT32 install) and each emulator's `config.json` (`rompath`, `imgpath`, `extlist`).                                                                                      |
 
 Known judgement calls, all reasons the profiles stay `community`:
@@ -257,3 +260,33 @@ maintainer's own network, through `listingFromApi` (the one place that shape is 
 desktop app's own "Check for updates" calls the same function), replaces `listing` and keeps
 `systems`, then reports the old and new commit, the counts per folder, and any mapping problems
 against the mapping it just kept.
+
+## thumbnails.json
+
+`packages/profiles/data/thumbnails.json` (`packages/profiles/src/thumbnails.ts`) holds the
+measured list of `libretro-thumbnails` repositories the cover art feature downloads from: 131
+repository names, each with its default branch (`master` or `main`). It is read once,
+synchronously, into `THUMBNAILS` when the module loads, validated by `thumbnailsFileSchema`. It is
+**not a device profile**: `loadShippedProfiles()` skips it by name (`THUMBNAILS_FILE`), the same
+way it skips `systems.json` and `libretro.json`, so it never has to pass `profileSchema` and never
+appears in a profile list.
+
+A console's thumbnail repository is its mapped libretro DAT name (`data/libretro.json`) with
+spaces replaced by underscores (`repoNameFor`); a console with no DAT mapping, or whose repository
+name is absent from this list, is "not available" (`thumbnailRepoFor`). A repository is only ever
+listed or fetched at the branch this file records for it, never at a branch read from a GitHub
+answer or a listing: `allowedRepos()` is the allowlist the transport checks requests against, and
+it comes from this shipped file alone.
+
+Rules, each pinned by a test in `packages/profiles/test/thumbnails.test.ts`:
+
+- Every repository name matches a strict safe-name pattern (letters, digits, `_`, `.` and `-`, no
+  `..`), because it becomes a URL path segment; no name is listed twice; the branch is `master` or
+  `main`, nothing else.
+- `recordedAt` is a parseable date-time.
+
+**Who records it:** a maintainer runs `npm run record:thumbnails` before each release (never CI,
+never a test). It asks `api.github.com` for the organisation's repository pages with the
+maintainer's own network, through `thumbnailsFromApi` (the one place that shape is derived),
+and replaces the whole file, sorted by name, requesting only at each repository's own recorded
+branch thereafter.

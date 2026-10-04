@@ -81,7 +81,7 @@ The full list of security rules is in
 ## Catalog schema
 
 The catalog is one SQLite file in the app data folder. It is never kept on the NAS. There are
-fifteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
+sixteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
 per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry
 and confirmation columns (`unreadable_count`, `last_error`, `last_verified`,
 `last_complete_scan_id`) and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder`
@@ -107,8 +107,12 @@ Migration 13 adds stable game keys and each file's DAT match, and migration 14 t
 rejected DAT game key into a list of every one the user rejected (`rejected_keys`; see
 [Identification](#identification)). Migration 15 adds `dat_origin`: one row per downloaded DAT
 (URL, commit, git SHA, licence, fetch time), written in the transaction that marks the DAT ready
-and deleted with it; a DAT imported from the picker has none. Opening a catalog written by a
-newer build is refused rather than downgraded.
+and deleted with it; a DAT imported from the picker has none. Migration 16 makes `title` a media
+kind (rebuilding `media` and moving rows already read from `.romperoom/media/<system>/title` and
+ES-DE's `titlescreens` folders from `unknown`, so no rescan is needed) and adds cover art's own
+records, deleted with their library: `art_added`, each picture Romperoom wrote into a library
+(path, size, SHA-1, kind, source and the listing it came from), and `art_dir`, each folder it
+created there. Opening a catalog written by a newer build is refused rather than downgraded.
 Systems are not a table:
 `system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed
 in [systems.md](systems.md)). The connection
@@ -138,6 +142,8 @@ erDiagram
   DAT_GAME |o--o{ FILE : "identifies"
   DAT_ROM |o--o{ FILE : "matched by"
   SOURCE_ROOT ||--o| IDENTIFY_RUN : "tracks"
+  SOURCE_ROOT ||--o{ ART_ADDED : "pictures added"
+  SOURCE_ROOT ||--o{ ART_DIR : "folders created"
 
   SOURCE_ROOT {
     int id PK
@@ -198,7 +204,7 @@ erDiagram
     int root_id FK
     text system_id
     text rel_path "unique per root"
-    text kind "box, screenshot, marquee, video, manual, wheel, unknown"
+    text kind "box, screenshot, marquee, video, manual, wheel, title, unknown"
     text stem "matched to a ROM file name"
     int size
     real mtime_ms
@@ -402,6 +408,32 @@ erDiagram
 - `last_scan_json` keeps the last scan's outcome, so the health page survives a restart. When it
   would pass 64 KB, its lists are halved and `truncated` is set. While a scan runs, the state is
   `running`; a later start that still finds `running` reports the scan as interrupted.
+
+### Cover art writer
+
+`packages/engine/src/art/writer.ts` is the only code outside Tidy up that writes into a library
+([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)). A session takes the `art`
+lock on every library its games' pictures go to, removes the part files a crashed run left in
+`.romperoom/tmp`, and refuses to start unless each volume has its share of the review's bytes
+plus 256 MiB free. Each picture is saved as
+`.romperoom/media/<system>/<box|screenshot|title>/<ROM file stem>.png` (or `.jpg` from a card):
+a randomly named part file in `.romperoom/tmp`, fsynced and closed, then hard-linked into place,
+so an existing file is never overwritten, even one that appears during the write; it counts as
+already present. Where the file system has no hard links (SMB shares, FAT, exFAT), the target is
+checked to be absent and the part file is renamed into place: never copied there, so no
+half-written picture is ever visible at its name (the residual window is in ADR 41). Every folder on the way is
+checked by `isRealFolderChain` (`art/fsutil.ts`): each component is a directory to `lstat`,
+never a link, and its real path is inside the library's. The media row is linked to its game in
+the transaction that records the file in `art_added` (a record left at that path by a picture
+the player deleted is replaced: the exclusive link just proved its file gone); folders the writer
+made go to `art_dir`. A game whose picture name is too long or unsafe, whose picture would not
+link back to it (a stem another game shares, a folder mapped to another system), or whose file
+system refuses the name, is "not available" and never stops the run. `art/remove.ts` (Remove downloaded art) deletes only
+recorded files whose size and SHA-1 still match, under the same lock and the same folder check,
+then the recorded folders that are empty, deepest first. A record must have a shape the writer
+makes (`.romperoom/media/<system>/<kind>/<name>`, or one of its five folders), with no `.` or
+`..` segment; anything that fails a check is left and counted. A session's `end()` releases the
+lock only once every save in flight has settled.
 
 ## Scanning and its safety guards
 
@@ -728,18 +760,20 @@ release is idempotent and runs in `finally`. A refused request throws `LibraryBu
 (`code: 'LIBRARY_BUSY'`), which names the kind of job that holds the library, and starts
 nothing: a refused scan records no scan result.
 
-| Held \ requested | scan    | op      | deploy  | identify |
-| ---------------- | ------- | ------- | ------- | -------- |
-| scan             | refused | refused | refused | refused  |
-| op               | refused | refused | refused | refused  |
-| deploy           | refused | refused | shared  | refused  |
-| identify         | refused | refused | refused | refused  |
+| Held \ requested | scan    | op      | deploy  | identify | art     |
+| ---------------- | ------- | ------- | ------- | -------- | ------- |
+| scan             | refused | refused | refused | refused  | refused |
+| op               | refused | refused | refused | refused  | refused |
+| deploy           | refused | refused | shared  | refused  | refused |
+| identify         | refused | refused | refused | refused  | refused |
+| art              | refused | refused | refused | refused  | refused |
 
 - `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal,
   a purge, and removing a library. `deploy`: a deploy reads its source libraries (the deploy
   facade itself runs one deploy at a time). `identify`: an identify run holds the library it
   is identifying; replacing or removing a DAT takes every library's `identify` lock for its
-  transaction (see [Identification](#identification)).
+  transaction (see [Identification](#identification)). `art`: a cover art session or Remove
+  downloaded art (see [Cover art writer](#cover-art-writer)).
 - Only reads share: two deploys may read one library, nothing may change it while one does.
 
 ## Tidying the library
@@ -1183,7 +1217,61 @@ shapes, the commit in the path) and every resolved address the address guard (`a
 a connection is made. Redirects are refused, sizes and times are capped, and no credential or
 cookie is ever sent. Every attempt is appended to `<dataDir>/network-log.json` (the newest 500),
 which Network activity shows. Nothing calls the transport on boot, on a timer or after a scan:
-only "Download N files" and "Check for updates" do.
+only "Download N files" and "Check for updates" do, and cover art's "Get cover art" and its
+review's "Download" ([Cover art](#cover-art)).
+
+## Cover art
+
+```mermaid
+flowchart LR
+  subgraph R["Renderer (no network)"]
+    P["Health ›<br/>Games without cover art"]
+  end
+  subgraph M["Main process"]
+    H["art-host<br/>argument checks · plans"]
+    SV["Art service<br/>review · download<br/>PNG check · card"]
+    T["DAT transport<br/>node:https · allowlist<br/>size · blob SHA-1"]
+  end
+  subgraph E["Engine"]
+    WR["art writer<br/>lock · write · link"]
+    CR["card reader"]
+  end
+  P -- "art:* IPC" --> H --> SV --> T
+  T --> API["api.github.com<br/>tree listings"]
+  T --> RAW["raw.githubusercontent.com<br/>pictures"]
+  SV --> WR --> MED[(".romperoom/media")]
+  SV --> CR --> CARD[("SD card<br/>read only")]
+```
+
+Health's **Games without cover art** card fills gaps from the libretro-thumbnails collection on
+GitHub, or from the pictures a frontend already keeps on an SD card
+([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)). The page sends console
+ids, kind names and back the review's opaque plan id; `apps/desktop/src/main/art-host.ts` checks
+each and keeps at most eight plans.
+
+**Get cover art.** The art service (`main/art-download/service.ts`) asks `api.github.com` for
+each console's recursive tree listing at the branch `packages/profiles/data/thumbnails.json`
+records for its repository (one request per console; when GitHub marks the answer truncated,
+one per kind folder). Listings are cached in `<dataDir>/art-listings/` with their tree SHA and
+reused for 24 hours, so a second review asks nothing. A game is matched by its DAT name when it
+is identified, otherwise by its ROM file name, exactly (libretro's ten replaced characters
+aside); never fuzzily. Every game missing a kind is counted: the review shows, per console, the
+pictures no listing has (or that could not be saved or linked back) as "not available", the
+results add those for the chosen kinds to their "not available" figure (outside "Saved x of n"),
+and Health's counts come from the same games (`listArtWanted` and `artHealth` in
+`packages/engine/src/art/wanted.ts`). The review states the requests used and those left this
+hour, from GitHub's rate headers. **Download** fetches each picture from `raw.githubusercontent.com`
+through the same transport as game databases (one socket module, one request log), checks its
+size, git blob SHA-1 and PNG signature, and hands it to the engine's art writer
+([Cover art writer](#cover-art-writer)), which saves it under the ROM's stem and links it to the
+game at once: no rescan is needed.
+
+**Import art from an SD card** makes no request. The card is chosen from the deploy wizard's
+volume listing and the device from its profiles; `packages/engine/src/art/card.ts` reads the
+profile's media folders on the card and matches pictures to games by the ROM SHA-1 the card's
+Romperoom manifest records, else by identified title, else by file name. Only a picture that would
+fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it with the source
+`sd:<profile id>`. The card is only read.
 
 ## Deploy planner
 
