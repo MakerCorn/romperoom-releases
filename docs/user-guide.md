@@ -15,7 +15,7 @@ placeholder covers.
 - [Browse your games](#browse-your-games)
 - [Game details](#game-details)
 - [Library health](#library-health)
-- [Add a game database](#add-a-game-database)
+- [Getting game databases](#getting-game-databases)
 - [Identify your games](#identify-your-games)
 - [What the labels mean](#what-the-labels-mean)
 - [Check name matches](#check-name-matches)
@@ -33,7 +33,7 @@ placeholder covers.
 - Your games can be on this computer, an external drive or a network share (NAS). Connect the
   drive first.
 - Romperoom works best when each console has its own folder, such as `snes` or
-  `Game Boy Advance`. Folder names are matched to known systems without minding
+  `Game Boy Advance`. Folder names are matched to [known systems](systems.md) without minding
   case, accents, spaces or punctuation.
 - Zipped games (`.zip`, `.7z`) are fine.
 
@@ -124,32 +124,72 @@ Press **Scan again** after you change your files.
 | ------------------------------------------------------------- | ------------------------------------------------------------------ |
 | ![Library health](screenshots/health-console-shelf-light.png) | ![Library health, dark](screenshots/health-console-shelf-dark.png) |
 
-## Add a game database
+## Getting game databases
 
-Romperoom ships with no game databases (DAT files) of its own. Get them from the groups that
-make them, for free:
+Romperoom ships with no game databases (DAT files) of its own. Open **Settings** (top right) and
+switch to the **Game databases** tab: it offers two ways to get them, above the list of what you
+have already imported.
 
-- [No-Intro](https://datomatic.no-intro.org/) (cartridge-based consoles and handhelds)
-- [Redump](http://redump.org/) (disc-based consoles)
-- [libretro-database](https://github.com/libretro/libretro-database) (copies of both, in one
-  place, handy for trying several consoles at once)
+### Get a database from the official site
 
-Open **Settings** (top right) and switch to the **Game databases** tab. **Console** lets you
-say which console the file is for; leave it at **Work it out from the file** and Romperoom reads
-it from the file itself. Press **Import a DAT file** and choose the file in the dialog that
-opens. If Romperoom can't tell the console from the file, it asks you to choose one before it
-imports anything — when it has a guess, that guess is already chosen, for you to confirm. Once
-an import is done, **Console** goes back to **Work it out from the file**, so the next file is
-never tied to the console you chose for the last one.
+Pick a console under **Get a database from the official site** (consoles in your library come
+first) and press **Open download page**. Romperoom opens the group's own site in your browser —
+[No-Intro](https://datomatic.no-intro.org/) for cartridge-based consoles and handhelds,
+[Redump](http://redump.org/) for disc-based ones — and tells you the file name to look for.
+Romperoom itself makes no request for this: your browser downloads the file under the site's own
+terms.
 
-Each imported database is listed with its console, its name, where it came from, its version,
-the day you imported it, its number of games and its size. **Remove**
-asks you to confirm in place before it takes a database off the list. Games it had named go back
-to their file names until you identify again with the remaining databases.
+Once you have it, use **Import a DAT file** in the same section, just below: its own **Console
+for the file you import** says which console the file is for (leave it at **Work it out from the
+file** and Romperoom reads it from the file itself); once you've just opened a download page, the
+picker opens straight to your Downloads folder with the file you got already chosen, where your
+system supports that. If Romperoom can't tell the console from the file, it asks you to choose one
+before it imports anything — when it has a guess, that guess is already chosen, for you to
+confirm. Once an import is done, this console choice goes back to **Work it out from the file**,
+so the next file is never tied to the console you chose for the last one.
 
 | Light                                                            | Dark                                                                  |
 | ---------------------------------------------------------------- | --------------------------------------------------------------------- |
 | ![Game databases](screenshots/databases-console-shelf-light.png) | ![Game databases, dark](screenshots/databases-console-shelf-dark.png) |
+
+### Download for me
+
+Under **Download for me**, press **Review downloads** to see what Romperoom would fetch for the
+consoles already in your library, from [libretro-database][libretro-database] on GitHub (a copy
+of No-Intro's and Redump's data, converted and shared under the Creative Commons
+Attribution-ShareAlike 4.0 licence). Nothing is downloaded until you review the list:
+every file, its size, the total, where it comes from and the licence, before you press
+**Download**. A console already up to date is shown but can't be chosen again; one with a newer
+version is picked for you; one you already have a database for from elsewhere is not picked, and
+downloading it replaces that database. **Cancel** backs out without downloading anything.
+
+| Light                                                                     | Dark                                                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| ![Review downloads](screenshots/databases-review-console-shelf-light.png) | ![Review downloads, dark](screenshots/databases-review-console-shelf-dark.png) |
+
+While it downloads, Romperoom shows its progress file by file; **Stop downloading** keeps whatever
+has already been imported. The results list what happened to each file — imported, replaced,
+already up to date, or why one failed — with **Identify now** offered when something changed.
+
+| Light                                                                      | Dark                                                                            |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| ![Download results](screenshots/databases-results-console-shelf-light.png) | ![Download results, dark](screenshots/databases-results-console-shelf-dark.png) |
+
+**Check for updates** looks for a newer version of libretro-database's listing and says so next
+to the button, or says why it couldn't check. **Network activity**, below both sections, lists
+every request Romperoom has made for this feature — when, where to, what happened and how many
+bytes — so you can see for yourself that it only ever goes to GitHub, and only when you pressed
+Download or Check for updates.
+
+### Managing what you have imported
+
+Each imported database is listed below both sections, with its console, its name, where it came
+from, its version, the day you imported it, its number of games and its size. A database Romperoom
+downloaded for you also has a **Details** disclosure, named with that database (several downloaded
+databases are never all just "Details"): the source repository, the commit, the file's address and
+a **Licence** link. **Remove** asks you to confirm in place before it takes a database off the
+list. Games it had named go back to their file names until you identify again with the remaining
+databases.
 
 ## Identify your games
 
@@ -244,7 +284,7 @@ changes your files. Press **Try again** to read every one of them again now.
 ## Settings and themes
 
 **Settings** (top right) has two tabs: **Appearance** and **Game databases** (see
-[Add a game database](#add-a-game-database)). Appearance changes how Romperoom looks:
+[Getting game databases](#getting-game-databases)). Appearance changes how Romperoom looks:
 
 - **Theme:** Console shelf (warm and cosy), CRT neon (glowing arcade colours) or Clean modern
   (quiet, so the cover art stands out).
@@ -334,6 +374,7 @@ once you are sure. Files you put on the card yourself are never replaced or move
   database, not the file name; two revisions of one identified game still count as one game for
   **One version of each game**.
 
+[libretro-database]: https://github.com/libretro/libretro-database
 [deploy-device-lt]: screenshots/deploy-device-console-shelf-light.png
 [deploy-device-dk]: screenshots/deploy-device-console-shelf-dark.png
 [deploy-where-lt]: screenshots/deploy-where-console-shelf-light.png
@@ -405,7 +446,7 @@ much space, and you type `DELETE FOREVER` to confirm. A file that changed or wen
 it was set aside is kept, and the preview says how many. This cannot be undone.
 
 If Tidy up says Romperoom is busy, the library folder isn't available, or your library changed
-since you looked, see troubleshooting.
+since you looked, see [troubleshooting](troubleshooting.md#tidy-up-says-romperoom-is-busy).
 
 [tidy-overview-lt]: screenshots/tidy-overview-console-shelf-light.png
 [tidy-overview-dk]: screenshots/tidy-overview-console-shelf-dark.png
@@ -457,12 +498,13 @@ were removed only changes Romperoom's own list. On a card, it only replaces or m
 put there itself.
 
 **Does it go online?**
-No. It cannot reach the internet or your network, other than the drive your games are on. See
-[security.md](../SECURITY.md).
+Only if you ask. Under Settings › Game databases, Download for me and Check for updates contact
+GitHub, and Network activity lists every request. Everything else works offline. See
+[security.md](security.md).
 
 **Where does it keep its data?**
 In a folder of its own, not in your ROM folder (see
-[configuration.md](../README.md#your-data-and-uninstalling)). To start over, quit Romperoom and delete
+[configuration.md](configuration.md#data-folder)). To start over, quit Romperoom and delete
 that folder. Your games are not touched.
 
 **Why does a game say "Unidentified"?**
@@ -473,11 +515,11 @@ yet, or the file does not match what is in the databases you imported. See
 **Why are some games missing?**
 Their folder may not match a console: look under **Folders without a console** on Health. A
 file that couldn't be read is listed there too. Two revisions of one game show as one, and a game
-stored as a whole folder (some DOS and PC games) is not handled yet. See troubleshooting.
+stored as a whole folder (some DOS and PC games) is not handled yet. See [troubleshooting](troubleshooting.md).
 
 **Can it put games on my handheld's SD card?**
 Yes: see [Put games on an SD card](#put-games-on-an-sd-card). If a card doesn't show up, or
-copying is slow, see troubleshooting.
+copying is slow, see [troubleshooting](troubleshooting.md#a-card-doesnt-show-up).
 
 **My drive is slow. Can I stop a scan?**
 Yes: **Cancel scan**. The next scan continues close to where it stopped.

@@ -17,6 +17,7 @@ no source code here.
 
 - [Download](#download)
 - [Using Romperoom](#using-romperoom)
+- [Documentation](#documentation)
 - [Check your download](#check-your-download)
 - [Install](#install)
 - [Opening a build that is not code-signed](#opening-a-build-that-is-not-code-signed)
@@ -45,6 +46,29 @@ are not supported yet.
 
 The [user guide](docs/user-guide.md) walks through every screen: setting up your library,
 browsing, library health, putting games on an SD card, and tidying up.
+
+## Documentation
+
+Everything below lives in [docs/](docs/); the [documentation index](docs/README.md) links all of
+it in one place. Most of it is written for players, but a few pages are for the technically
+curious.
+
+| Document | What it covers |
+| --- | --- |
+| [Documentation index](docs/README.md) | One page linking to every document below. |
+| [User guide](docs/user-guide.md) | A walk-through of every screen in Romperoom, with pictures. |
+| [Troubleshooting](docs/troubleshooting.md) | Problems you might run into and what to do about them; none of them can harm your collection. |
+| [Supported systems](docs/systems.md) | Every console and computer Romperoom recognises, and the folder names it looks for. |
+| [Roadmap](docs/roadmap.md) | What Romperoom can already do, and what is still being built. |
+| [Architecture](docs/architecture.md) | How the app is put together under the hood, for the technically curious. |
+| [Development](docs/development.md) | How to build and run Romperoom from its source code. |
+| [Testing](docs/testing.md) | How Romperoom is tested before a release goes out. |
+| [Configuration](docs/configuration.md) | The handful of settings and options an advanced user can change. |
+| [Device profiles and systems](docs/profiles.md) | How Romperoom knows what an SD card or handheld needs, and how that list is kept. |
+| [Release process](docs/release.md) | How a new version is built, checked and published. |
+| [CI runners](docs/ci-runners.md) | The computers that build and test Romperoom automatically. |
+| [Security](docs/security.md) | What Romperoom protects, and how it is locked down. |
+| [Decisions](docs/decisions.md) | Short notes on some of the bigger choices behind how Romperoom works, and why. |
 
 ## Check your download
 
