@@ -27,6 +27,7 @@ was set up from what other players shared and has not been tested by us yet.
 - [Path safety](#path-safety)
 - [Status and sources](#status-and-sources)
 - [Shipped profiles and their sources](#shipped-profiles-and-their-sources)
+- [Saves](#saves)
 - [A worked example](#a-worked-example)
 - [Adding a device profile](#adding-a-device-profile)
 - [The systems catalog](#the-systems-catalog)
@@ -60,6 +61,10 @@ table lists every key of the schema.
 | `media.<kind>.format`          | `png`, `jpg`, `mp4` or `pdf`, or a list of them                             | The file formats the device reads. `jpg` also covers `.jpeg`.                                                         |
 | `media.<kind>.suffix`          | text, optional                                                              | Added to the ROM's stem to name the media file (Batocera's `-image`).                                                 |
 | `media.<kind>.maxWidth`        | whole number, optional                                                      | The widest image the device shows well.                                                                               |
+| `saves.root`                   | relative path                                                               | Where the device keeps in-game saves. Leave `saves` out when no source says (see [Saves](#saves)).                    |
+| `saves.folder`                 | relative path template                                                      | The folder below `saves.root`: `{system}`, `{folder}`, or `{core}` as the whole last segment.                         |
+| `saves.extensions.<id>`        | `.ext` in lower case, at least one                                          | The save files of that system. A system left out has no saves synced.                                                 |
+| `saves.cores.<id>`             | one path segment, optional                                                  | The core folder for a console with no saves on the card yet (`{core}` layouts only).                                  |
 | `gamelist.format`              | `none`, `es-de-xml`, `emulationstation-xml`, `batocera-xml` or `onion-json` | The game list file the device reads.                                                                                  |
 | `gamelist.path`                | relative path template                                                      | Where one system's game list goes. Required with a format, refused with `none`.                                       |
 | `limits.fileSystem`            | `fat32`, `exfat`, `ntfs`, `ext4` or `any`                                   | The card file system the device needs.                                                                                |
@@ -151,6 +156,35 @@ Known judgement calls, all reasons the profiles stay `community`:
   settings on the device.
 - Onion reads a `miyoogamelist.xml`, whose format its docs do not describe, so no game list is
   written.
+
+## Saves
+
+The optional `saves` block says where a device keeps in-game saves, so **Sync a card** can keep
+them in step with the library ([user guide](user-guide.md#sync-a-card)). A profile without it
+can still have its card's games imported; the review then says "Romperoom doesn't know where
+this device keeps saves." A save belongs to the game whose ROM stem it carries
+(`Tetris (World).srm` for `Tetris (World).gb`), compared in Unicode NFC, lower-cased. Save
+states (`.state`, `.state1`, `.state.auto`, `.ss0`) are never synced. `{core}` stands for one
+folder per emulator core, as RetroArch's "Sort saves into folders by core name" makes them; a
+save there belongs to the console whose ROM on the card carries its stem, and one whose stem
+names games of two consoles is left alone.
+
+| Profile    | Saves                                          | Consoles                        | Taken from                                                                                                                                                                                                                          |
+| ---------- | ----------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `muos`     | `MUOS/save/file/<core>/<stem>.srm`             | all but DS (DraStic by default) | MustardOS `internal`: `retroarch.default.cfg` (`savefile_directory`, `sort_savefiles_enable`), `bind.sh` (`MUOS/save` on the card) and the manifest's default cores; core names from `libretro-core-info` (`corename`).             |
+| `onion`    | `Saves/CurrentProfile/saves/<core>/<stem>.srm` | all but DS (DraStic)            | Onion's `retroarch.cfg` (`savefile_directory`, `sort_savefiles_enable`), each emulator's `launch.sh` (its core; gpSP's `saves/gpSP`) and Onion's FAQ (`.srm`, named like the ROM); core names from `libretro-core-info`.            |
+| `batocera` | `saves/<folder>/<stem>.srm`                    | all but DS                      | `batocera-launch-libretro`'s `emulator.py` (saves go to the system's saves folder, sorting off), `batocera_launch`'s `emulator.py` (`saves_dir` is `SAVES / system`) and `batocera_common/paths.py` (`SAVES` is `/userdata/saves`). |
+| `es-de`    | none                                           |                                 | ES-DE leaves saves to each emulator, outside its own folders; its user guide names no save location, so nothing on a card says where they are.                                                                                      |
+
+Judgement calls, recorded so a check on a real device can overturn them:
+
+- Only `.srm` is synced: RetroArch's save name for every core these profiles use by default
+  (PCSX ReARMed keeps memory card 1 as `.srm` too). Saves of standalone emulators (DraStic on
+  muOS and Onion, DuckStation if chosen on Batocera) are never read.
+- `cores` holds each default core's `corename` from `libretro-core-info`, the folder name
+  RetroArch sorts saves into. A card that already holds saves of a console uses that folder
+  instead; when it holds them in more than one, the library's saves are not offered to it.
+- No layout has been checked against a real card yet, so the profiles stay `community`.
 
 ## A worked example
 

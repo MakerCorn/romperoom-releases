@@ -18,6 +18,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live identification run](#live-identification-run)
 - [Live game database download run](#live-game-database-download-run)
 - [Live cover art run](#live-cover-art-run)
+- [Live card sync run](#live-card-sync-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -608,6 +609,89 @@ and fingerprinting the share) was **not evaluated**. What it measured:
   fingerprint was identical to the one before;
 - the ES-DE fixture card imported its 2 pictures (`sd:es-de`), with no connection but loopback,
   and the card was unchanged.
+
+## Live card sync run
+
+CI never syncs a real card: the end-to-end suite poses a folder as a Batocera card
+(`ROMPEROOM_TEST_VOLUME`). Only a live run shows a real library's names and sizes, a real share's
+file system (no hard links, case-insensitive names) and a real card's layout. Run it before a
+release that changes anything under `packages/engine/src/sync/`,
+`apps/desktop/src/main/sync-host.ts` or a profile's `saves` block. It is driven by hand with a
+throwaway Playwright script over the built app (`npm run build`), in the manner of
+`e2e/support.ts`, never committed:
+
+1. **Library.** Copy two or three console folders from your library's share into a scratch
+   library outside the share (never writing to the share), or make one of small files named with
+   real No-Intro titles, with one large file (hundreds of MB) so hashing shows in the timings.
+   Fingerprint the share's folders before and after (they must be identical; an error is "not
+   evaluated", never "unchanged"), and the scratch library outside `.romperoom` (paths, sizes and
+   content hashes).
+2. **Cards.** Scratch folders in two device profiles' layouts (Batocera: `roms/<folder>` and
+   `saves/<folder>`; muOS: `ROMS/<folder>` and `MUOS/save/file/<core>`), holding: a game the
+   library has under the same name; a copy of a library game under another name (the large one);
+   a new game; a save the library lacks; a game whose save only the library holds; and a save
+   state. With a real handheld's card, use a copy of it, never the card itself. The card's id is
+   `test:<real path>`, and ids over 100 characters are refused, so keep its path short.
+3. **Sync.** Launch with a fresh `ROMPEROOM_DATA_DIR`, the scratch library through
+   `ROMPEROOM_TEST_PICK_FOLDER` and the card through `ROMPEROOM_TEST_VOLUME`; set up the library,
+   open Sync a card, read the card and record the review (present by name and by hash, the new
+   game's folder, the saves and their actions). Sync. Check: the new game is in its console
+   folder with the card file's SHA-1; the card's save is in `.romperoom/saves/<system>/`, the
+   library's is on the card, the save state is left; the card has `.romperoom/card.json` with
+   only `v` and `id`.
+4. **Undo from the results.** The game and the new library saves are gone, the scratch
+   library's fingerprint outside `.romperoom` equals the one before, and the next review offers
+   them again. Sync again, then **Scan these consoles**: the new game appears on the wall.
+5. **Again.** Read the card a second time: nothing to do, and no game is hashed again (the large
+   copy's review takes milliseconds, not seconds: the card's hash cache).
+6. **Each way, then both.** Change the card's save and a library save, and sync: each goes the
+   other way, and the replaced copies are in `.romperoom/saves-backup/<system>/`. Change one save
+   on both sides: the review shows a conflict set to **Decide later** and Sync explains it has
+   nothing to do; pick the library's copy and sync: the card's save is backed up, then replaced.
+7. **Undo from Recent syncs** an earlier sync whose save has changed since: it is left, and
+   listed with its reason.
+8. **Pull the card.** Add a few large games, sync, and rename the card's folder once the first is
+   done: the run stops with "The card was removed", what was copied stays, nothing waits in Tidy
+   up's Recovery, no part file is left, and **Undo this sync** removes what it imported.
+9. **Throughout.** Snapshot both sides before and after every step: no file present before is
+   gone after a sync, and no content is lost anywhere; the card is unchanged outside its save
+   folders and `.romperoom`. The request log is empty and `network-log.json` absent; `lsof -nP
+   -i -a -p <pids>` over the app's processes shows loopback only (Playwright's own `--inspect`
+   and DevTools ports), with a listening socket in the script itself as the positive control.
+
+What it cannot observe: Windows and Linux; a real handheld playing the synced save (the layouts
+in [profiles.md](profiles.md#saves) are from each system's source, not checked on a device);
+FAT32 and exFAT cards (the card is a folder on the Mac's disk); a card pulled out mid-write (a
+renamed folder is not a removed device: a file already open is still read to its end); and
+connections between `lsof` samples (the request log is the complete record).
+
+**Last run: 2026-10-05,** macOS, the built app, a scratch library of 10 small files named with
+real No-Intro titles across Game Boy, Game Boy Advance and NES, plus one 512 MiB Game Boy Advance
+file, with one library save; a Batocera fixture card and a muOS fixture card. Your library's
+share was not mounted, so the share run (copying real folders and fingerprinting the share) was
+**not evaluated**. What it measured:
+
+- the first review counted 6 games present (2 under another name) and offered Metroid Fusion
+  for the folder Game Boy Advance, 2 saves to the library, 1 to the card and the save state left;
+  it took 1.4 s, hashing the 512 MiB copy; the review after the sync took 0.06 s;
+- the sync imported the game with the card file's SHA-1, both saves with the card's SHA-1s, wrote
+  the library's save to the card and `card.json` with only `v` and `id`;
+- Undo from the results restored the library's fingerprint outside `.romperoom` exactly, and the
+  next review offered the game and both saves again; after a second sync, Scan these consoles
+  put Metroid Fusion on the wall;
+- one save each way went across, each replaced copy in `.romperoom/saves-backup`; a conflict
+  defaulted to Decide later (Sync disabled, with its reason), and the library's pick backed up
+  the card's save before replacing it;
+- Undo from Recent syncs of a sync whose save had changed since was "Partly undone", listing the
+  changed save and the backup that could not go back;
+- renaming the card's folder during a 4-game, 1.6 GiB sync stopped it with "The card was
+  removed" after 2 games; Recovery was empty, no part file remained, and Undo removed both;
+- the muOS card synced per core: its game and save came in, and the library's saves went to the
+  `mGBA` and `Gambatte` folders;
+- across 8 sync and undo steps no file was removed and no content lost on either side; the
+  library ended with exactly the 2 imported games added, the cards were unchanged outside their
+  save folders and `.romperoom`, the request log was empty, `network-log.json` absent, and
+  `lsof` saw loopback only (its control saw its own socket).
 
 ## Real-card run
 

@@ -59,7 +59,8 @@ flowchart TB
   [security.md](security.md#main-process-requests)), and every session, the ones
   made later included, gets the same proxy and permission denials.
 - `window.romperoom` exposes exactly the channels in `apps/desktop/src/shared/ipc.ts`, plus
-  `onScanProgress`. The type check pins the channel list to the `RendererApi` type in both
+  seven push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
+  `onIdentifyProgress`, `onDatsProgress`, `onArtProgress` and `onSyncProgress`). The type check pins the channel list to the `RendererApi` type in both
   directions.
 - Every handler resolves to `{ ok, value }` or `{ ok: false, error: { name, message } }`. A stack
   never crosses the bridge. `contextBridge` keeps only an Error's message, so the preload writes
@@ -81,7 +82,7 @@ The full list of security rules is in
 ## Catalog schema
 
 The catalog is one SQLite file in the app data folder. It is never kept on the NAS. There are
-sixteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
+seventeen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
 per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry
 and confirmation columns (`unreadable_count`, `last_error`, `last_verified`,
 `last_complete_scan_id`) and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder`
@@ -112,7 +113,12 @@ kind (rebuilding `media` and moving rows already read from `.romperoom/media/<sy
 ES-DE's `titlescreens` folders from `unknown`, so no rescan is needed) and adds cover art's own
 records, deleted with their library: `art_added`, each picture Romperoom wrote into a library
 (path, size, SHA-1, kind, source and the listing it came from), and `art_dir`, each folder it
-created there. Opening a catalog written by a newer build is refused rather than downgraded.
+created there. Migration 17 adds card sync's records: `card` (each card's id from its
+`.romperoom/card.json`), `card_save` (per card, library and save, the size and SHA-1 both sides
+held when they last agreed), `card_rom_hash` (a card game's hashes, kept until its size or
+mtime changes) and `card_sync` (each sync, its journal and the bases it replaced, for undo); a
+library's rows go with it (see [Card sync](#card-sync)). Opening a catalog written by a newer
+build is refused rather than downgraded.
 Systems are not a table:
 `system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed
 in [systems.md](systems.md)). The connection
@@ -144,6 +150,12 @@ erDiagram
   SOURCE_ROOT ||--o| IDENTIFY_RUN : "tracks"
   SOURCE_ROOT ||--o{ ART_ADDED : "pictures added"
   SOURCE_ROOT ||--o{ ART_DIR : "folders created"
+  CARD ||--o{ CARD_SAVE : "last agreed"
+  SOURCE_ROOT ||--o{ CARD_SAVE : "saves of"
+  CARD ||--o{ CARD_ROM_HASH : "hash cache"
+  CARD ||--o{ CARD_SYNC : "synced by"
+  SOURCE_ROOT ||--o{ CARD_SYNC : "syncs into"
+  CARD_SYNC |o--o| OP_JOURNAL : "undone through"
 
   SOURCE_ROOT {
     int id PK
@@ -760,20 +772,22 @@ release is idempotent and runs in `finally`. A refused request throws `LibraryBu
 (`code: 'LIBRARY_BUSY'`), which names the kind of job that holds the library, and starts
 nothing: a refused scan records no scan result.
 
-| Held \ requested | scan    | op      | deploy  | identify | art     |
-| ---------------- | ------- | ------- | ------- | -------- | ------- |
-| scan             | refused | refused | refused | refused  | refused |
-| op               | refused | refused | refused | refused  | refused |
-| deploy           | refused | refused | shared  | refused  | refused |
-| identify         | refused | refused | refused | refused  | refused |
-| art              | refused | refused | refused | refused  | refused |
+| Held \ requested | scan    | op      | deploy  | identify | art     | sync    |
+| ---------------- | ------- | ------- | ------- | -------- | ------- | ------- |
+| scan             | refused | refused | refused | refused  | refused | refused |
+| op               | refused | refused | refused | refused  | refused | refused |
+| deploy           | refused | refused | shared  | refused  | refused | refused |
+| identify         | refused | refused | refused | refused  | refused | refused |
+| art              | refused | refused | refused | refused  | refused | refused |
+| sync             | refused | refused | refused | refused  | refused | refused |
 
 - `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal,
   a purge, and removing a library. `deploy`: a deploy reads its source libraries (the deploy
   facade itself runs one deploy at a time). `identify`: an identify run holds the library it
   is identifying; replacing or removing a DAT takes every library's `identify` lock for its
   transaction (see [Identification](#identification)). `art`: a cover art session or Remove
-  downloaded art (see [Cover art writer](#cover-art-writer)).
+  downloaded art (see [Cover art writer](#cover-art-writer)). `sync`: a card sync's run or
+  undo; its journal runs under that lock (see [Card sync](#card-sync)).
 - Only reads share: two deploys may read one library, nothing may change it while one does.
 
 ## Tidying the library
@@ -1272,6 +1286,61 @@ profile's media folders on the card and matches pictures to games by the ROM SHA
 Romperoom manifest records, else by identified title, else by file name. Only a picture that would
 fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it with the source
 `sd:<profile id>`. The card is only read.
+
+## Card sync
+
+```mermaid
+flowchart LR
+  subgraph R["Renderer (no network)"]
+    P["Put games on a card ›<br/>Sync a card"]
+  end
+  subgraph M["Main process"]
+    H["sync-host<br/>argument checks · safe card"]
+  end
+  subgraph E["Engine"]
+    RV["review<br/>layout · hash pool · three-way"]
+    RN["run<br/>sync lock · part files"]
+    J["Tidy up journal<br/>move steps · undo"]
+  end
+  P -- "sync:* IPC" --> H --> RV
+  H --> RN
+  RV --> CARD[("SD card")]
+  RN --> TMP[(".romperoom/tmp")] --> J
+  J --> LIB[("console folders<br/>.romperoom/saves")]
+  RN --> CARD
+  J --> BAK[(".romperoom/saves-backup")]
+  RN -- "card-save backups" --> BAK
+```
+
+**Sync a card** (Put games on a card › Sync a card) brings a handheld's new games and in-game
+saves into a library and newer saves back to the card, after a review, offline
+([ADR 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
+The page sends a listed volume id, a device profile id, a library id, back the review's opaque
+plan id with item ids from it, and a sync id; `apps/desktop/src/main/sync-host.ts` checks each,
+and syncs only a card every safe-target rule of the deploy wizard allows.
+
+**Review** (`packages/engine/src/sync/review.ts`). The card is read through its profile
+(`sync/layout.ts`): each console's files directly in `root.roms/<folder>` with the profile's ROM
+extensions (the systems catalog's when it lists none), and the saves in its `saves` folders
+([profiles.md](profiles.md#saves)). Links, special files, names over 255 bytes and files over the
+caps (4 GiB for a game, 32 MiB for a save) are refused and counted, never opened
+(`sync/card.ts`). A card game whose file-name key (NFC, lower case) matches a present library
+file of its console is already there; any other is hashed through the hash pool (cancellable;
+remembered per card id until its size or mtime changes) and compared with the catalog's SHA-1s;
+what is left is offered, to the console folder holding most of its games (or a new one in the
+library's style), unless a different file has the name there. Saves are paired by console, stem
+key and extension with `.romperoom/saves/<system>/` and decided three ways against the base, the
+last state both sides agreed on (`sync/decide.ts`).
+
+**Run** (`sync/run.ts`), under the library's `sync` lock. A new card gets
+`.romperoom/card.json`. Card bytes go to `sync-<uuid>.part` files in `.romperoom/tmp` and are
+checked against the review's SHA-1; then one Tidy up journal moves each into place (a replaced
+library save first moves to `.romperoom/saves-backup/<system>/<stem>.<time><ext>`). Then each
+library save going to the card is written beside its target as a part file and renamed over it,
+only after the card's own bytes were saved in the backup folder and the card file still holds
+what the review saw. The bases of the saves now in step are recorded (`card_save`), with the
+bases they replaced, so **Undo this sync** (`sync/undo.ts`) can reverse the journal and put them
+back. Stop finishes or discards the file being copied; what was copied before stays.
 
 ## Deploy planner
 

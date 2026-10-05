@@ -1,9 +1,10 @@
 # Using Romperoom
 
 Romperoom shows your ROM collection as a shelf of games, copies the games you pick to an SD
-card, and tidies up duplicates and leftover artwork. Only Tidy up changes your games, and only
-after you have seen what it will do; cover art only adds pictures to Romperoom's own folder,
-when you ask. This guide walks through every screen.
+card, syncs a handheld's card back, and tidies up duplicates and leftover artwork. Only Tidy up
+changes your games, and only after you have seen what it will do; cover art only adds pictures
+to Romperoom's own folder, when you ask; Sync a card only adds the games and saves you approve,
+and backs up any save it replaces. This guide walks through every screen.
 
 The pictures come from a small made-up test library, so the sizes are tiny and most games have
 placeholder covers.
@@ -25,6 +26,7 @@ placeholder covers.
 - [Files that couldn't be read](#files-that-couldnt-be-read)
 - [Settings and themes](#settings-and-themes)
 - [Put games on an SD card](#put-games-on-an-sd-card)
+- [Sync a card](#sync-a-card)
 - [Tidy up your library](#tidy-up-your-library)
 - [Keyboard](#keyboard)
 - [Gamepad](#gamepad)
@@ -444,6 +446,76 @@ once you are sure. Files you put on the card yourself are never replaced or move
 [deploy-check-dk]: screenshots/deploy-check-console-shelf-dark.png
 [deploy-done-lt]: screenshots/deploy-done-console-shelf-light.png
 
+## Sync a card
+
+**Sync a card** brings back what a handheld picked up away from your library: games copied
+straight onto its card, and the saves you made while playing. Newer saves from the library go
+back to the card, so you can carry on with a game on any of your devices. Nothing is deleted on
+either side, save states and BIOS files are never touched, and Romperoom stays offline.
+
+1. **Choose.** Open **Put games on a card** and press **Sync a card**. Pick the card, the device
+   it is from and, with more than one library, the library. Only cards Romperoom can write to are
+   listed (the same ones the copy wizard would use). **Read the card** looks at it without
+   changing anything; checking games the library may already have under another name can take a
+   while for large ones, and **Stop** goes back.
+2. **Review.** One screen, and nothing has been written yet:
+   - **New games on the card**, per console: each with its size and the library folder it goes
+     to (a new folder is marked as such). Games the library already has, by name or under
+     another name, are counted, not listed. A file that looks like a BIOS, or is part of a game
+     made of several files (a cue sheet and its tracks), starts unticked. A game whose name is
+     already used in the library by a different file is shown greyed out, with the reason; it is
+     never renamed or copied over. So is a game whose console folder can't be used: something
+     else in your library already has that folder's name, or the folder can't be used right
+     now. Files in the card's game folders that aren't games are skipped, and counted.
+   - **Saves**: **To the library**, **To the card**, and **Changed on both sides**, where you
+     pick which copy to keep (each with its size and when it last changed); the other is kept
+     as a backup. **Decide later** changes nothing. Saves deleted on one side are listed; the
+     other side keeps its copy. A device whose save folders Romperoom doesn't know only has its
+     games imported: "Romperoom doesn't know where this device keeps saves."
+   - **Saves left alone**, under their console: a save Romperoom can't use (it can't be read,
+     is empty or larger than a save should be, isn't a normal file, has another copy in a second
+     folder or a twin whose name differs only in capitals, could belong to games on two consoles,
+     or its game is no longer on the card), with the reason. Nothing is copied onto or over it, and it is never reported
+     deleted. When a console's save folder can't be used, the review says that console's saves
+     weren't checked.
+   - The totals, and a warning when the library or the card lacks room.
+
+   | Light                                     | Dark                                     |
+   | ----------------------------------------- | ---------------------------------------- |
+   | ![The sync review, light][sync-review-lt] | ![The sync review, dark][sync-review-dk] |
+
+3. **Sync.** A progress bar with the item and bytes so far, and **Stop**: the file being copied
+   is finished or left out, and everything copied before stays. Every save that is replaced, on
+   either side, is first copied to the library's `.romperoom/saves-backup` folder, and backups
+   are never removed by Romperoom.
+4. **Results.** What was imported and synced, anything that could not be (with the reason), and
+   how much the backup folder holds. **Scan these consoles** adds the new games to your library
+   (they appear after that scan). **Undo this sync** takes back what it put in the library:
+   imported games and new saves leave their folders and replaced library saves come back from
+   their backups, but only where nothing changed since; each file it left is listed with the reason. Saves it
+   wrote to the card stay there; their earlier copies are in the backup folder. **Recent syncs**
+   under **Sync a card** lists the latest ones, each with its own Undo while it can still be
+   undone. When the library was busy (a scan, say) and nothing was written, **Back to the
+   review** lets you sync the same choice once it is free.
+
+   | Light                                            | Dark                                            |
+   | ------------------------------------------------ | ----------------------------------------------- |
+   | ![The results of a sync, light][sync-results-lt] | ![The results of a sync, dark][sync-results-dk] |
+
+The first sync gives the card a small file, `.romperoom/card.json`, holding only a random id, so
+Romperoom knows the card next time. Saves are matched to games by name: `Tetris (World).srm`
+belongs to `Tetris (World).gb`. Which devices keep their saves where is in
+[profiles.md](profiles.md#saves).
+
+A known limit: a copy of a card made with a disk tool carries the same id, so Romperoom takes it
+for the card it was copied from. Syncing both may then show more saves as changed on both sides
+than you expect. Nothing is ever deleted either way: pick the copy to keep, or **Decide later**.
+
+[sync-review-lt]: screenshots/sync-review-console-shelf-light.png
+[sync-review-dk]: screenshots/sync-review-console-shelf-dark.png
+[sync-results-lt]: screenshots/sync-results-console-shelf-light.png
+[sync-results-dk]: screenshots/sync-results-console-shelf-dark.png
+
 ## Tidy up your library
 
 **Tidy up** finds copies of the same game and pictures no game uses. Nothing moves until you
@@ -557,8 +629,12 @@ Only when you ask it to in Tidy up, after a preview. Even then it only sets file
 your library, where you can put them back; deleting them forever needs you to type
 `DELETE FOREVER`. Scanning and copying to a card only read your library. Confirming that games
 were removed only changes Romperoom's own list. On a card, it only replaces or moves files it
-put there itself. Cover art never changes a game file: it only adds pictures to the library's
-own `.romperoom/media` folder when you ask, and removes only the ones it added.
+put there itself, except that [Sync a card](#sync-a-card) replaces a save you approved after
+copying the card's own to the library's `.romperoom/saves-backup`. In the library, Sync a card
+adds games but never changes or deletes one, moves a save it replaces to the same backup folder
+first, and its Undo removes only what it added.
+Cover art never changes a game file: it only adds pictures to the library's own
+`.romperoom/media` folder when you ask, and removes only the ones it added.
 
 **Does it go online?**
 Only if you ask. Under Settings › Game databases, Download for me and Check for updates contact
@@ -579,7 +655,8 @@ yet, or the file does not match what is in the databases you imported. See
 **Why are some games missing?**
 Their folder may not match a console: look under **Folders without a console** on Health. A
 file that couldn't be read is listed there too. Two revisions of one game show as one, and a game
-stored as a whole folder (some DOS and PC games) is not handled yet. See [troubleshooting](troubleshooting.md).
+stored as a whole folder (some DOS and PC games) is not handled yet. See
+[troubleshooting](troubleshooting.md).
 
 **Can it put games on my handheld's SD card?**
 Yes: see [Put games on an SD card](#put-games-on-an-sd-card). If a card doesn't show up, or

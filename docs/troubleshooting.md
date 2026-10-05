@@ -2,7 +2,8 @@
 
 Problems you might meet, and what to do. Only Tidy up changes your games, and it only sets
 files aside, where you can put them back; cover art only adds pictures to Romperoom's own
-`.romperoom/media` folder, when you ask. None of these problems can harm your collection.
+`.romperoom/media` folder, when you ask; Sync a card only adds the games and saves you approve,
+and backs up any save it replaces. None of these problems can harm your collection.
 
 ## Contents
 
@@ -25,6 +26,10 @@ files aside, where you can put them back; cover art only adds pictures to Romper
 - [A card is greyed out](#a-card-is-greyed-out)
 - [The games don't fit on the card](#the-games-dont-fit-on-the-card)
 - [Copying to the card is slow](#copying-to-the-card-is-slow)
+- [A card can't be synced](#a-card-cant-be-synced)
+- [A game from the card wasn't offered](#a-game-from-the-card-wasnt-offered)
+- [A save wasn't synced](#a-save-wasnt-synced)
+- [Undo this sync left something](#undo-this-sync-left-something)
 - [Tidy up says Romperoom is busy](#tidy-up-says-romperoom-is-busy)
 - [Your library folder isn't available](#your-library-folder-isnt-available)
 - [Your library changed since you looked](#your-library-changed-since-you-looked)
@@ -295,6 +300,41 @@ stays.
   which slows a copy of many files. That is normal; let it finish. Romperoom has not been run on
   a real Windows PC yet, so tell us how it went.
 - You can **Cancel the copy** at any time. The next copy picks up from there.
+
+## A card can't be synced
+
+Sync a card lists only cards Romperoom could also copy games to: not the disk your computer runs
+from, not a read-only or locked card, not a network drive, and not a card that holds (or is
+inside) your library. Unlock the card or plug it in directly, then press **Look again**. If the
+card was synced from another window or taken out since the review, read it again.
+
+## A game from the card wasn't offered
+
+The review offers only games the library lacks. A game is already there when a library file of
+the same console has the same file name (letter case and accents aside), or the same contents
+under another name; the review counts those. A game is shown greyed out when a different file
+already has its name in the library folder it would go to: rename one of them yourself. Files
+the device's profile does not list for that console (`.txt`, pictures, folders inside a console
+folder) are not games here, and links, special files, names longer than 255 bytes and files over
+4 GiB are left alone.
+
+## A save wasn't synced
+
+A save belongs to the game whose name it carries (`Tetris (World).srm` for
+`Tetris (World).gb`). Save states are never synced. On muOS and Onion, saves sit in one folder
+per emulator core: a save whose name matches games of two consoles on the card is left alone,
+and a library save goes to a console's core folder on the card only when the card uses just one
+for that console (or none yet). A save that changed on both sides waits for you to pick which to
+keep; **Decide later** leaves both as they are. Devices whose save folders Romperoom doesn't know
+(ES-DE) have only their games imported ([profiles.md](profiles.md#saves)).
+
+## Undo this sync left something
+
+Undo puts back only what still holds exactly what the sync wrote: a game or save that changed
+since is left, and listed. Saves written to the card are never undone; their earlier copies are
+in the library's `.romperoom/saves-backup` folder, named `<game>.<date and time>.<ext>`. A sync
+cut short by a crash or by the library going away waits in Tidy up's Recovery, like a tidy, to
+be finished or rolled back.
 
 ## Tidy up says Romperoom is busy
 

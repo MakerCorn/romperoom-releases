@@ -12,9 +12,11 @@ The short version:
   cover art, and then only to two GitHub hosts.
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
-- Only Tidy up moves files in a library, and only into its set-aside folder, after a preview.
-  Deleting them forever needs typed words, and is the only deletion of the player's files. Cover
-  art adds pictures only under `.romperoom/media`, never replacing a file.
+- Only Tidy up moves games and artwork in a library, and only into its set-aside folder, after a
+  preview. Deleting them forever needs typed words, and is the only deletion of the player's
+  files. Cover art adds pictures only under `.romperoom/media`, never replacing a file. Sync a
+  card adds the games and saves the player approves (console folders, `.romperoom/saves`),
+  replacing a save only after a backup, and writes on a card only its id file and saves.
 
 ## Contents
 
@@ -230,9 +232,9 @@ both handlers.
 ## IPC channels
 
 The page reaches the host only through `window.romperoom`. That object has one function per
-channel in the `IPC` table (`src/shared/ipc.ts`), plus six push listeners (`onScanProgress`,
-`onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress` and
-`onArtProgress`). Raw
+channel in the `IPC` table (`src/shared/ipc.ts`), plus seven push listeners (`onScanProgress`,
+`onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress`,
+`onArtProgress` and `onSyncProgress`). Raw
 `ipcRenderer` and IPC event objects never cross the bridge. `IPC_MATCHES_API` makes the type
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
@@ -316,6 +318,13 @@ test checks that this table lists exactly the channels in `IPC`.
 | `art:importCard` | page → host | Saves the reviewed card pictures | library (`.romperoom/media`) and catalog |
 | `art:remove` | page → host | Deletes the pictures cover art added that are unchanged | library and catalog |
 | `art:progress` | host → page | Cover art progress, then the result, to the window that started it | no |
+| `sync:review` | page → host | Reads a listed card through a device profile against a library (hashing card games, offline) and returns a review; volume id, profile id and library id only | catalog (card game hashes of a known card) |
+| `sync:run` | page → host | Imports the chosen games and syncs the chosen saves; the review's plan id, its item ids and a side per conflict only | library (console folders, `.romperoom/saves`, `.romperoom/saves-backup`, `.romperoom/tmp`), the card (saves, `.romperoom/card.json`) and catalog |
+| `sync:cancel` | page → host | Stops this window's card sync (the file being copied is finished or discarded) | no |
+| `sync:status` | page → host | This window's running or last card sync (a reloaded page adopts it) | no |
+| `sync:undo` | page → host | Undo this sync: what it wrote into the library goes back where unchanged; a sync id only | library and catalog |
+| `sync:list` | page → host | The latest syncs, newest first | no |
+| `sync:progress` | host → page | Card sync progress, then the result, to the window that started it | no |
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
 
@@ -372,9 +381,26 @@ a time, and any other is refused with `ArtBusyError`; a run binds to the window 
 it, its progress and result go only to that window, only it can stop it, and closing that window
 or quitting stops it (each saved picture stays).
 
+The `sync:` channels are handled by the sync host (`src/main/sync-host.ts`). The page sends a
+volume id from the host's own drive listing (at most 100 characters), a device profile id the
+host knows, a library id, back the review's plan id with item ids from that review (`g<n>`,
+`s<n>`, each once) and, per conflict, the side that wins (`card` or `library`), and a sync id. It
+never sends a path, a URL or a file name. The plan id must be a lower-case UUID and one the host
+gave to that same window (at most 4 are kept); anything else is refused with
+`SyncArgumentError` before the engine is called. A card is synced only when every deploy
+safe-target rule passes for it, at the review and again before the run, which also needs the
+same mount ([Filesystem safety](#filesystem-safety)); a card that fails that second check (taken
+out, mounted elsewhere, refused by a rule, or not checkable) is refused with
+`SyncCardRefusedError`, and the page says the card can't be synced. One sync job (a review, a
+run or an undo) runs at a time, and any other is refused with `SyncBusyError`; a review or run
+binds to the window that started it, its progress and result go only to that window, only it can
+stop it, and closing that window or quitting stops it (what was copied stays). The results
+carry names and library-relative places, never the card's mount or the library's path; why Undo
+left a file is one of a closed set of reasons, and the file system's own message is only logged.
+
 The engine members that are _not_ exposed are `close`, `lastScan`, `resolveMedia`,
-`recoverJournals`, `resolveJournal` and the `tidy`, `identify` and `art` facades themselves
-(host-only). The operation
+`recoverJournals`, `resolveJournal` and the `tidy`, `identify`, `art` and `sync` facades
+themselves (host-only). The operation
 engine (`applyPlan`, `undoJournal` and the rest) has no channel at all: the page reaches tidy
 runs only through the tidy host's ids.
 
@@ -606,6 +632,10 @@ for the download (the official-site path still works).
   (`.romperoom/media`) is written only by cover art, when the player confirms a review (see
   [Filesystem safety](#filesystem-safety)); each picture it adds is recorded in the catalog
   (`art_added`, with its size, SHA-1, source and pin, and `art_dir` for the folders it made).
+  Sync a card writes the games and saves the player approves into console folders,
+  `.romperoom/saves` and `.romperoom/saves-backup`, through one journal (see
+  [Filesystem safety](#filesystem-safety)); the catalog keeps its card ids, save bases and card
+  game hashes (`card`, `card_save`, `card_rom_hash`, `card_sync`).
 - **Logs** go to the terminal (stdout and stderr). Messages may hold library paths. They never
   hold file contents. The one log file is `network-log.json` (below).
 - **Game database files** (see [configuration.md](configuration.md#data-folder)):
@@ -679,10 +709,48 @@ for the download (the official-site path still works).
   from the card") unless its size and format still match the review. The check and the read are
   two steps (see [Gaps](#gaps)).
 
+- **Sync a card writes only what the review offered**
+  ([decision 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card),
+  `packages/engine/src/sync/`). The rules:
+  - Only the engine writes. The page passes no path, only ids from the review; the host passes
+    only the mount path of the card it listed.
+  - The host syncs only a card from its own listing that every deploy safe-target rule allows
+    (not a system disk, not read-only, not a network drive, not a fixed disk, not a protected
+    folder such as the home or temp folder, not holding or inside a library),
+    checked at the review and again before the run, which also needs the same mount. A review's
+    plan id works only for the window it was given to; one sync job runs at a time.
+  - Into the library: card bytes go to `.romperoom/tmp/sync-<uuid>.part` (exclusive create,
+    fsync, close) and are checked against the SHA-1 the review measured; then one Tidy up journal
+    moves each into its console folder or `.romperoom/saves/<system>/`, never over a file. A
+    library save being replaced is first moved to `.romperoom/saves-backup/<system>/`. Every
+    folder on the way is a real folder chain inside the library. The run holds the library's
+    `sync` lock.
+  - On the card: only `.romperoom/card.json` (`{ "v": 1, "id": "<random uuid>" }`, at most
+    4 KiB, read with a strict schema) and saves in the profile's save folders. Each is written
+    first to a part file beside it (`<name>.romperoom-part`, exclusive create, fsync, close); a
+    regular file already holding that name is Romperoom's own leftover and is removed first,
+    anything else there refuses the write. A new save goes into place by an exclusive hard link,
+    or, on a card without hard links (FAT, exFAT), by the no-clobber rename: neither ever
+    replaces a file, so a save the player made meanwhile wins. A card save is replaced only
+    after its bytes are in the library's `.romperoom/saves-backup` folder (not journaled, so no
+    undo or rollback can move that copy), and only while it still holds what the review saw;
+    the part file is then renamed over it. The windows these checks leave are in
+    [Gaps](#gaps).
+  - Reading the card: links, FIFOs, devices and sockets are refused before anything is opened;
+    names over 255 bytes or with control characters and files over the caps (games 4 GiB,
+    saves 32 MiB) are left and counted; a file is opened without following a final link and
+    without blocking, below folders checked to be a real chain inside the card.
+  - Nothing of the player's is deleted on either side. Undo this sync reverses the journal where
+    files still hold what the sync wrote: it puts back the saves it replaced, and removes the
+    copies of card games and the new saves it added to `.romperoom/saves` that are unchanged
+    (they come back into `.romperoom/tmp` first); card writes stay, their earlier bytes in the
+    backup folder.
+
 ## Emptying the quarantine
 
 Emptying the quarantine (`purge` on the tidy facade) is the only code in Romperoom that deletes a
-user's file. Everything else moves files into quarantine and can be undone.
+user's file. Everything else moves files into quarantine and can be undone. Removing cover art
+and Undo this sync delete only files Romperoom itself added, still unchanged since.
 
 **What it defends against**
 
@@ -872,14 +940,19 @@ somehow became markup.
   requests, shared with "Check for updates"), and download the pictures a review found for the
   library's own gaps into `.romperoom/media`. It can import pictures from a card the host lists,
   and remove the pictures cover art added that are unchanged.
+- Sync a card the host lists, if every deploy safe-target rule allows it: import the games its
+  review offered into the library's console folders, copy the saves it offered both ways (each
+  replaced save backed up first, a conflict's side as the page picks), give the card its id
+  file, and undo a sync.
 
 **It cannot:**
 
 - Run Node.js, require a module, or reach `ipcRenderer` directly.
-- Create or change any file, or move or delete one outside the tidy and cover art rules. Outside
-  [Tidying up](#tidying-up) and cover art no channel writes anything to a library, and the
-  operation engine has no channel. Cover art writes only new pictures under `.romperoom/media`
-  (and part files in `.romperoom/tmp`), never over a file.
+- Create or change any file, or move or delete one outside the tidy, cover art and card sync
+  rules. Outside [Tidying up](#tidying-up), cover art and card sync no channel writes anything to
+  a library, and the operation engine has no channel. Cover art writes only new pictures under
+  `.romperoom/media` (and part files in `.romperoom/tmp`), never over a file. Card sync writes
+  only what its review offered ([Filesystem safety](#filesystem-safety)).
 - Read a file's contents. It sees hashes and sizes, never bytes, except images through the
   media scheme.
 - Load `file://` or another origin, or navigate the window away.
@@ -894,6 +967,9 @@ somehow became markup.
   anywhere but the store. It sends console ids, kind names, a listed volume id, a profile id and
   plan ids the host gave to its own window; the pictures, their names and their places come
   from the review the host made.
+- Name a path, a file name or a folder for card sync. It sends a listed volume id, a profile id,
+  a library id, a plan id the host gave to its own window with item ids from that review and a
+  side per conflict, and a sync id; the files, their names and their places come from the review.
 
 It can also make the host download mapped DATs from `raw.githubusercontent.com` at the current
 pin and import them (which can replace a same-named DAT and so revert its matches, as an import
@@ -910,8 +986,9 @@ reviewed against this list.
 
 ## Deploying to a card
 
-Writing to a card is the only thing Romperoom does outside its own data folder, so the page is
-treated as hostile here too. The rule: **the page never names a path to write to.**
+Writing to a card is one of the few things Romperoom does outside its own data folder (the
+others write into a library: Tidy up, cover art and card sync), so the page is treated as
+hostile here too. The rule: **the page never names a path to write to.**
 
 **Threat model.** Assume the page is compromised (a bug in rendering a game title, a malicious
 gamelist). It can call every `deploy:` channel with any arguments, in any order, as often as it
@@ -995,6 +1072,17 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
   the real-chain check and the open would be read through, and a picture replaced since the
   review by another of the same size and format is imported as found. The checks narrow both to
   that instant; the bytes saved are still only a picture of at most 16 MiB in the store.
+- **Card sync checks a card's folders, then writes.** `O_NOFOLLOW` covers only a file's last name,
+  so a card folder swapped for a link between the real-folder check and the open, the part file's
+  exclusive create, its link or its rename (`.romperoom/card.json` or a save) would be followed, and
+  one write could land outside the card. It needs another program changing the card's folders at
+  that instant, not a hostile card's own contents. A card save rewritten between the sync's last
+  check of its bytes and the rename that replaces it is replaced, and those newest bytes are in no
+  backup: no file system offers a compare-and-swap rename, so the check narrows the window to that
+  instant. A new card save goes into place by an exclusive hard link; on a card without hard links
+  (FAT, exFAT), by the no-clobber rename, where a write into Romperoom's own reserved empty file in
+  the instant before the rename would be replaced ([decision
+  42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
 - **Emptying the quarantine checks a file, then deletes it.** A file replaced between its final
   hash and its `unlink` is deleted. The window is one system call, inside a folder only the app
   writes to ([emptying the quarantine](#emptying-the-quarantine)).
@@ -1034,6 +1122,11 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
 - **Drag and drop is tested synthetically, not by hand.** Before each release, drag a `.html`
   file and a ROM from Finder (or Explorer) onto the wizard and the wall. The window should stay
   on the app, show the not-allowed cursor and log nothing.
+- **Card sync checks, then reads and writes.** The windows of the two cover art entries above
+  apply to its library folders and card reads too. The hash pool reads a card game by path, so a
+  game swapped for a link after its check is hashed through it; only a hash is learned, and the
+  copy reads the card itself, no-follow, and must match that hash
+  ([decision 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
 
 ## Packaging checklist
 

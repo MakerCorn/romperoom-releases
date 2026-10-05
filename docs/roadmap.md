@@ -123,6 +123,12 @@ Put a playable selection on a handheld's SD card.
   formatting ([architecture.md](architecture.md#card-writer)). The page never names a path
   ([decisions.md](decisions.md#23-the-page-never-names-a-path-to-write-to)).
 - **BIOS folders:** a BIOS folder chosen per library is copied to a device that has one.
+- **Sync a card:** bring a handheld's new games and in-game saves into the library and newer
+  saves back to the card, in one reviewed, undoable step that deletes nothing on either side
+  ([user guide](user-guide.md#sync-a-card),
+  [ADR 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
+  Save layouts are measured from each system's source for muOS, Onion and Batocera; ES-DE syncs
+  games only.
 
 Proven on a FAT32 disk image on macOS and, end to end, on a test folder posing as a card.
 Windows and Linux listing is tested from recorded output only, the wizard has not been run

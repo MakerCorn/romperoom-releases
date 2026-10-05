@@ -47,6 +47,7 @@ design history.
 39. [A game's identity is its DAT name, and a match never leaves its system](#39-a-games-identity-is-its-dat-name-and-a-match-never-leaves-its-system)
 40. [Game databases can be downloaded from one pinned source, only when asked](#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)
 41. [A library gains one writer outside Tidy up](#41-a-library-gains-one-writer-outside-tidy-up)
+42. [Card sync writes into a library and onto a card](#42-card-sync-writes-into-a-library-and-onto-a-card)
 
 ## 1. One repository, four workspaces
 
@@ -561,3 +562,44 @@ stands.
 - **Network:** Get cover art lists and downloads pictures from `api.github.com` and
   `raw.githubusercontent.com` through the game database transport (ADR 40's rules), only when
   pressed; nothing else changes in ADR 10.
+
+## 42. Card sync writes into a library and onto a card
+
+- **Decision:** **Sync a card** brings a handheld's new games and in-game saves into the library
+  and sends newer saves back, only when the user confirms a review, and never deletes anything
+  on either side. Into the library it writes only into console folders (imported games, never
+  over a file) and under `.romperoom/saves`, `.romperoom/saves-backup` and `.romperoom/tmp`, with
+  cover art's guarantees (ADR 41): every folder on the way is a real folder inside the library,
+  never a link, and the work holds the library's `sync` lock. Card bytes reach the library only
+  through part files in `.romperoom/tmp` (exclusive create, fsync, close) checked against the
+  SHA-1 the review measured, then go into place through one Tidy up journal (ADR 7): `move`
+  steps that never replace a file, so Undo this sync reverses them, only where a file still
+  holds what the sync wrote. A library save that is replaced is first moved to
+  `.romperoom/saves-backup`. On the card it writes `.romperoom/card.json` (a random id) and saves:
+  a card save is replaced only after its bytes are saved in the library's backup folder, through
+  a part file beside it, fsynced, then renamed over it once it still holds what the review saw.
+- **Why:** "game saves should be portable" (owner decision 2): a save made on a handheld is
+  unique until it is copied, and the library is the hub. The journal already proves never
+  overwriting, crash recovery and undo; reusing it keeps one mechanism for moving files.
+- **Cost:** the library has two writers outside Tidy up, and the promise narrows again: "never
+  changes your games" still holds (games are only added), but saves under `.romperoom/saves` are
+  replaced, always after a backup. The deploy writer's rule (ADR 22) still governs what it writes;
+  card sync is a second writer to a card, which replaces only saves, after a backup. Card writes are
+  not undone automatically (their earlier bytes are in the backup folder). The windows ADR 41
+  records apply here too: a folder swapped for a link between the check and the write, or a card
+  file swapped between the check and the read, at that instant; and the hash pool reads a card game
+  by path, so a game swapped for a link after its check is hashed through it (only a hash is
+  learned; the copy reads the card itself, no-follow, and is checked against that hash). On the
+  card, no-follow covers only a file's last name: a card folder swapped for a link between its
+  real-folder check and the open, the part file's exclusive create, its link or its rename (the id
+  file or a save) is followed, so one write could land outside the card. It needs another program
+  changing the card's folders at that instant, not a card's own contents. A new card save goes into
+  place by an exclusive hard link, which never replaces a file; a card without hard links (FAT,
+  exFAT, on any system) gets the no-clobber rename instead, where only a write into Romperoom's own
+  reserved empty file in the instant before the rename would be replaced. A card save the player
+  rewrites between the run's last check of its bytes and the rename over it is replaced, and those
+  newest bytes are in no backup (no file system offers a compare-and-swap rename; the check narrows
+  it to that instant). In the library, each journal step checks its folders are real folders inside
+  the library right before it makes a folder or reserves its destination's name, so a folder swapped
+  for a link during the run refuses the step. A sync interrupted by a crash waits, like any journal,
+  in Tidy up's Recovery, which finishes or rolls it back with the same per-step check.
