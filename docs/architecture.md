@@ -59,9 +59,10 @@ flowchart TB
   [security.md](security.md#main-process-requests)), and every session, the ones
   made later included, gets the same proxy and permission denials.
 - `window.romperoom` exposes exactly the channels in `apps/desktop/src/shared/ipc.ts`, plus
-  seven push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
-  `onIdentifyProgress`, `onDatsProgress`, `onArtProgress` and `onSyncProgress`). The type check pins the channel list to the `RendererApi` type in both
-  directions.
+  eight push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
+  `onIdentifyProgress`, `onDatsProgress`, `onArtProgress`, `onSyncProgress` and
+  `onStandardiseProgress`). The type check pins the channel list to the `RendererApi` type in
+  both directions.
 - Every handler resolves to `{ ok, value }` or `{ ok: false, error: { name, message } }`. A stack
   never crosses the bridge. `contextBridge` keeps only an Error's message, so the preload writes
   the name into it (`LibraryBusyError: ...`) and `errorNameOf()` reads it back: the screens tell
@@ -82,7 +83,7 @@ The full list of security rules is in
 ## Catalog schema
 
 The catalog is one SQLite file in the app data folder. It is never kept on the NAS. There are
-seventeen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
+eighteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
 per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry
 and confirmation columns (`unreadable_count`, `last_error`, `last_verified`,
 `last_complete_scan_id`) and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder`
@@ -117,8 +118,16 @@ created there. Migration 17 adds card sync's records: `card` (each card's id fro
 `.romperoom/card.json`), `card_save` (per card, library and save, the size and SHA-1 both sides
 held when they last agreed), `card_rom_hash` (a card game's hashes, kept until its size or
 mtime changes) and `card_sync` (each sync, its journal and the bases it replaced, for undo); a
-library's rows go with it (see [Card sync](#card-sync)). Opening a catalog written by a newer
-build is refused rather than downgraded.
+library's rows go with it (see [Card sync](#card-sync)). Migration 18 is for Standardise the
+library: `op_step` is rebuilt with foreign keys off so a step may move a whole folder
+(`move-dir`, with the folder's inode in `node_ino` and its device, kept as a record, in
+`node_dev`, and the catalog link `tree`, which moves every row under the folder),
+`library_reconnect` is rebuilt so its `trigger` also allows `standardise`, and three tables are
+added, deleted with their library: `standardise_profile` (each library's chosen device
+profile), `standardise_run` (each run, its two journals, its units and outcome) and
+`standardise_backup` (each game list, cue sheet or playlist a run replaced, and where the
+original went; see Standardise the library below). Opening a catalog written by a newer build
+is refused rather than downgraded.
 Systems are not a table:
 `system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed
 in [systems.md](systems.md)). The connection
@@ -156,6 +165,10 @@ erDiagram
   CARD ||--o{ CARD_SYNC : "synced by"
   SOURCE_ROOT ||--o{ CARD_SYNC : "syncs into"
   CARD_SYNC |o--o| OP_JOURNAL : "undone through"
+  SOURCE_ROOT ||--o| STANDARDISE_PROFILE : "names folders by"
+  SOURCE_ROOT ||--o{ STANDARDISE_RUN : "standardised by"
+  STANDARDISE_RUN |o--o| OP_JOURNAL : "undone through"
+  STANDARDISE_RUN ||--o{ STANDARDISE_BACKUP : "replaced"
 
   SOURCE_ROOT {
     int id PK
@@ -257,7 +270,7 @@ erDiagram
     int id PK
     text root_path
     text at
-    text trigger "user, scan"
+    text trigger "user, scan, standardise"
     text root_dev "the identity recorded now"
     text root_ino
     text root_real
@@ -269,7 +282,7 @@ erDiagram
     int id PK
     int journal_id FK
     int seq "unique per journal"
-    text action "move, quarantine"
+    text action "move, quarantine, move-dir"
     text from_path
     text to_path
     text sha1
@@ -278,11 +291,13 @@ erDiagram
     text error
     text reserved_dev "our empty name reservation"
     text reserved_ino
-    text catalog_kind "file, media"
-    int catalog_id
+    text catalog_kind "file, media, tree"
+    int catalog_id "a tree's: the library"
     text keeper_path "the copy that must survive"
     text keeper_sha1
     text expect_sha1
+    text node_dev "a moved folder's device (a record)"
+    text node_ino "a moved folder's inode"
   }
   OPERATION {
     int id PK
@@ -739,7 +754,11 @@ stateDiagram-v2
   written into the library. Before anything is called missing, and before finish, rollback or
   undo touch a file, the folder must still be that library: the real path must match, and
   either the device and inode or the fingerprint (a network share gets a new device number
-  every mount; a folder swapped in at the path keeps neither). An empty folder is never the
+  every mount; a folder swapped in at the path keeps neither). For a journal that renames
+  top-level folders (a Standardise run's folder moves), the recorded folder names also count
+  when they are today's names but for the ones it renames itself (each rename's old, new and
+  temporary name count as one), so its undo and Recovery work after a remount; every other name
+  must be as recorded, so a different library is still refused. An empty folder is never the
   library (an unplugged drive leaves its empty mountpoint). A mismatch throws
   `RootIdentityError`, records `blocked_reason`, and leaves every step as it was: nothing is
   marked failed, and the journal shows as `blocked-root` until the library is back.
@@ -761,6 +780,22 @@ stateDiagram-v2
 - A step that names a catalog row (`catalog_kind`, `catalog_id`) updates that row in the same
   transaction as the step's status: `done` moves the row to its quarantine path with status
   `quarantined`, `undone` puts it back as `present`, `purged` deletes it.
+- A `move-dir` step (Standardise only; Tidy up never plans one) renames a whole folder in one
+  rename, so everything in it keeps its bytes and links. The destination must be absent, or the
+  same folder under another spelling on a volume that folds case (then it goes through
+  `<folder>.romperoom-case`, as a file's case-only rename does); the one thing a POSIX rename can
+  replace is an empty folder that appeared after the check, which holds nothing. The folder's
+  inode is journaled before it moves (`node_ino`; `node_dev` as a record), so undo, finish and
+  rollback act only on that folder, recognised by its inode on the library's device as it is
+  then (a remounted share or disk gets a new device number and keeps its inodes). Right before
+  the rename, the folder receiving it is checked again to be reached through no link, the
+  destination to be free, and the folder to still be the one checked. Its catalog link is
+  `tree`: every file and media row under the folder, cover art's records of the pictures and
+  folders it wrote there (`art_added`, `art_dir`), and a top-level folder's mapping, unmapped and
+  ignored entries, take the new name in the step's transaction, after rows and entries already
+  under the new name (which describe nothing) are deleted. A finish or rollback that finds the
+  folder moved and its old name taken since marks the step done (its rows follow it); undo then
+  reports the name taken, so a rollback ends `partial`, never clean.
 
 ## One work lock per library
 
@@ -781,13 +816,14 @@ nothing: a refused scan records no scan result.
 | art              | refused | refused | refused | refused  | refused | refused |
 | sync             | refused | refused | refused | refused  | refused | refused |
 
-- `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal,
-  a purge, and removing a library. `deploy`: a deploy reads its source libraries (the deploy
-  facade itself runs one deploy at a time). `identify`: an identify run holds the library it
-  is identifying; replacing or removing a DAT takes every library's `identify` lock for its
-  transaction (see [Identification](#identification)). `art`: a cover art session or Remove
-  downloaded art (see [Cover art writer](#cover-art-writer)). `sync`: a card sync's run or
-  undo; its journal runs under that lock (see [Card sync](#card-sync)).
+- `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal, a
+  purge, removing a library, and a standardise run or its undo (see
+  [Standardise the library](#standardise-the-library)). `deploy`: a deploy reads its source
+  libraries (the deploy facade itself runs one deploy at a time). `identify`: an identify run
+  holds the library it is identifying; replacing or removing a DAT takes every library's
+  `identify` lock for its transaction (see [Identification](#identification)). `art`: a cover art
+  session or Remove downloaded art (see [Cover art writer](#cover-art-writer)). `sync`: a card
+  sync's run or undo; its journal runs under that lock (see [Card sync](#card-sync)).
 - Only reads share: two deploys may read one library, nothing may change it while one does.
 
 ## Tidying the library
@@ -1341,6 +1377,85 @@ only after the card's own bytes were saved in the backup folder and the card fil
 what the review saw. The bases of the saves now in step are recorded (`card_save`), with the
 bases they replaced, so **Undo this sync** (`sync/undo.ts`) can reverse the journal and put them
 back. Stop finishes or discards the file being copied; what was copied before stays.
+
+## Standardise the library
+
+```mermaid
+flowchart LR
+  subgraph R["Renderer (no network)"]
+    P["Tidy up ›<br/>Standardise library"]
+  end
+  subgraph M["Main process"]
+    H["standardise-host<br/>argument checks"]
+  end
+  subgraph E["Engine"]
+    RV["review<br/>folders · games · lists"]
+    RN["run<br/>op lock · units"]
+    J["Tidy up journals<br/>move · move-dir · undo"]
+  end
+  P -- "standardise:* IPC" --> H --> RV
+  H --> RN
+  RV --> LIB[("console folders<br/>games · art · saves")]
+  RN --> TMP[(".romperoom/tmp")] --> J
+  J --> LIB
+  J --> BAK[(".romperoom/lists-backup")]
+  J --> Q[(".romperoom-quarantine")]
+```
+
+**Standardise library** (Tidy up) renames a library's console folders to one device profile's
+folder names and identified games to their official DAT names, with what names them, after a
+review ([ADR 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
+The chosen profile is remembered per library (`standardise_profile`).
+
+**Review** (`packages/engine/src/standardise/review.ts`) reads only. Each top-level folder is
+resolved as the scanner resolves it (the user's mapping, else the console's names and aliases); one
+whose name differs from the profile's folder for its console is renamed, or, when another folder has
+or will take that name, merged into it (a merge's files whose name the target already has are
+clashes: identical ones, by size and SHA-1, may be set aside, others stay). A folder of no console,
+of more than one (its rows disagree), or of a console the profile has no folder for is listed and
+left. Each copy of an identified game (every rom its DAT game lists present and verified by
+fingerprint) whose file names differ from its official names is offered on its own; copies of one
+game share its id. One file takes its DAT game name and its own extension, each part of a game of
+several files its DAT rom's name, and a game of several parts that fills one folder of its own also
+renames that folder. A name that is unsafe or taken by another file leaves the game alone with the
+reason; an item that cannot be read is left `unreadable`, and a file identify matched to several
+DAT games that the user has not settled is left `match-unreviewed`. Its art (the pictures the
+catalog links to it), its saves (in `.romperoom/saves/<system>/` and every profile's save layout
+inside the library) and its game list entries follow it; a picture or save two copies would take
+along follows neither. Game lists are the `gamelist.xml` in each console folder; disc descriptions
+and playlists are the game's own `.cue` and `.m3u` parts, rewritten by `standardise/lists.ts`,
+which changes only references to renamed files and refuses a file it cannot read with certainty.
+
+**Run** (`standardise/run.ts`), under the library's `op` lock, through the real-folder operations of
+card sync. Renames run first, then merges, then games; a unit (a folder, a game, a list) is all or
+nothing, and Stop takes effect between units. A merge holds back every file of a copy of a game when
+one of its files clashes with a different file (the copy is the review's unit, its parts, never the
+game's id). A game a chosen clash would take a picture or save from (the duplicate set aside) is
+left with its name (`copy-set-aside`). Before each step (`unitGate`, the journal's `skip`), a step
+whose unit already failed, or that depends on a unit that failed (a merge on the rename it goes
+into, a game on the folder move or merge that moves its files), does not run; the done steps of a
+failed unit are put back before the journal closes. The main journal stays open (`keepOpen`, so in
+Recovery) until its units are settled and the game lists' journal is recorded; a step that cannot be
+put back keeps it there and stops the run (`needs-recovery`: "Romperoom couldn't put everything back
+after an item failed. Tidy up's Recovery finishes it or undoes it."). Once the run row exists, every
+outcome is recorded with its reason: an error the run did not expect is recorded as a stop before it
+is thrown on, and only a crash leaves the row `running`. Rewritten cue sheets and playlists are
+staged as `std-<uuid>.part` in `.romperoom/tmp`; each original moves to
+`.romperoom/lists-backup/<run>/` and the new file takes its place (`standardise_backup` records
+each). The game lists follow in a second journal, rewritten from the games that really were renamed.
+The catalog follows each step (file and media rows; a folder's rows, mapping, unmapped and ignored
+entries), a moved picture's stem and cover art's own record follow it, and a run interrupted by a
+crash or a lost library waits in Tidy up's Recovery, which settles the run when it finishes (with
+the same unit checks; an undo that landed before it was marked counts as done, and so does a rename
+that landed before it was marked even when its old name is taken since, so its put-back reports the
+name taken and the run waits in Recovery or the rollback ends partial) or rolls back. **Undo**
+(`standardise/undo.ts`) reverses the lists, then the rest, where unchanged. When a run, its Undo or
+its Recovery ends, the library's other journals are recorded again with the folder as it is now
+(`rerecordLibraryIdentity`, a `library_reconnect` row with the trigger `standardise`), only while
+the folder is provably the one the run's journal recorded and each of them recorded that same
+library; so a remount after renamed top-level folders does not lock them out. A library at the path
+with other top-level folder names is refused; one with the same names is taken for the same library,
+as the existing fingerprint rule takes it, and the re-record then records its device and inode.
 
 ## Deploy planner
 

@@ -152,8 +152,8 @@ Then two checks for identify, run on the packaged app
    so the lockfile agrees, and merge that as `chore(release): X.Y.Z` through a pull request.
 3. **Tag the merged commit** and push the tag:
    `git tag -a vX.Y.Z -m "Romperoom X.Y.Z"` then `git push origin vX.Y.Z`.
-4. **Watch the release workflow** (Actions, `release`). It rebuilds and re-checks everything
-   and drafts a release named `Romperoom X.Y.Z` in the private repository.
+4. **Watch the release workflow** (Actions, `release`). The tag push rebuilds and re-checks
+   everything and drafts a release named `Romperoom X.Y.Z` in the private repository.
 5. **Check the draft by hand** before anyone else sees it:
    - download each file and run `shasum -a 256 -c SHA256SUMS.txt` (Windows: `Get-FileHash`);
    - install on a clean macOS account (Apple silicon) and on a Windows PC, open each the
@@ -164,30 +164,79 @@ Then two checks for identify, run on the packaged app
    - read the release notes: user-facing, nothing private;
    - [Before each release](#before-each-release) was run on this build, or is recorded as not
      run.
-6. **Publish the draft** in the private repository.
-7. **Publish publicly** ([below](#publishing-to-the-public-repository)).
+6. **Publish publicly** ([below](#publishing-to-the-public-repository)): **Run workflow** with
+   the tag and **publish** ticked. The draft is finished, so that run builds nothing and
+   publishes exactly the files you checked. The private release must still be a draft: the
+   workflow never touches a published release, so a run for a published tag stops at once.
+7. **Publish the draft** in the private repository.
 
-A dry run: **Run workflow** on a branch builds and checks both platforms and keeps the files as
-run artifacts, without drafting anything.
+A dry run: **Run workflow** on a branch, with the tag input empty, builds and checks every
+platform and creates and uploads nothing: no release, no assets, no artifacts (traces of a
+failed run excepted). Its installers are not kept; to try one, build it locally or tag.
 
 ## The release workflow
 
-`.github/workflows/release.yml`, on a pushed `v*` tag or **Run workflow**:
+`.github/workflows/release.yml`, on a pushed `v*` tag or **Run workflow**. The files move
+between jobs as assets of the private draft release, never as Actions artifacts: artifact
+storage has an account quota, and a full quota stopped the 0.7.0 release at its upload step.
 
-1. **build** (macOS arm64 and Windows x64, in parallel). Checks that the tag names the
-   version, then runs lint, type-check and the coverage gate again, `npm run build`,
-   `package` with the signing secrets if any, `verify:package`, `e2e:packaged` and
-   `checksums.mjs --verify`. It uploads the installers and that build's
-   `SHA256SUMS.<build>.txt`.
-2. **release** (needs both builds). Checks every build's sums against the files that arrived
-   and merges them into one `SHA256SUMS.txt` (`checksums.mjs --merge`), writes the release
-   notes, and keeps everything as the `release` artifact. On a tag it creates the draft release
-   in this repository, or refreshes the files of an existing draft. It refuses to touch a
-   release that is already published.
-3. **publish-public**. Only on **Run workflow** for a tag with **publish** ticked: it syncs the
-   documentation and drafts the release in the public repository, pushing the docs only after
-   the draft exists. Otherwise it writes the manual steps to the run summary
+1. **prepare**. Decides what the run releases: the **tag** input if given, else the tag the run
+   is on, else nothing (a dry run). A tag must be exactly `vX.Y.Z` and exist in this repository,
+   and its two `package.json` versions must name it. Then it creates the draft release for the
+   tag, empty, or reuses the existing draft; it stops if the release is already published, the
+   tag has more than one release, or the releases cannot be listed. Creating the draft once,
+   before the builds, keeps the three builds from racing to create it. On a run with
+   **publish** ticked it checks whether the draft is already finished: notes set, no per-build
+   sums left, every build present, and every file listed in a `SHA256SUMS.txt` that verifies.
+   If so the run is **publish only**: `build` and `release` are skipped and the checked files
+   are published as they are. A draft that is missing or unfinished is built first. A draft
+   that looks finished but holds unlisted files or fails its sums stops the run.
+2. **build** (macOS arm64, Windows x64 and Linux x64, in parallel), from the tag's code.
+   Checks that the tag names the version, then runs lint, type-check and the coverage gate
+   again, `npm run build`, `package` with the signing secrets if any, `verify:package`,
+   `e2e:packaged` and `checksums.mjs --verify`. On a release run it uploads exactly the files
+   its `SHA256SUMS.<build>.txt` lists, and that file, to the draft, replacing same-named files
+   of an earlier run. Before every delete and upload it checks the release is still a draft,
+   and stops if it is not. On a dry run it uploads nothing. Traces and screenshots of a failed
+   packaged-app check are kept as a run artifact for 3 days, when the quota allows; a failed
+   trace upload does not fail the job.
+3. **release** (needs every build; not on a dry run). Downloads the draft's files, requires
+   exactly one sums file per build (`mac-arm64`, `win-x64`, `linux-x64`: a missing platform
+   fails the run), checks every build's sums against the files and merges them into one
+   `SHA256SUMS.txt` (`checksums.mjs --merge`), and fails on any file on the draft that no build
+   listed. It writes the release notes, uploads `SHA256SUMS.txt`, sets the notes on a draft it
+   created (an edited draft keeps its notes), and removes the per-build sums files, leaving
+   the installers and `SHA256SUMS.txt`. It checks the release is still a draft before each
+   change, and stops without changing it once someone has published it.
+4. **publish-public**. Only on **Run workflow** with a tag and **publish** ticked (after
+   `release`, or straight after `prepare` on a publish-only run): it downloads the private
+   draft's files and notes, checks the sums again, syncs the documentation and
+   drafts the release in the public repository, pushing the docs only after the draft exists.
+   Otherwise it writes the manual steps to the run summary
    ([below](#publishing-to-the-public-repository)).
+
+**Releasing an existing tag from `main`.** A run builds the tag's code with the workflow of the
+ref it runs on. So when a tag's own workflow is broken (v0.7.0's used Actions artifacts), run
+the current one from `main` against the tag, without moving it:
+
+```sh
+gh workflow run release.yml --ref main -f tag=vX.Y.Z  # builds the private draft
+# check the draft by hand (step 5 above), then:
+gh workflow run release.yml --ref main -f tag=vX.Y.Z -f publish=true  # publishes those files
+```
+
+The tag input is checked before use (exactly `vX.Y.Z`, an existing tag) and reaches the shell
+only as an environment variable. A run for the tag input queues behind a run for a push of the
+same tag rather than racing it. The workflow runs the tag's own copies of
+`.github/actions/ensure-gh`, `apps/desktop/scripts/checksums.mjs`,
+`releases-repo-template/scripts/make-release-notes.mjs` and `scripts/publish-docs.mjs`, so an
+older tag works only if it has them with the same interfaces (v0.7.0 does).
+
+**Re-running.** Before the draft is checked, a re-run of the whole workflow refreshes the
+draft's files. If the release job fails after it removed the per-build sums files, re-run all
+jobs, not only the failed one: it needs every build's sums on the draft. Once the draft has
+been checked, never re-run a build: start a publish run, which builds nothing for a finished
+draft.
 
 Every third-party action in `release.yml` and `ci.yml` is pinned to a full commit SHA with the
 release it names as a comment (`uses: actions/checkout@<sha> # v4.4.0`), so a moved tag cannot
@@ -196,12 +245,18 @@ not pinned that way (local `./` actions excepted). To update one, look up the ta
 (`gh api repos/<owner>/<repo>/git/ref/tags/<tag>`, and for an annotated tag follow its
 `object.url` to the commit) and change the SHA and the comment together.
 
-Permissions are `contents: read` except the release job (`contents: write`, its own
-repository). The publish job reads this repository with its own token and writes to the public
-repository only with `PUBLIC_RELEASES_TOKEN`. Runs for the same ref queue
-rather than cancel. CI's `package` job (`ci.yml`) runs the same `package:dir`,
-`verify:package` and `e2e:packaged` on every push and pull request, so a packaging regression
-shows up before a release.
+Permissions are `contents: read` by default. `prepare`, `build` and `release` have
+`contents: write` on this repository, for the draft release only. `publish-public` has it too,
+only because GitHub shows draft releases to tokens that can push; it uses its own token for
+nothing but downloading the private draft, and writes to the public repository only with
+`PUBLIC_RELEASES_TOKEN`. Runs for the same release queue rather than cancel. CI's `package` job
+(`ci.yml`) runs the same `package:dir`, `verify:package` and `e2e:packaged` on every push and
+pull request, so a packaging regression shows up before a release.
+
+The build jobs hold `contents: write` for the whole job (permissions cannot be per step), and
+use the token only in their upload step. On a persistent self-hosted runner, code that runs
+earlier in the job (a dependency's install script) could in principle outlive its step and
+read that step's environment. An ephemeral runner for release builds would close that.
 
 ## Publishing to the public repository
 
@@ -224,18 +279,22 @@ table, install help and checksum instructions; `SECURITY.md`). It holds no sourc
    token with **Contents: read and write** on that one repository only, stored in the cloud
    secret store and copied into the repository secret, never into a file or a chat.
 
-**Each release, automated:** **Run workflow** on the tag `vX.Y.Z` with **publish** ticked. The
-job checks the sums again, then syncs the documentation: it clones the public repository's
-`main` with the token and runs `scripts/publish-docs.mjs` over the clone. If the sync finds a
-problem, the job stops there and nothing reaches the public repository. Then it creates a
+**Each release, automated:** once the tag push has built the private draft and you have checked
+it, **Run workflow** on the tag `vX.Y.Z` (or on `main` with the tag input `vX.Y.Z`) with
+**publish** ticked, while the private release is still a draft. The draft is finished, so the
+run builds nothing. The job downloads the private draft's files and notes, checks the sums
+again, then syncs the documentation: it clones the public repository's `main` with the token
+and runs `scripts/publish-docs.mjs` over the clone. If the sync finds a problem, the job stops
+there and nothing reaches the public repository. Then it creates a
 **draft** in the public repository with the same files and notes; it stops if that repository
 already has the release. Only once the draft exists does it commit any documentation change as
 `docs: sync documentation for vX.Y.Z` and push it to `main`, so a failed draft leaves the public
 docs untouched. Then update the README's download table and version, and publish the draft.
 
 If the push fails after the draft exists (`main` moved between the clone and the push, or a new
-protection rule), a re-run stops at the existing draft. Push the documentation by hand instead
-(below), from a checkout of the same tag; the draft is unaffected.
+protection rule), do not re-run the workflow with **Re-run all jobs**; use only **Re-run failed
+jobs**, which re-runs the publish job alone and stops at the existing public draft. Then push
+the documentation by hand (below), from a checkout of the same tag; the draft is unaffected.
 
 **Each release, by hand:** sync the documentation from a checkout of the tag, review the
 change, then commit and push it:
@@ -249,9 +308,9 @@ git -C /tmp/rr-public commit -m "docs: sync documentation for vX.Y.Z"
 git -C /tmp/rr-public push origin main
 ```
 
-Then download the run's `release` artifact, create the release `vX.Y.Z` in the public
-repository, attach every file in `dist/`, paste `dist-notes.md`, update the README table,
-publish.
+Then download the private draft's files (`gh release download vX.Y.Z --dir dist`), create the
+release `vX.Y.Z` in the public repository, attach every file in `dist/`, paste the private
+draft's notes, update the README table, publish.
 
 **What the documentation sync does** (`scripts/publish-docs.mjs`, the same on both paths):
 

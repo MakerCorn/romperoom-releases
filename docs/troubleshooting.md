@@ -1,9 +1,10 @@
 # Troubleshooting
 
-Problems you might meet, and what to do. Only Tidy up changes your games, and it only sets
-files aside, where you can put them back; cover art only adds pictures to Romperoom's own
-`.romperoom/media` folder, when you ask; Sync a card only adds the games and saves you approve,
-and backs up any save it replaces. None of these problems can harm your collection.
+Problems you might meet, and what to do. Only Tidy up changes your games: it sets files aside,
+where you can put them back, and Standardise library renames folders and games, which Undo puts
+back; cover art only adds pictures to Romperoom's own `.romperoom/media` folder, when you ask;
+Sync a card only adds the games and saves you approve, and backs up any save it replaces. None of
+these problems can harm your collection.
 
 ## Contents
 
@@ -35,6 +36,10 @@ and backs up any save it replaces. None of these problems can harm your collecti
 - [Your library changed since you looked](#your-library-changed-since-you-looked)
 - [A file couldn't be put back](#a-file-couldnt-be-put-back)
 - [Romperoom was interrupted while tidying](#romperoom-was-interrupted-while-tidying)
+- [Standardise left a folder or game as it was](#standardise-left-a-folder-or-game-as-it-was)
+- [A game list wasn't changed](#a-game-list-wasnt-changed)
+- [A frontend still shows the old names](#a-frontend-still-shows-the-old-names)
+- [Undo this run left something](#undo-this-run-left-something)
 - [Windows and Linux](#windows-and-linux)
 - [For developers](#for-developers)
 
@@ -378,6 +383,81 @@ by itself; after a Cancel, press **Finish or undo…** on the result. For each r
 
 If it says your library folder isn't available, reconnect the drive first. An interrupted
 delete forever offers **Finish deleting** or **Keep the rest**.
+
+## Standardise left a folder or game as it was
+
+The review says why, in one line:
+
+- **"This profile has no folder name for this console."** The device you chose has no folder for
+  it: choose another device, or leave it.
+- **"Romperoom doesn't know which console this folder is for."** Assign the folder a console (on
+  Health), then review again.
+- **"This folder could be more than one console."** Its games were catalogued as more than one
+  console, or as another console than its name says. If the folder really holds two consoles,
+  move one console's games to its own folder; otherwise scan again. Then review again.
+- **"A different file with this name is already there."** Something else has the new name.
+  Romperoom never overwrites: move or rename it yourself, then review again.
+- **"The official name can't be used as a file name."** The game database's name has a character
+  or a length no file system takes.
+- **"A part of this game is missing"** or **"doesn't match the official data."** Every file of a
+  game must be there and match the database by its contents, so it is never half renamed. Scan
+  again, and identify, then review again.
+- **"This game's file matches more than one game in your databases."** Its contents are the same
+  as several games in the database, so Romperoom won't pick one: choose the right one under
+  **Check name matches**, then review again.
+- **"Romperoom couldn't read this item, so it was left alone."** A file or folder couldn't be
+  opened (it may be locked, or the drive refused it). Check the drive, then review again.
+- **"A picture or save of this game is an identical copy you chose to set aside, so the game
+  keeps its name."** A clash you ticked sets aside this game's picture or save (an identical copy
+  is already in the folder it merges into), so the game keeps its name rather than be renamed
+  without it. Untick that clash to rename the game.
+- **"Romperoom couldn't put everything back after an item failed."** An item failed part way and
+  something it had already moved couldn't go back (its old name was taken meanwhile). The run
+  waits under Tidy up's **Finish or undo…**: free the name and finish it, or undo it.
+
+A run as a whole can end early, with one of these lines:
+
+- **"Not enough space in the library."** A rewritten game list, cue sheet or playlist needs room
+  on the drive. Free some space, then review again; anything already renamed stays.
+- **"The library is busy with …"** Another job (Tidy up, a scan, identify, cover art, a card sync
+  or a deploy) is using the library. Try again when it finishes.
+- **"Stopped. Everything done before you pressed Stop is kept and can be undone."** You pressed
+  **Stop**. What was left waits under Tidy up's **Finish or undo…**.
+- **"Your library folder isn't available."** The drive went away during the run. Reconnect it;
+  Tidy up's **Finish or undo…** finishes or rolls back the rest.
+
+While a run waits under **Finish or undo…**, Romperoom won't start another run of that library,
+and won't remove the library from Romperoom: it says **"An earlier run of this library was
+interrupted"** or **"This library has an interrupted standardise run"**. Finish it or undo it
+first, then try again.
+
+Games that aren't identified are never renamed. When two folders merge, a file whose name is
+already taken stays in its folder unless it is an identical copy you ticked to set aside, so the
+folder may not end up empty; Romperoom never removes folders.
+
+## A game list wasn't changed
+
+A game list (`gamelist.xml`), cue sheet or playlist is changed only where it names a renamed game,
+and only when Romperoom can read it with certainty. One it can't (not UTF-8, damaged, or naming a
+game in a way that could mean two files) is left exactly as it was and named in the review or the
+results: "Romperoom couldn't read this game list, so it was left alone." A game whose own cue
+sheet or playlist can't be read is not renamed. A game list a frontend keeps outside your library
+(ES-DE's own `gamelists` folder) is not touched.
+
+## A frontend still shows the old names
+
+A frontend's own database (as opposed to a game list in your library) cannot be updated: run its
+scan or "update game lists" after standardising. On a card, copy the games again with **Put games
+on a card**. Saves on a card keep their old names, and the next card sync treats the renamed
+game's card save as a save of the old name.
+
+## Undo this run left something
+
+Undo puts back only what still holds exactly what the run wrote: a file or folder that changed or
+moved since, or whose old name is now taken, is left and listed. Every game list, cue sheet and
+playlist the run replaced keeps its original in `.romperoom/lists-backup/<run>/` in your library.
+A run cut short by a crash or by the library going away waits in Tidy up's **Finish or undo…**,
+like a tidy.
 
 ## Windows and Linux
 

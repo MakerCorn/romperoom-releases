@@ -232,9 +232,9 @@ both handlers.
 ## IPC channels
 
 The page reaches the host only through `window.romperoom`. That object has one function per
-channel in the `IPC` table (`src/shared/ipc.ts`), plus seven push listeners (`onScanProgress`,
+channel in the `IPC` table (`src/shared/ipc.ts`), plus eight push listeners (`onScanProgress`,
 `onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress`,
-`onArtProgress` and `onSyncProgress`). Raw
+`onArtProgress`, `onSyncProgress` and `onStandardiseProgress`). Raw
 `ipcRenderer` and IPC event objects never cross the bridge. `IPC_MATCHES_API` makes the type
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
@@ -325,6 +325,13 @@ test checks that this table lists exactly the channels in `IPC`.
 | `sync:undo` | page → host | Undo this sync: what it wrote into the library goes back where unchanged; a sync id only | library and catalog |
 | `sync:list` | page → host | The latest syncs, newest first | no |
 | `sync:progress` | host → page | Card sync progress, then the result, to the window that started it | no |
+| `standardise:review` | page → host | Reads a library against a device profile and returns a review (nothing written but the chosen profile); library id and profile id only | catalog (the library's chosen profile) |
+| `standardise:run` | page → host | Renames and merges the chosen console folders and renames the chosen games, with their art, saves, cue sheets, playlists and game lists; the review's plan id and its item ids only | library (console folders, games, art, saves, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`, `.romperoom-quarantine`) and catalog |
+| `standardise:cancel` | page → host | Stops this window's standardise review or run (a run stops between units) | no |
+| `standardise:status` | page → host | This window's running or last standardise run (a reloaded page adopts it) | no |
+| `standardise:undo` | page → host | Undo this run: what it renamed and replaced goes back where unchanged; a run id only | library and catalog |
+| `standardise:list` | page → host | Each library's chosen profile and the latest standardise runs | no |
+| `standardise:progress` | host → page | Standardise progress, then the result, to the window that started it | no |
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
 
@@ -341,7 +348,9 @@ Every handler (`src/main/handlers.ts`) applies the same rules:
   `DatNeedsSystemError` keeps its `suggestion` (the console the DAT's name suggests), and only
   when it is a system id (`^[a-z0-9-]{1,64}$`). The preload turns an error reply back into a
   thrown `Error`, with the name (and a suggestion, as `(suggested console: …)`) in its message,
-  since the bridge drops an Error's own properties.
+  since the bridge drops an Error's own properties. An unexpected error's first line is passed on
+  as it is: it can name a path inside a library (the page already lists library paths), never a
+  stack.
 
 The `deploy:` channels are handled by the deploy host (`src/main/deploy-host.ts`), not passed
 to the engine; see [Deploying to a card](#deploying-to-a-card). The `tidy:` channels are
@@ -398,9 +407,26 @@ stop it, and closing that window or quitting stops it (what was copied stays). T
 carry names and library-relative places, never the card's mount or the library's path; why Undo
 left a file is one of a closed set of reasons, and the file system's own message is only logged.
 
+The `standardise:` channels are handled by the standardise host (`src/main/standardise-host.ts`).
+The page sends a library id the host lists, a device profile id the host knows, back the review's
+plan id with item ids from that review (`f<n>`, `g<n>`, `c<n>`, each once, each in its own list),
+and a run id. It never sends a path or a file name. The plan id must be a lower-case UUID the host
+gave to that same window (the host keeps as many reviews as the engine does, 2); anything else is
+refused with `StandardiseArgumentError` before the engine is called. One standardise job (a review,
+a run or an undo) runs at a time, and any other is refused with `StandardiseBusyError`; a review or
+run binds to the window that started it, its progress and result go only to that window, only it
+can stop it, and closing that window or quitting stops it between units (what was renamed stays;
+Tidy up's Recovery finishes or undoes it). A run and its undo hold the library lock Tidy up uses,
+so a run started while another job holds the library is refused with nothing written, and while
+one runs every other job says the library is busy with "Tidy up or Standardise". The engine
+refuses a choice the review did not offer, a review older than the catalog's last change, and a
+new run while an earlier run of the library waits in Recovery; removing that library is refused
+too. The results carry names and library-relative paths, never the library's own path; why Undo
+left a file is one of a closed set of reasons, and the file system's own message is only logged.
+
 The engine members that are _not_ exposed are `close`, `lastScan`, `resolveMedia`,
-`recoverJournals`, `resolveJournal` and the `tidy`, `identify`, `art` and `sync` facades
-themselves (host-only). The operation
+`recoverJournals`, `resolveJournal` and the `tidy`, `identify`, `art`, `sync` and `standardise`
+facades themselves (host-only). The operation
 engine (`applyPlan`, `undoJournal` and the rest) has no channel at all: the page reaches tidy
 runs only through the tidy host's ids.
 
@@ -745,12 +771,31 @@ for the download (the official-site path still works).
     copies of card games and the new saves it added to `.romperoom/saves` that are unchanged
     (they come back into `.romperoom/tmp` first); card writes stay, their earlier bytes in the
     backup folder.
+- **Standardise writes only what the review offered, inside the library**
+  ([decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own),
+  `packages/engine/src/standardise/`). The rules:
+  - Only the engine writes. The page passes a library id, a profile id and ids from the review;
+    the host passes no path at all.
+  - The run holds the library's `op` lock, the one Tidy up takes, so no scan, Tidy up, identify,
+    cover art, card sync or copy to a card runs alongside it.
+  - Every rename is a step of Tidy up's journal and never lands over a file: a console folder or
+    a game that is a folder moves whole (a case-only rename through `<folder>.romperoom-case`),
+    and a file moves through the same name reservation as every operation. Each step checks the
+    real-folder chain of its folders just before it runs, and fails rather than follow a link.
+  - A game list, cue sheet or playlist changes only where it names a renamed file. Its new text
+    is staged in `.romperoom/tmp`, the original is moved to `.romperoom/lists-backup/<run>/`,
+    then the new text moves into place; Undo puts the original back only while the file still
+    holds what the run wrote.
+  - Nothing is deleted. An identical copy a merge meets is set aside in `.romperoom-quarantine`;
+    a merged folder left empty stays where it is.
 
 ## Emptying the quarantine
 
 Emptying the quarantine (`purge` on the tidy facade) is the only code in Romperoom that deletes a
 user's file. Everything else moves files into quarantine and can be undone. Removing cover art
-and Undo this sync delete only files Romperoom itself added, still unchanged since.
+and Undo this sync delete only files Romperoom itself added, still unchanged since; Standardise
+deletes only its own staged text (`std-*.part` in `.romperoom/tmp`, the rewritten game lists, cue
+sheets and playlists, including those Undo takes back there), once no journal needs it.
 
 **What it defends against**
 
@@ -940,6 +985,11 @@ somehow became markup.
   requests, shared with "Check for updates"), and download the pictures a review found for the
   library's own gaps into `.romperoom/media`. It can import pictures from a card the host lists,
   and remove the pictures cover art added that are unchanged.
+- Standardise a library it has added to a device profile it names: rename and merge the
+  console folders and rename the identified games its review offered, with their art, saves, cue
+  sheets, playlists and game lists (each list's original moved to `.romperoom/lists-backup`
+  first), set aside identical copies a merge meets, and undo a run. Nothing is deleted, and
+  nothing outside that library is touched.
 - Sync a card the host lists, if every deploy safe-target rule allows it: import the games its
   review offered into the library's console folders, copy the saves it offered both ways (each
   replaced save backed up first, a conflict's side as the page picks), give the card its id
@@ -948,11 +998,14 @@ somehow became markup.
 **It cannot:**
 
 - Run Node.js, require a module, or reach `ipcRenderer` directly.
-- Create or change any file, or move or delete one outside the tidy, cover art and card sync
-  rules. Outside [Tidying up](#tidying-up), cover art and card sync no channel writes anything to
-  a library, and the operation engine has no channel. Cover art writes only new pictures under
-  `.romperoom/media` (and part files in `.romperoom/tmp`), never over a file. Card sync writes
-  only what its review offered ([Filesystem safety](#filesystem-safety)).
+- Create or change any file, or move or delete one outside the tidy, cover art, card sync and
+  standardise rules. Outside [Tidying up](#tidying-up), cover art, card sync and standardise no
+  channel writes anything to a library, and the operation engine has no channel. Cover art
+  writes only new pictures under `.romperoom/media` (and part files in `.romperoom/tmp`), never
+  over a file. Card sync and standardise write only what their review offered
+  ([Filesystem safety](#filesystem-safety)), and standardise changes a game list, cue sheet or
+  playlist only where it names a renamed file, after moving the original to
+  `.romperoom/lists-backup`.
 - Read a file's contents. It sees hashes and sizes, never bytes, except images through the
   media scheme.
 - Load `file://` or another origin, or navigate the window away.
@@ -1110,6 +1163,9 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
 - **Gaps in disc numbering without an `of N` tag are not warned about.** Discs 1 and 3 of a set
   that never says how many discs it has look complete; only a disc some region of the title has
   and the chosen one lacks is named.
+- **An unexpected error's message reaches the page.** A handler passes on the first line of an
+  error it did not expect (see Replies under [IPC channels](#ipc-channels)), which can name a path
+  inside a library. Wording every such error in the host instead is a project-wide follow-up.
 - **No proxy or private-CA support for Download for me.** The game database transport uses Node's
   bundled roots and ignores system and environment proxies, so a network that requires a proxy
   or inspects TLS with its own certificate authority cannot use it; the official-site path (the
@@ -1122,6 +1178,12 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
 - **Drag and drop is tested synthetically, not by hand.** Before each release, drag a `.html`
   file and a ROM from Finder (or Explorer) onto the wizard and the wall. The window should stay
   on the app, show the not-allowed cursor and log nothing.
+- **Standardise checks, then renames.** Each journal step checks the folders it renames into
+  are reached through no link, when it is checked and again right before its rename; a folder
+  swapped for a link in between is followed at that instant. On POSIX a folder rename can
+  replace an empty folder that appeared at its destination after the check; it holds nothing
+  ([decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
+  A frontend's own database is not updated, so a renamed game may need a rescan there.
 - **Card sync checks, then reads and writes.** The windows of the two cover art entries above
   apply to its library folders and card reads too. The hash pool reads a card game by path, so a
   game swapped for a link after its check is hashed through it; only a hash is learned, and the

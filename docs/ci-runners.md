@@ -25,8 +25,10 @@ Linux legs and the packaging check before merging. Commitlint and the secret sca
 `MAC_RUNNER_LABELS` is set (else on Ubuntu).
 
 A self-hosted runner needs nothing installed beyond what its section below lists: the workflows
-install Node themselves, and the release jobs fetch a pinned, checksum-verified `gh` when the
-runner has none (`.github/actions/ensure-gh`).
+install Node themselves, and the release jobs that run on the Mac (or Ubuntu) fetch a pinned,
+checksum-verified `gh` when the runner has none
+(`.github/actions/ensure-gh`). The release builds
+upload their files with Node, so the Windows runner needs no `gh`.
 
 ## Self-hosted macOS runner
 
@@ -104,3 +106,30 @@ docker run -d --name romperoom-linux-runner --restart unless-stopped --shm-size=
 - What it cannot show: a real Linux desktop. In particular the AppImage's sandbox on Ubuntu
   23.10+, where unprivileged user namespaces are restricted, and SD card readers (no USB in the
   container). Try a build on a real desktop before publishing it.
+
+## Artifact storage
+
+Self-hosted runners still upload artifacts to GitHub, and artifact storage has an account
+quota. A full quota fails every upload ("Artifact storage quota has been hit"); it stopped the
+0.7.0 release build on 2026-10-05, and refused uploads even after every stored artifact was
+deleted (GitHub recalculates usage every 6 to 12 hours).
+
+So the workflows use artifacts only for traces and screenshots of a failed run (`ci.yml`'s
+`e2e` and `package` jobs, the release build's packaged-app check), kept for 3 days. Each of
+those uploads runs only on failure, in its own step with `continue-on-error`, so a full quota
+neither fails the job nor hides the real failure. Release files never use artifact storage:
+the release builds upload their installers to the private draft release, and the later jobs
+download them from there ([release.md](release.md#the-release-workflow)); release assets do
+not count against the quota.
+
+To free space, delete old artifacts (`gh api -X DELETE
+repos/OWNER/REPO/actions/artifacts/ID`).
+
+## Shared workspace on self-hosted runners
+
+A self-hosted runner reuses one working folder per repository. A sparse checkout leaves
+`core.sparseCheckout` set there, and the next job that checks out the whole repository can be
+left without the `packages/` folder ("No workspaces found: --workspace=@romperoom/profiles").
+The release workflow therefore checks out the full repository in every job. To repair a runner
+that already has the setting, move `_work/romperoom/romperoom` aside while it is idle; the next
+job recreates it.

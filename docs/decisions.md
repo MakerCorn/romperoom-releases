@@ -48,6 +48,7 @@ design history.
 40. [Game databases can be downloaded from one pinned source, only when asked](#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)
 41. [A library gains one writer outside Tidy up](#41-a-library-gains-one-writer-outside-tidy-up)
 42. [Card sync writes into a library and onto a card](#42-card-sync-writes-into-a-library-and-onto-a-card)
+43. [Standardise renames folders and games, and edits two kinds of files other programs own](#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)
 
 ## 1. One repository, four workspaces
 
@@ -603,3 +604,84 @@ stands.
   the library right before it makes a folder or reserves its destination's name, so a folder swapped
   for a link during the run refuses the step. A sync interrupted by a crash waits, like any journal,
   in Tidy up's Recovery, which finishes or rolls it back with the same per-step check.
+
+## 43. Standardise renames folders and games, and edits two kinds of files other programs own
+
+- **Decision:** **Standardise library** (Tidy up) renames and merges a library's console folders to
+  one device profile's folder names, and renames identified games to their official DAT names
+  with the art, saves, disc descriptions (`.cue`), playlists (`.m3u`) and frontend game lists
+  (`gamelist.xml`) that name them, only when the user approves a review, and never deletes
+  anything. It writes only inside the library, under the library's `op` lock (Tidy up's), through
+  one Tidy up journal (ADR 7) and a second one for the game lists, written once the games are
+  settled. Every step checks its folders are real folders inside the library right before it
+  makes one or reserves a name (cover art's and card sync's operations, ADR 41 and ADR 42). A
+  console folder or a game that is a folder moves in one rename (a `move-dir` journal step whose
+  folder's device and inode are recorded, so undo and Recovery move back only that folder). A
+  duplicate met while merging moves to the set-aside folder, never deleted. A game list, cue
+  sheet or playlist is changed only where it names a renamed file: the original moves to
+  `.romperoom/lists-backup/<run>/` and the new file, written to a part file and fsynced first,
+  takes its place; Undo puts the original back while the new one still holds what the run wrote.
+  A list or sheet that cannot be read with certainty is left as it is and reported. A folder, a
+  game and a list are each all or nothing: once a step fails, the rest of its unit and every unit
+  that depends on it (a merge on the rename it goes into, a game on the folder move or merge that
+  moves it) does not run, and its done steps are put back before the journal closes; a step that
+  cannot be put back keeps the journal in Recovery, and the run stops saying "Romperoom couldn't
+  put everything back after an item failed. Tidy up's Recovery finishes it or undoes it." When a
+  run, its Undo or its Recovery ends, the library's other journals are recorded again with the
+  folder as it is now (an audit row, as a reconnect writes), so a remount after the top-level
+  folders were renamed does not refuse them; this happens only while the folder is provably the
+  one the run's journal recorded (the same device and inode, or the same folder names but for the
+  ones that journal renamed) and each of those journals recorded that same library. A library at
+  the path with other top-level folder names is refused; one with the same names is taken for the
+  same library, as the fingerprint rule already takes it, and is then recorded by its device and
+  inode. A rename that landed just before a crash counts as done in Recovery even when something
+  took its old name since, so its unit's put-back reports the name taken (the run waits in
+  Recovery, or the rollback ends partial) rather than leaving a game half renamed. While a run
+  waits in Recovery, a new run of that library and removing the library are refused, so the
+  waiting run is never settled against what a later run renamed, nor without its units. When Undo,
+  a rollback or a put-back brings back a rewritten cue sheet or playlist that a scan saw
+  meanwhile, its catalog row gets back what it said before the run while the file there still
+  holds the original bytes, so the next review offers the game again.
+- **Why:** frontends and handhelds want one naming scheme, and a library built over years has
+  several (owner decisions 1 and 2). Renaming a game without its art, saves and the lists that
+  name it would leave them pointing at nothing (owner decision 4); editing those files minimally,
+  with the original kept, is the least surprising way to keep them working (owner decisions 5
+  and 6).
+- **Cost:** two kinds of files Romperoom does not own are now changed (a frontend's game list,
+  and a disc's description or playlist), and the library's write boundary grows to console
+  folder names and game names. A frontend's own database cannot be updated, so a renamed game may
+  need a rescan there. Saves on a card keep their old names: the next card sync pairs saves by
+  name, so a renamed game's card save is seen as a new save of the old name. The windows ADR 41
+  records apply: a folder swapped for a link between a step's check and its rename, at that
+  instant; and on POSIX a folder rename can replace an empty folder that appeared at the
+  destination after the check (it holds nothing). The catalog follows each step in its own
+  transaction (file and media rows, a folder's mappings), and a moved picture keeps its link to
+  its game; a scan afterwards confirms the rest. Known limits, each on the safe side:
+  - a game list's media path that is absolute or contains `..` is left unmatched, so it keeps
+    naming the old file (frontends write relative paths);
+  - a clean relative subfolder path that names a different file of a renamed file's name
+    (`./Hacks/tetris.gb` beside a renamed `tetris.gb`) is left alone, not taken for the game;
+  - art and saves that two copies of a game would both take along stay where they are, listed as
+    taken for both copies;
+  - a game whose picture or save is an identical copy that a ticked merge clash sets aside keeps
+    its name (`copy-set-aside`: "A picture or save of this game is an identical copy you chose to
+    set aside, so the game keeps its name."), rather than be renamed without it;
+  - a game split across folders (its `.cue` in the console folder, its tracks in a subfolder) is
+    never offered;
+  - undoing or rolling back a journal from before a console folder was renamed puts its files back
+    under the folder's old name, so that folder exists again beside the renamed one (nothing is
+    lost; a later run merges it);
+  - a merging folder's own `gamelist.xml` stays in the source folder, so the games moved out of it
+    keep their list entries only there, where no frontend reads them for the target;
+  - a folder made at a moved folder's old name can pass as the moved folder when the file system
+    hands it the same inode number (Linux reuses them at once); undo then renames that folder back,
+    and its catalog rows follow it;
+  - on a volume where a folder's inode changes on rename or remount (an SMB share without stable
+    file IDs), the moved folder is no longer recognised: Undo keeps it where it is ("the folder
+    there is not the one that was moved"), and Recovery's finish marks its step failed with its
+    catalog rows left under the old name. Nothing moves that should not, but folder moves cannot
+    be undone or finished there;
+  - a playlist (`.m3u`) that a run renamed without rewriting it, and that identify matched by its
+    new name before the run was undone or rolled back, keeps that name match afterwards, so the
+    review leaves its game as not matching; a scan does not clear it (the file's size and time
+    are unchanged, so it is not read again), but running Identify games again does.

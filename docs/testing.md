@@ -19,6 +19,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live game database download run](#live-game-database-download-run)
 - [Live cover art run](#live-cover-art-run)
 - [Live card sync run](#live-card-sync-run)
+- [Live standardise run](#live-standardise-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -136,6 +137,7 @@ support, so run `npm run build` first. There is no browser to install.
 | `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                     |
 | `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way, a crash and recovery, delete forever, busy, keyboard only, 320 px          |
 | `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages |
+| `standardise.spec.ts`  | Standardise library on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark |
 | `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                   |
 
 How the harness (`e2e/support.ts`) works:
@@ -692,6 +694,114 @@ share was not mounted, so the share run (copying real folders and fingerprinting
   library ended with exactly the 2 imported games added, the cards were unchanged outside their
   save folders and `.romperoom`, the request log was empty, `network-log.json` absent, and
   `lsof` saw loopback only (its control saw its own socket).
+
+## Live standardise run
+
+CI never standardises a real library: the end-to-end suite builds its own scratch library
+(`e2e/standardise-fixtures.ts`). Only a live run shows real No-Intro and Redump names, disc games
+of a realistic size, the built app's screens over a whole run, and a real process killed part way.
+Run it before a release that changes anything under `packages/engine/src/standardise/`, the
+journal's folder moves (`packages/engine/src/ops/journal.ts`) or
+`apps/desktop/src/main/standardise-host.ts`. Drive it with a throwaway Playwright script over the
+built app (`npm run build`), in the manner of `e2e/support.ts`, kept outside the repository and
+never committed:
+
+1. **Library.** Build a scratch library outside the repository and outside your library's share.
+   Give it folders named otherwise than the profile names them, two of one console so they merge
+   (`GBA` and `Game Boy Advance`; on a Mac `GBA` to `gba` is a case-only rename), and a folder of
+   another console under an alias (`Mega Drive`, `PlayStation`). Name the files with real No-Intro
+   and Redump titles: games under another name (`aw.gba`), games already named by their database,
+   and one game no database knows. Add disc games of a `.cue` and two `.bin` tracks, one in a
+   folder of its own and one beside a playlist (`.m3u`) and a note; make the tracks large
+   (200 MiB each was enough) so that Stop and a kill land part way. Add a `gamelist.xml` in a
+   console folder naming some games, with an `<image>` element and a comment, and one naming the
+   disc games; a picture under `images/`; a save in `.romperoom/saves/<system>/` and one in a
+   profile's layout (`saves/gba/`); and, in the folder that merges, an identical copy of a file of
+   the other folder and a different file of the same name as one there. Write a DAT per console
+   for these files (a logiqx file with the real header name; a disc's `.cue` entry carries the
+   checksums of the cue sheet as it is on disk). If the share is mounted, copy real folders from it
+   instead (never writing to it) and fingerprint the share's folders before and after: they must
+   be identical. Fingerprint the scratch library: the path, size, modification time and SHA-1 of
+   every file. A fingerprint that fails to read is "not evaluated", never "unchanged".
+2. **Identify.** Launch with a fresh `ROMPEROOM_DATA_DIR`, the scratch library through
+   `ROMPEROOM_TEST_PICK_FOLDER`, and one path through `ROMPEROOM_TEST_PICK_FILE` whose file you
+   replace with each DAT before importing it. Set up the library (Choose your ROM folder, Go to my
+   library), import each DAT (a header the app cannot place, such as
+   `Sega - Mega Drive - Genesis`, asks for its console), then Identify games.
+3. **Review.** Tidy up › Standardise library, choose ES-DE, Review the changes. Record the
+   folders (renamed, merged, left and why), the games (offered, left and why, what follows), the
+   clashes and the game lists. `standardiseReview` through the bridge gives the same as data.
+4. **Run.** Tick the identical clash, Standardise. Check: folders and games have their new names;
+   the merged folder keeps only the different file; the disc games' `.cue` and `.m3u` name the
+   new parts; the picture and both saves follow their game; each `gamelist.xml` differs, line by
+   line, only in the renamed games' `<path>` and `<image>` elements; the originals of every game
+   list, cue sheet and playlist the run replaced are in `.romperoom/lists-backup/<run>/`; the
+   set-aside copy is in `.romperoom-quarantine`; every SHA-1 from before is somewhere after.
+5. **Scan and Undo from the results.** Press Scan again on the results, then Undo this run. The
+   fingerprint outside `.romperoom` equals the one before, modification times included. Review
+   again: it equals the first review, the scan between the run and its Undo notwithstanding (the
+   disc games are offered again, none left as not matching).
+6. **Stop, then Finish or undo….** Review again, tick the clash, Standardise, and press Stop a
+   few steps in. Each game is either renamed whole or untouched, the run says Stopped with the
+   changes that did not run, and its journal waits in Tidy up's Recovery. Press Finish or undo…,
+   then Finish: everything is renamed and both game lists are rewritten. Scan, open the library:
+   the renamed game's picture shows on the wall. Undo the run from History.
+7. **A kill.** Review and run again (the bridge is enough), and kill the app's process
+   (`SIGKILL`) about half way, while a disc game is being renamed. Fingerprint. Start the app
+   again with the same data folder: the "Finish tidying up" panel opens by itself; press Undo what
+   was done. The fingerprint outside `.romperoom` equals the one before.
+8. **A frontend.** If one that reads a ROM folder and `gamelist.xml` is installed (ES-DE,
+   Batocera), point it at the scratch library after a run and rescan: the renamed games show with
+   their names from `gamelist.xml`.
+9. **Throughout.** After every step, every SHA-1 from before is somewhere in the library (a
+   set-aside copy in `.romperoom-quarantine`, an original in `.romperoom/lists-backup`). At the
+   end the request log is empty and `network-log.json` absent.
+
+What it cannot observe: Windows and Linux; a case-only folder rename on a case-sensitive volume;
+FAT32, exFAT and network shares (the library is on the Mac's own disk); a frontend's own database;
+and saves on a card.
+
+**Last run: 2026-10-06,** macOS, the built app, a scratch library of 34 files (2.0 GiB) named with
+real No-Intro and Redump titles across Game Boy Advance, PlayStation and Mega Drive, with five disc
+games of a `.cue` and two 200 MiB tracks (one beside an `.m3u`) and two `gamelist.xml` files.
+Your library's share was not mounted, so the share run (copying real folders and fingerprinting
+the share) was **not evaluated**. What it measured:
+
+- the review renamed 3 folders (`GBA` to `gba` by letter case, `Mega Drive` to `genesis`,
+  `PlayStation` to `psx`), merged 1 (`Game Boy Advance` into `gba`) and left `saves` (a device's
+  saves); it offered 9 games and left none, listed 1 identical and 1 different clash, and 2 game
+  lists of 2 entries each; the games already named and the unidentified one were not listed;
+- folders renamed and merged: **observed**; the merged folder kept only the different file, the
+  identical copy went to `.romperoom-quarantine`, and the folder stayed in place;
+- a game renamed with its art and saves: **observed**; the picture, the library save and the
+  Batocera-layout save took the new name, and after a scan the picture showed on the wall;
+- the multi-file games: **observed**; the folder game's folder, `.cue` and tracks were renamed and
+  its `.cue` names the new tracks; the other game's `.cue`, `.m3u` and tracks were renamed in
+  place and its `.m3u` names the new `.cue`;
+- `gamelist.xml`: **observed**; a line diff showed only the renamed games' `<path>` and `<image>`
+  lines changed, CRLF line ends and the comment kept;
+- backups: **observed**; the originals of 2 game lists, 5 cue sheets and 1 playlist were in
+  `.romperoom/lists-backup/1/`;
+- Undo from the results: **observed**; 49 changes put back, the fingerprint outside `.romperoom`
+  (and inside it) equal to the one before, modification times included. The next review left the
+  5 disc games ("A part of this game doesn't match the official data.") because Scan again had
+  run between the run and its Undo; after another scan it equalled the first review, and without a
+  scan in between (run, Undo, review) it was equal at once. Fixed since: Undo now gives a
+  rewritten cue sheet's or playlist's catalog row back what it said before the run. The engine
+  suite covers it (run, scan, Undo, review, run again, for a cue sheet and a playlist); this live
+  run was not repeated;
+- Stop, then Finish or undo…: **observed**; Stop at step 4 of 45 ended the run Stopped with 4
+  folders and 1 game done and 8 changes not run, each game whole; its journal waited in Recovery,
+  and Finish renamed the rest and rewrote both game lists; Undo from History then restored the
+  fingerprint;
+- a kill mid-run, then rollback: **observed**; killed at step 22 of 45 with a disc game's folder
+  renamed but not yet its files; the next start opened the panel, the run read Interrupted, and
+  Undo what was done restored the fingerprint outside `.romperoom` exactly;
+- a frontend rescan: **not evaluated**; no frontend that reads a ROM folder or `gamelist.xml` is
+  installed on this Mac (OpenEmu is, but it imports games into its own library);
+- the share: **not evaluated**, the share was not mounted;
+- the network: **observed**; the request log was empty and `network-log.json` absent;
+- throughout, every SHA-1 from before was in the library after each run, stop, finish and kill.
 
 ## Real-card run
 

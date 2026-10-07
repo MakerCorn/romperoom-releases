@@ -3,10 +3,10 @@
 Romperoom is built in four milestones. **Milestone 1, Foundation, is complete,** and so are the
 DAT part of Milestone 2: identifying games against DAT files you import or have Romperoom
 download when you ask, and cover art from libretro-thumbnails and SD cards, the first part of
-Milestone 3: Tidy up, which sets aside duplicates and leftover artwork, and the first part of
-Milestone 4: copying games to an SD card. Everything marked planned is not built yet, and plans
-change as each milestone starts. Next come a first release, then the rest of Organize. The
-detailed plans, with their tests, are in the design history
+Milestone 3: Tidy up, which sets aside duplicates and leftover artwork and standardises folder
+and game names, and the first part of Milestone 4: copying games to an SD card. Everything marked
+planned is not built yet, and plans change as each milestone starts. Next come a first release,
+then the rest of Organize. The detailed plans, with their tests, are in the design history
 (foundation,
 identify,
 game database downloads,
@@ -92,19 +92,28 @@ a journal that knows its library.
   time or together, and Delete forever behind a preview and typed words.
 - **Recovery:** a run that stopped (a crash, or Cancel) is offered to finish or undo, at the next
   start and from its own result.
+- **Standardise library:** console folders renamed and merged to one device profile's names, and
+  identified games renamed to their DAT names with their art, saves, cue sheets, playlists and
+  game list entries ([user guide](user-guide.md#standardise-your-library),
+  [architecture.md](architecture.md#standardise-the-library)), all or nothing per game, undoable.
 
 Proven end to end on the fixture library on macOS, and with the fixture's Windows shape
-simulated. Not run against a real Windows drive or a NAS.
+simulated; Standardise library was also run live on a scratch library on macOS
+([testing.md](testing.md#live-standardise-run)). Not run against a real Windows drive or a NAS.
 
 **Still planned:**
 
-- **Folder standardisation:** rename and merge console folders (`GBA` and `Game Boy Advance`)
-  to one scheme, and rename files to their DAT names. Their art is renamed with them.
 - **Re-linking artwork** to a renamed game, game-list entries without a game, duplicates across
   libraries, and emptying only files older than a date.
 - **Filtering leftover artwork by cause,** and thumbnails beside each duplicate copy.
 - **A cancelled run that is never settled stays interrupted,** even after a fresh run tidied
   the same files ([decision 33](decisions.md#33-a-stopped-tidy-is-finished-or-undone-not-undone-in-part)).
+- **A renamed playlist's name match after Standardise is undone.** A playlist (`.m3u`) a run
+  renamed without rewriting it, matched by identify under its new name before the run was undone
+  or rolled back, keeps that match, and the review leaves its game as not matching until Identify
+  games runs again (a scan does not clear it). The likely fix is to keep every renamed playlist's
+  catalog row as rewritten ones are kept
+  ([decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
 
 ## Milestone 4: Deploy (SD cards done)
 
@@ -155,7 +164,8 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 
 1. **A first release:** publish the unsigned beta the release workflow drafts, then signing
    and updates (see [release.md](release.md)).
-2. **[Milestone 3, Organize](#milestone-3-organize-tidy-up-done):** folder standardisation.
+2. **[Milestone 3, Organize](#milestone-3-organize-tidy-up-done):** re-linking artwork,
+   leftover-art filters and duplicates across libraries.
 3. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** scrapers
    (ScreenScraper, its own spec), once the owner decisions in [Open questions](#open-questions)
    are made.

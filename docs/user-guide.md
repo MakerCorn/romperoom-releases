@@ -28,6 +28,7 @@ placeholder covers.
 - [Put games on an SD card](#put-games-on-an-sd-card)
 - [Sync a card](#sync-a-card)
 - [Tidy up your library](#tidy-up-your-library)
+- [Standardise your library](#standardise-your-library)
 - [Keyboard](#keyboard)
 - [Gamepad](#gamepad)
 - [Questions](#questions)
@@ -589,6 +590,70 @@ since you looked, see [troubleshooting](troubleshooting.md#tidy-up-says-romperoo
 [tidy-confirm-lt]: screenshots/tidy-confirm-console-shelf-light.png
 [tidy-setaside-lt]: screenshots/tidy-setaside-console-shelf-light.png
 
+## Standardise your library
+
+**Standardise library** (a tab of Tidy up) names your console folders the way one device does,
+and your identified games by their official names from your game databases. A library built up
+over the years often has `GBA`, `gba` and `Game Boy Advance` side by side, and games named
+`tetris.gb`: this makes them one scheme. You review every change first, nothing is deleted, and
+the whole run can be undone. Tidy up's **Overview** shows the device you chose last.
+
+1. Choose the device whose folder names you want: ES-DE, muOS, Onion (Miyoo Mini) or Batocera.
+   Romperoom remembers it for this library, and you can pick another later. **Review the
+   changes** checks the library (**Stop** goes back to choosing) and shows the review.
+2. In the review, tick what to change. Anything left unticked stays as it is. It has these parts:
+   - **Folders:** each console folder whose name differs, such as `Game Boy Advance → gba`, with
+     how many games it holds. When two folders are one console, the second merges into the one
+     that takes the name, so it can only be ticked while that one is. A folder Romperoom can't
+     place, one this device has no folder for, one whose name is taken by something else, and a
+     folder of a device's saves are listed with the reason and left alone.
+   - **Games**, under the name of their console: each identified game whose file name differs
+     from its official name, with what it brings along: its pictures, its saves (in
+     `.romperoom/saves` and any device's save folder inside your library) and the game list
+     entries that name it. Two copies of one game are each listed, by where each one is. A game
+     of several files (a disc's `.cue` and `.bin` files, a playlist) is renamed whole, its `.cue`
+     or `.m3u` rewritten to the new names, or not at all. A game whose picture or save can't come
+     along (its new name is taken) starts unticked and says which file stays. A game Romperoom
+     can't rename says why. Games that aren't identified are never touched, and a game whose file
+     matches more than one game waits until you choose under **Check name matches**.
+   - **Files with the same name:** when a merge meets a file already there, it stays in its own
+     folder. An identical copy can be set aside instead (tick it), and a different one always
+     stays where it is.
+   - **Game lists** that will change, and any left alone with the reason.
+3. **Standardise.** Progress shows each change; **Stop** stops between games, keeping what is
+   done. The results say what was renamed and anything left as it was, with **Undo this run**
+   and **Scan again**. They stay until you press **Done**, even if you visit another screen and
+   come back. If the library was busy with another job, nothing changes, the result names the
+   job, and **Back to the review** returns to it.
+
+| Light                                              | Dark                                                     |
+| -------------------------------------------------- | -------------------------------------------------------- |
+| ![The standardise review][standardise-review-lt]   | ![The standardise review, dark][standardise-review-dk]   |
+| ![The standardise results][standardise-results-lt] | ![The standardise results, dark][standardise-results-dk] |
+
+Game lists (`gamelist.xml` in a console folder, which Batocera and ES-DE read) change only where
+they name a renamed game. Before a game list, cue sheet or playlist changes, its original is
+moved to `.romperoom/lists-backup` in your library, and it stays there. A game list Romperoom
+can't read with certainty is left as it is and named in the review, and so is the game list of a
+folder that merges into another (it stays in that folder). A frontend's own database isn't
+changed, so a renamed game may need a rescan there. Saves on a card keep their old names.
+
+**Recent standardise runs**, here and under **History**, offer **Undo** while a run can still be
+undone. Undo puts back only what is unchanged since; anything else stays where it is and is
+listed. A run stopped part way, cut short by a crash or a disconnected drive, or one that
+couldn't put a failed item back, waits in Tidy up's Recovery: the results and the Overview offer
+**Finish or undo…**. While it waits, Romperoom won't start another run of that library ("An
+earlier run of this library was interrupted") or remove the library ("This library has an
+interrupted standardise run"): finish it or undo it first, then try again.
+
+If your library changed since the review, or the review is too old, Romperoom says so and
+**Review again** checks the library afresh; nothing was changed.
+
+[standardise-review-lt]: screenshots/standardise-review-console-shelf-light.png
+[standardise-review-dk]: screenshots/standardise-review-console-shelf-dark.png
+[standardise-results-lt]: screenshots/standardise-results-console-shelf-light.png
+[standardise-results-dk]: screenshots/standardise-results-console-shelf-dark.png
+
 ## Keyboard
 
 Everything works from the keyboard. Tab moves between controls, and a visible ring shows
@@ -625,12 +690,15 @@ Holding a direction repeats it.
 ## Questions
 
 **Does Romperoom change, move or delete my games?**
-Only when you ask it to in Tidy up, after a preview. Even then it only sets files aside inside
-your library, where you can put them back; deleting them forever needs you to type
-`DELETE FOREVER`. Scanning and copying to a card only read your library. Confirming that games
-were removed only changes Romperoom's own list. On a card, it only replaces or moves files it
-put there itself, except that [Sync a card](#sync-a-card) replaces a save you approved after
-copying the card's own to the library's `.romperoom/saves-backup`. In the library, Sync a card
+Only when you ask it to in Tidy up, after a preview. Duplicates and leftover artwork are only set
+aside inside your library, where you can put them back; deleting them forever needs you to type
+`DELETE FOREVER`.
+[Standardise library](#standardise-your-library) renames folders and games, and changes the game
+lists, cue sheets and playlists that name them (keeping each original), only after you approve its
+review, and Undo puts them back. Scanning and copying to a card only read your library. Confirming
+that games were removed only changes Romperoom's own list. On a card, it only replaces or moves
+files it put there itself, except that [Sync a card](#sync-a-card) replaces a save you approved
+after copying the card's own to the library's `.romperoom/saves-backup`. In the library, Sync a card
 adds games but never changes or deletes one, moves a save it replaces to the same backup folder
 first, and its Undo removes only what it added.
 Cover art never changes a game file: it only adds pictures to the library's own

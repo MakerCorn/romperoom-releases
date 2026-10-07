@@ -154,8 +154,15 @@ Known judgement calls, all reasons the profiles stay `community`:
 - Batocera's `image` tag defaults to a screenshot and `thumbnail` to a 2D box (`Settings.cpp`),
   so screenshots map to `-image` and box art to `-thumb`. A user can change those scraper
   settings on the device.
-- Onion reads a `miyoogamelist.xml`, whose format its docs do not describe, so no game list is
-  written.
+- Onion reads a `miyoogamelist.xml` in each ROM folder. Its FAQ says it has the format of
+  `gamelist.xml`, and its own generator (`miyoogamelist_gen.sh`) writes `./<rom>` paths and
+  `./Imgs/<stem>.png` images, but the profile names no game list, so none is written and
+  Standardise does not change one.
+- **Standardise library** reads the game list of the formats the shipped profiles name
+  (`gamelist.xml`: Batocera's, and ES-DE's when it reads lists from the ROM folders) in each
+  console folder of a library: its `<game>` and `<folder>` entries' `<path>`, relative to the
+  folder (ES-DE `Gamelist.cpp`/`GamelistFileParser.cpp`, batocera-emulationstation
+  `Gamelist.cpp`). muOS names no game list.
 
 ## Saves
 
