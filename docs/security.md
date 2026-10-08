@@ -12,10 +12,11 @@ The short version:
   cover art, and then only to two GitHub hosts.
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
-- Only Tidy up moves games and artwork in a library, and only into its set-aside folder, after a
-  preview. Deleting them forever needs typed words, and is the only deletion of the player's
-  files. Cover art adds pictures only under `.romperoom/media`, never replacing a file. Sync a
-  card adds the games and saves the player approves (console folders, `.romperoom/saves`),
+- Only Tidy up moves games and artwork in a library: into its set-aside folder after a preview, or,
+  for Standardise and re-link, to new names after a review, keeping each edited game list's
+  original. Deleting set-aside files forever needs typed words, and is the only deletion of the
+  player's files. Cover art adds pictures only under `.romperoom/media`, never replacing a file.
+  Sync a card adds the games and saves the player approves (console folders, `.romperoom/saves`),
   replacing a save only after a backup, and writes on a card only its id file and saves.
 
 ## Contents
@@ -241,9 +242,9 @@ test checks that this table lists exactly the channels in `IPC`.
 
 | Channel                   | Direction   | What it does                                                             | Writes?      |
 | ------------------------- | ----------- | ------------------------------------------------------------------------ | ------------ |
-| `engine:addLibrary`       | page → host | Adds an absolute folder as a library (not a filesystem root, not nested) | catalog only |
-| `engine:removeLibrary`    | page → host | Forgets a library's catalog rows; never touches files                    | catalog only |
-| `engine:listLibraries`    | page → host | Lists libraries                                                          | no           |
+| `engine:addLibrary`       | page → host | Adds an absolute folder as a library (not a filesystem root, not one already added, not inside or around one) | catalog only |
+| `engine:removeLibrary`    | page → host | Forgets a library's catalog rows, journals and runs; never touches files; refused while a scan runs, a job holds it or something of it waits in Recovery | catalog only |
+| `engine:listLibraries`    | page → host | Lists libraries; with `{ details: true }` (nothing else is accepted) also each one's name, game count, last scan and whether its folder answers (the host reads each library's own folder, at most 3 s) | no           |
 | `engine:scan`             | page → host | Scans a library read-only; progress comes back on `scanProgress`         | catalog only |
 | `engine:cancelScan`       | page → host | Cancels the running scan                                                 | no           |
 | `engine:listSystems`      | page → host | Systems that have games, with counts                                     | no           |
@@ -273,10 +274,10 @@ test checks that this table lists exactly the channels in `IPC`.
 | `deploy:listBiosFolders` | page → host | Each library's BIOS folder, by name | no |
 | `deploy:progress` | host → page | Deploy progress, then the report, to the window that started it | no |
 | `tidy:overview` | page → host | Duplicate, leftover-artwork and set-aside totals per library, by name | no |
-| `tidy:findDuplicates` | page → host | One library's duplicate groups under a keeper policy; returns a window-bound id | no |
+| `tidy:findDuplicates` | page → host | One library's duplicate groups under a keeper policy; returns a window-bound id. With `across: true`, the files held in two or more libraries, by library name (a report, no id) | no |
 | `tidy:groups` | page → host | Another page of the same groups (refused once they changed) | no |
 | `tidy:planDuplicateCleanup` | page → host | Plans setting aside every copy but the keeper, with per-group choices | no |
-| `tidy:detectOrphans` | page → host | Artwork no game uses, by media id and cause | catalog only (checksums) |
+| `tidy:detectOrphans` | page → host | Artwork no game uses, by media id and cause (optionally of one cause), with a count per cause | catalog only (checksums) |
 | `tidy:planOrphanCleanup` | page → host | Plans setting aside the chosen artwork, by media id | no |
 | `tidy:apply` | page → host | Runs a plan once: moves its files into `.romperoom-quarantine` | the library |
 | `tidy:cancel` | page → host | Stops this window's tidy run after the current file | no |
@@ -285,10 +286,10 @@ test checks that this table lists exactly the channels in `IPC`.
 | `tidy:listOperations` | page → host | Past tidy and delete operations, with what each still has set aside | no |
 | `tidy:listQuarantine` | page → host | Set-aside files, library-relative, by library or operation | no |
 | `tidy:restore` | page → host | Puts chosen set-aside files (by item id) or an operation's files back | the library |
-| `tidy:purgePreview` | page → host | What deleting set-aside files forever would delete, and the words to type | no |
+| `tidy:purgePreview` | page → host | What deleting set-aside files forever (all, or those set aside more than 30 or 90 days ago) would delete, and the words to type | no |
 | `tidy:purge` | page → host | Deletes a previewed set forever; the engine checks the typed words and size | the quarantine |
 | `tidy:recoverList` | page → host | Tidy runs and deletions a crash interrupted, by library name | no |
-| `tidy:resolveJournal` | page → host | Finishes or undoes one interrupted run or deletion | the library |
+| `tidy:resolveJournal` | page → host | Finishes or undoes one interrupted run or deletion, or discards the rest of a Tidy up run (catalog only) | the library |
 | `tidy:reconnectLibrary` | page → host | After "Is this still your library?": re-points a library's runs at the folder now at its path (`{ confirm: true }`; the engine refuses an empty or different folder) | no (reads the library folder) |
 | `tidy:progress` | host → page | Tidy progress, then the result, to the window that started it | no |
 | `identify:importDat` | page → host | Opens the host's file picker and imports the picked game database (DAT); no path from the page | catalog only (reads the picked file) |
@@ -327,10 +328,12 @@ test checks that this table lists exactly the channels in `IPC`.
 | `sync:progress` | host → page | Card sync progress, then the result, to the window that started it | no |
 | `standardise:review` | page → host | Reads a library against a device profile and returns a review (nothing written but the chosen profile); library id and profile id only | catalog (the library's chosen profile) |
 | `standardise:run` | page → host | Renames and merges the chosen console folders and renames the chosen games, with their art, saves, cue sheets, playlists and game lists; the review's plan id and its item ids only | library (console folders, games, art, saves, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`, `.romperoom-quarantine`) and catalog |
-| `standardise:cancel` | page → host | Stops this window's standardise review or run (a run stops between units) | no |
+| `standardise:cancel` | page → host | Stops this window's standardise review or run, or its re-link run (a run stops between units, a re-link run between pictures) | no |
 | `standardise:status` | page → host | This window's running or last standardise run (a reloaded page adopts it) | no |
 | `standardise:undo` | page → host | Undo this run: what it renamed and replaced goes back where unchanged; a run id only | library and catalog |
 | `standardise:list` | page → host | Each library's chosen profile and the latest standardise runs | no |
+| `standardise:relinkReview` | page → host | Reads a re-link review of a library: leftover pictures one game clearly matches, and game list entries whose game file is gone; a library id only | catalog only (checksums) |
+| `standardise:relinkRun` | page → host | Renames the chosen pictures after their game and updates the game lists that name them, and re-points the chosen entries; the re-link review's plan id and its item ids only | library (pictures, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`) and catalog |
 | `standardise:progress` | host → page | Standardise progress, then the result, to the window that started it | no |
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
@@ -410,25 +413,29 @@ left a file is one of a closed set of reasons, and the file system's own message
 The `standardise:` channels are handled by the standardise host (`src/main/standardise-host.ts`).
 The page sends a library id the host lists, a device profile id the host knows, back the review's
 plan id with item ids from that review (`f<n>`, `g<n>`, `c<n>`, each once, each in its own list),
-and a run id. It never sends a path or a file name. The plan id must be a lower-case UUID the host
-gave to that same window (the host keeps as many reviews as the engine does, 2); anything else is
-refused with `StandardiseArgumentError` before the engine is called. One standardise job (a review,
-a run or an undo) runs at a time, and any other is refused with `StandardiseBusyError`; a review or
-run binds to the window that started it, its progress and result go only to that window, only it
-can stop it, and closing that window or quitting stops it between units (what was renamed stays;
-Tidy up's Recovery finishes or undoes it). A run and its undo hold the library lock Tidy up uses,
-so a run started while another job holds the library is refused with nothing written, and while
-one runs every other job says the library is busy with "Tidy up or Standardise". The engine
-refuses a choice the review did not offer, a review older than the catalog's last change, and a
-new run while an earlier run of the library waits in Recovery; removing that library is refused
-too. The results carry names and library-relative paths, never the library's own path; why Undo
-left a file is one of a closed set of reasons, and the file system's own message is only logged.
+and a run id. For a re-link it sends a library id, then the re-link review's plan id with its
+picture and entry ids (`p<n>`, `e<n>`, each once, each in its own list). It never sends a path or a
+file name. The plan id must be a lower-case UUID the host gave to that same window (the host keeps
+as many reviews of each kind as the engine does, 2); anything else is refused with
+`StandardiseArgumentError` before the engine is called. One standardise job (a review, a run, a
+re-link run or an undo) runs at a time, and any other is refused with `StandardiseBusyError` (a
+re-link review only reads the library, so it is no job and runs beside them; a reload drops the
+window's re-link reviews, one still being read is not kept, and one a refused run would put back is
+not put back); a review or run binds to the window that started it, its progress and result go only
+to that window, only it can stop it, and closing that window or quitting stops it between units
+(what was renamed stays; Tidy up's Recovery finishes or undoes it). A run and its undo hold the
+library lock Tidy up uses, so a run started while another job holds the library is refused with
+nothing written, and while one runs every other job says the library is busy with "Tidy up or
+Standardise". The engine refuses a choice the review did not offer, a review older than the
+catalog's last change, and a new run while an earlier run of the library waits in Recovery; removing
+that library is refused too. The results carry names and library-relative paths, never the library's
+own path; why Undo left a file is one of a closed set of reasons, and the file system's own message
+is only logged.
 
 The engine members that are _not_ exposed are `close`, `lastScan`, `resolveMedia`,
 `recoverJournals`, `resolveJournal` and the `tidy`, `identify`, `art`, `sync` and `standardise`
-facades themselves (host-only). The operation
-engine (`applyPlan`, `undoJournal` and the rest) has no channel at all: the page reaches tidy
-runs only through the tidy host's ids.
+facades themselves (host-only). The operation engine (`applyPlan`, `undoJournal` and the rest) has
+no channel at all: the page reaches tidy runs only through the tidy host's ids.
 
 Adding a channel: add the `Engine` method and its `IPC` entry together, since
 `IPC_MATCHES_API` fails until both exist. Then list it where the tests pin the exact surface:
@@ -443,9 +450,9 @@ Adding a channel: add the `Engine` method and its `IPC` entry together, since
 ## Network isolation
 
 Romperoom makes no network request unless the user presses Download for me or Check for updates
-under Game databases, or Get cover art under Health (and then Download in its review), and the
-page cannot make one at all. The CSP stops `fetch`, XHR and
-sockets. Three more layers cover what CSP does not govern.
+under Game databases, or Get cover art under Health (and then Download in its review), and the page
+cannot make one at all. The CSP stops `fetch`, XHR and sockets. Three more layers cover what CSP
+does not govern.
 
 WebRTC is outside CSP: `connect-src 'none'` does not stop a peer connection. Also, any
 same-origin frame an injected script makes (about:blank, `srcdoc`, nested) has its own
@@ -648,16 +655,20 @@ for the download (the official-site path still works).
   [configuration.md](configuration.md#data-folder)). It is never kept on the NAS. It holds
   library paths, relative file paths, sizes, modification times, CRC32/MD5/SHA-1 hashes, parsed
   titles, folder mappings and scan state. It is not encrypted. It holds no credentials, because
-  Milestone 1 has none.
+  Romperoom has none: every request it makes is anonymous.
 - **Settings** (theme and light or dark) live in the renderer's localStorage, under the key
-  `romperoom.settings.v1`.
+  `romperoom.settings.v1`, and the card wizard's last choices under `romperoom.deploy.v1` (see
+  [configuration.md](configuration.md#saved-settings)).
 - **Electron's own user data** (Chromium caches and local storage) shares the data folder.
   Chromium's cookie store is not encrypted (the `EnableCookieEncryption` fuse is off): the app
   sets no cookies and keeps no secrets there.
 - **Nothing is written to the library** by a scan. Romperoom's own media store
-  (`.romperoom/media`) is written only by cover art, when the player confirms a review (see
+  (`.romperoom/media`) gains pictures only from cover art, when the player confirms a review (see
   [Filesystem safety](#filesystem-safety)); each picture it adds is recorded in the catalog
   (`art_added`, with its size, SHA-1, source and pin, and `art_dir` for the folders it made).
+  Standardise and re-link rename pictures there, as anywhere in the library, only as their review
+  offered, and keep each replaced game list, cue sheet or playlist in `.romperoom/lists-backup`
+  (`standardise_run`, `standardise_backup`).
   Sync a card writes the games and saves the player approves into console folders,
   `.romperoom/saves` and `.romperoom/saves-backup`, through one journal (see
   [Filesystem safety](#filesystem-safety)); the catalog keeps its card ids, save bases and card
@@ -788,6 +799,14 @@ for the download (the official-site path still works).
     holds what the run wrote.
   - Nothing is deleted. An identical copy a merge meets is set aside in `.romperoom-quarantine`;
     a merged folder left empty stays where it is.
+- **Re-link writes only what its review offered, inside the library**
+  ([decision 44](decisions.md#44-re-link-renames-a-leftover-picture-after-the-one-game-that-clearly-matches-it),
+  `packages/engine/src/tidy/relink.ts`, `tidy/relink-run.ts`). The page passes a library id and
+  ids from the review. The run holds the library's `op` lock; each picture is renamed in its own
+  folder by one step of Tidy up's journal, through the same name reservation and real-folder
+  checks as Standardise, never over a file; a `gamelist.xml` changes only in the renamed pictures'
+  media references and the chosen entries' `<path>`, staged in `.romperoom/tmp` with the original
+  moved to `.romperoom/lists-backup/<run>/`. Nothing is deleted, and no entry is ever removed.
 
 ## Emptying the quarantine
 
@@ -935,7 +954,8 @@ pattern.
   (unknown fields, wrong types, page sizes over 200 and selections over 100,000 are refused), and
   the engine validates again with its own schemas.
 - **No paths out.** Every path shown is library-relative; anything absolute is cut to its last
-  name in either separator style (`shownPath`). Libraries are named by their folder's name.
+  name in either separator style (`shownPath`). Libraries are named by their folder's name, with
+  a number when two share it (`roms`, `roms (2)`).
 - **Window-bound ids.** Duplicate answers, plans and delete-forever previews are held under
   random host ids, bound to the window that asked, at most 6 per window and kind, for 30 minutes,
   and forgotten when the window navigates. The engine id behind one never reaches the page.
@@ -990,6 +1010,10 @@ somehow became markup.
   sheets, playlists and game lists (each list's original moved to `.romperoom/lists-backup`
   first), set aside identical copies a merge meets, and undo a run. Nothing is deleted, and
   nothing outside that library is touched.
+- Re-link the leftover pictures and game list entries a re-link review of a library it has added
+  offered: rename each picture after its game in its own folder, update the game lists that name
+  it and re-point the chosen entries (each list's original moved to `.romperoom/lists-backup`
+  first), and undo a run. Nothing is deleted, and nothing outside that library is touched.
 - Sync a card the host lists, if every deploy safe-target rule allows it: import the games its
   review offered into the library's console folders, copy the saves it offered both ways (each
   replaced save backed up first, a conflict's side as the page picks), give the card its id
@@ -1005,7 +1029,8 @@ somehow became markup.
   over a file. Card sync and standardise write only what their review offered
   ([Filesystem safety](#filesystem-safety)), and standardise changes a game list, cue sheet or
   playlist only where it names a renamed file, after moving the original to
-  `.romperoom/lists-backup`.
+  `.romperoom/lists-backup`. Re-link changes a game list only in the renamed pictures' references
+  and the chosen entries' paths, after moving the original to `.romperoom/lists-backup`.
 - Read a file's contents. It sees hashes and sizes, never bytes, except images through the
   media scheme.
 - Load `file://` or another origin, or navigate the window away.
@@ -1039,9 +1064,9 @@ reviewed against this list.
 
 ## Deploying to a card
 
-Writing to a card is one of the few things Romperoom does outside its own data folder (the
-others write into a library: Tidy up, cover art and card sync), so the page is treated as
-hostile here too. The rule: **the page never names a path to write to.**
+Writing to a card is one of the few things Romperoom does outside its own data folder (the others
+write into a library: Tidy up with Standardise and re-link, cover art and card sync), so the page is
+treated as hostile here too. The rule: **the page never names a path to write to.**
 
 **Threat model.** Assume the page is compromised (a bug in rendering a game title, a malicious
 gamelist). It can call every `deploy:` channel with any arguments, in any order, as often as it
@@ -1087,7 +1112,9 @@ above; `e2e/deploy.spec.ts` probes the real channels from the page.
 
 ## Gaps
 
-These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-milestones):
+These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-milestones).
+Limits that do not bear on safety (what Standardise, re-link or Across libraries leave out, for
+example) are in [development.md](development.md#known-limitations).
 
 - **The media protocol checks folders and then reads.** Between `resolveMedia()` and the open,
   an intermediate folder can be swapped for a symlink. `O_NOFOLLOW` covers only the last path
@@ -1100,7 +1127,8 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
   returned. A compromised renderer can therefore scan any readable folder (above).
 - **The builds are not code-signed or notarized**
   ([decisions.md](decisions.md#16-the-beta-ships-unsigned)). Players check downloads against
-  `SHA256SUMS.txt`, which only helps if they fetch it from the releases page. Fuses and asar integrity are checked on every build (below).
+  `SHA256SUMS.txt`, which only helps if they fetch it from the releases page. Fuses and asar
+  integrity are checked on every build (below).
 - **The packaged app refuses a list of switches, not every switch** (see
   [launch switches](#launch-switches)), and Chromium creates a `--user-data-dir` folder before
   the app can refuse it.
@@ -1178,12 +1206,17 @@ These are known and tracked in [roadmap.md](roadmap.md#must-fix-before-later-mil
 - **Drag and drop is tested synthetically, not by hand.** Before each release, drag a `.html`
   file and a ROM from Finder (or Explorer) onto the wizard and the wall. The window should stay
   on the app, show the not-allowed cursor and log nothing.
-- **Standardise checks, then renames.** Each journal step checks the folders it renames into
-  are reached through no link, when it is checked and again right before its rename; a folder
-  swapped for a link in between is followed at that instant. On POSIX a folder rename can
-  replace an empty folder that appeared at its destination after the check; it holds nothing
+- **Standardise and re-link check, then rename.** Each journal step checks the folders it renames
+  into are reached through no link, when it is checked and again right before its rename; a folder
+  swapped for a link in between is followed at that instant. On POSIX a folder rename can replace an
+  empty folder that appeared at its destination after the check; it holds nothing
   ([decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
   A frontend's own database is not updated, so a renamed game may need a rescan there.
+- **A share that hangs can freeze the main process.** Add a library… reads every existing
+  library's folder synchronously, and Across libraries reads each candidate copy's device and
+  inode synchronously after its folder probe, so a network share that stops answering stalls the
+  app until it answers or the system gives up on it. The Libraries tab's probe gives up after 3
+  seconds but keeps one file-system thread per hung library until the share answers.
 - **Card sync checks, then reads and writes.** The windows of the two cover art entries above
   apply to its library folders and card reads too. The hash pool reads a card game by path, so a
   game swapped for a link after its check is hashed through it; only a hash is learned, and the
@@ -1254,6 +1287,6 @@ silicon) they have also passed by hand, on Windows on CI only.
 - [ ] **Code signing and notarization** (macOS hardened runtime and notarization, Windows
       signing). Wired, not provisioned ([release.md](release.md#unsigned-and-signed-builds)).
 - [ ] **The manual drag-and-drop check** above, on each platform, before each release.
-- [ ] **A first install by hand on Windows.** CI runs the packaged Windows app on GitHub's
-      runners only.
+- [ ] **A first install by hand on Windows and on a Linux desktop.** CI runs the packaged apps on
+      CI runners only (the self-hosted Windows PC and Linux container, else GitHub's).
 - [ ] Review the `npm audit` findings from CI (reported, not blocking) before each release.

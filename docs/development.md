@@ -8,7 +8,7 @@ tests and CI, [security.md](security.md) for the desktop security model, and
 Requirements: Node.js 22.12 or newer (CI uses 22; development happens on 25; Electron 44,
 `@electron/fuses` and electron-builder's Electron download need 22.12) and npm. No C++
 toolchain is needed: install scripts are off ([below](#install-scripts-are-off)). macOS is the
-verified platform. CI passes on Windows too, but only on GitHub-hosted runners (see
+verified platform. CI passes on Windows and Linux too, but only on CI runners (see
 [Platforms](#platforms)).
 
 ## Contents
@@ -114,9 +114,9 @@ folder from `electron_config_cache` (the npm-config form). It ignores `ELECTRON_
 the variable the zip goes to the per-user default cache. To fetch the binary ahead of time, run
 `node node_modules/electron/install.js`. It does nothing when the binary is already there.
 
-In CI the `e2e` job sets `electron_config_cache=$RUNNER_TEMP/electron-cache`. `actions/cache` restores
-and saves that folder, keyed on the runner OS, the architecture and the locked Electron version
-(read from `package-lock.json` before `npm ci`). After `npm ci` the job runs `install.js`
+In CI the `e2e` job sets `electron_config_cache=$RUNNER_TEMP/electron-cache`. `actions/cache`
+restores and saves that folder, keyed on the runner OS, the architecture and the locked Electron
+version (read from `package-lock.json` before `npm ci`). After `npm ci` the job runs `install.js`
 explicitly: with a warm cache it unzips from it, and with a cold one it downloads (so a cold run
 needs network access to the Electron release host). A lockfile change that keeps the Electron
 version reuses the cache.
@@ -138,12 +138,12 @@ Coverage thresholds, mutation testing and the CI jobs are described in
 ## Native modules (better-sqlite3)
 
 better-sqlite3 13 ships prebuilt **Node-API** binaries (`prebuilds/<platform>-<arch>.node`, built
-with `NAPI_VERSION=10`) for `darwin`, `linux`, `linuxmusl` and `win32`, each on `arm64` and
-`x64`. Its loader (`lib/binding.js`) takes that file first and looks in `build/Debug` or
-`build/Release` only when it is missing. `packages/engine/test/prebuilds.test.ts` fails if
-macOS arm64 or x64, Windows x64 or Linux x64 lose theirs, or if a `build/` folder appears. Node-API is ABI-stable across runtimes, so the very same file loads under
-Node (engine tests; Node 25 is ABI 141) and under Electron 44 (ABI 149, Node-API 10). There is no
-rebuild step and no second copy:
+with `NAPI_VERSION=10`) for `darwin`, `linux`, `linuxmusl` and `win32`, each on `arm64` and `x64`.
+Its loader (`lib/binding.js`) takes that file first and looks in `build/Debug` or `build/Release`
+only when it is missing. `packages/engine/test/prebuilds.test.ts` fails if macOS arm64 or x64,
+Windows x64 or Linux x64 lose theirs, or if a `build/` folder appears. Node-API is ABI-stable across
+runtimes, so the very same file loads under Node (engine tests; Node 25 is ABI 141) and under
+Electron 44 (ABI 149, Node-API 10). There is no rebuild step and no second copy:
 
 ```sh
 ELECTRON_RUN_AS_NODE=1 "$(node -p "require('electron')")" -e \
@@ -212,11 +212,12 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 
 - **macOS** is where Romperoom is built and verified: unit tests, the end-to-end suite, the
   smoke and manual runs.
-- **Windows is checked by CI only.** CI runs the same jobs on `windows-latest`. Its first run
-  (2026-09-30) failed in `npm ci`, before any test ran; that is fixed, and the unit and
-  end-to-end jobs now pass there. Nobody has run the app on a real Windows PC by hand.
-  `ROMPEROOM_FIXTURE_SIMULATE_WIN32=1` only builds the test fixture's Windows shape on macOS.
-  Details are in [testing.md](testing.md#platforms).
+- **Windows is checked by CI only.** CI runs the same jobs on the self-hosted Windows PC when
+  `WIN_RUNNER_LABELS` is set, else on `windows-latest`
+  ([ci-runners.md](ci-runners.md#a-windows-machine)). Its first run (2026-09-30) failed in `npm ci`,
+  before any test ran; that is fixed, and the unit and end-to-end jobs now pass there. Nobody has
+  run the app on a real Windows PC by hand. `ROMPEROOM_FIXTURE_SIMULATE_WIN32=1` only builds the
+  test fixture's Windows shape on macOS. Details are in [testing.md](testing.md#platforms).
 - **Writing code and tests that hold on Windows:**
   - Paths: build them with `join`; compare with `sep`, never `'/'`. Library-relative paths in the
     catalog use `/` on every platform, and so does any path shown to people.
@@ -253,9 +254,9 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   guard cannot tell that library from an unmounted share or an empty mount point, so it never
   lets the media roots vouch for the ROMs, and it never marks the files missing.
   `confirmRemoval` does not lift this guard, because it runs before any folder is judged. To
-  recover today, call `removeLibrary` (which removes catalog rows only, never files) and add the
-  folder again. A way to confirm "this library really is empty" belongs in the Organize/UI
-  phase.
+  recover, remove the library in **Settings** › **Libraries** (which forgets its catalog rows
+  only, never files) and add the folder again. There is no way to confirm "this library really is
+  empty".
 - **Change detection is size plus mtime.** A file rewritten with the same size and modification
   time is not re-hashed. An `unreadable` file is retried on every scan, except a corrupt or
   encrypted archive after 3 content failures in a row: that one is retried only once its size or
@@ -268,11 +269,11 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 - **Directory listing has no timeout.** A hung network mount can stall the walk. Hashing has a
   per-file timeout (10 minutes); listing folders and reading file details do not.
 - **Renames look like a removal plus a new file.** The one exception is a case-only or NFC/NFD
-  rename of a top-level system folder on a volume where both spellings are one directory, which
-  is recognized and keeps its hashes. Renaming a file, a subfolder, or a folder to a different
-  name is not tracked yet; that is a later milestone. A folder is relocated only when it has
-  catalog rows, so a user mapping of a folder with none (an empty folder, or one with no file
-  of its system's extensions yet) stays under the old spelling after a case or NFC rename, and
+  rename of a top-level system folder on a volume where both spellings are one directory, which is
+  recognized and keeps its hashes. Renaming a file, a subfolder, or a folder to a different name is
+  not tracked (re-link can rename a picture a renamed game left behind). A folder is relocated only
+  when it has catalog rows, so a user mapping of a folder with none (an empty folder, or one with no
+  file of its system's extensions yet) stays under the old spelling after a case or NFC rename, and
   the folder has to be mapped again.
 - **A game stored as a folder is not one game, until identify joins its files.** The scanner
   catalogues files whose extension the system lists, so a folder that is one game is either
@@ -324,13 +325,81 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   another ROM, the next scan marks the old row missing. If the README is the folder's only
   file, the folder has no ROMs left and is reported suspect, so its row stays `present` until
   the removal is confirmed with `confirmRemoval`.
-- **Profiles do not check `root.bios` against the other roots.** The schema rejects a
-  `root.media` inside `root.roms` (or the other way round), but not a `root.bios` that overlaps
-  either of them. No code reads `root.bios` in Milestone 1; the check belongs with the first
-  feature that writes BIOS files.
+
+### Libraries
+
+- **Removing a library forgets its Tidy up history.** What it set aside stays in its
+  `.romperoom-quarantine` folder, but Undo, put back and Delete forever no longer offer it; move
+  the files back by hand. Adding the folder again starts afresh.
+- **Add a library… can stall on a hung share.** `addLibrary` is synchronous in the main process
+  and reads every existing library's folder (`placeOf`), so Romperoom stops responding until
+  the drive answers or the system gives up on it.
+- **One stuck probe thread per hung library.** The Libraries tab's folder probe gives up after 3
+  seconds, but a read of a share that hangs keeps one thread of the main process's file-system
+  pool until the share answers. Reads of one folder are shared while one is going, so that is at
+  most one stuck thread per hung library.
+- **A symlinked library reads "Can't reach its folder".** A library whose folder was moved and
+  replaced by a symbolic link at its old path is probed with `lstat`, which sees the link, so it
+  is listed as not reachable; its scans still read through the link.
+- **An identify run can be overtaken by a removal.** A run over every library fixes its list
+  when it starts and locks each library only when it reaches it, so a library removed in between
+  is not refused; its part fails with a foreign-key error, and the other libraries' parts run as
+  usual. Nothing is lost.
+
+### Tidy up, Standardise and re-link
+
+- **A duplicate set's picture is the suggested copy's,** even after the player chooses to keep a
+  different copy.
+- **A set-aside file's age is its run's start.** Delete forever's "Older than 30 days" and "Older
+  than 90 days" count from when the run that set a file aside started, not from each file's move.
+- **"Game removed" rarely shows.** A scan unlinks a picture whose game's files are gone, so
+  Artwork lists it under "No game in your library"
+  ([roadmap](roadmap.md#milestone-3-organize-tidy-up-done)).
+- **Standardise renames only identified games, inside one library.** A frontend's own database
+  and a game list kept outside the library are not updated, and saves on a card keep their old
+  names, so the next card sync takes a renamed game's card save for a save of the old name. On a
+  volume whose folders change inode on rename or remount (an SMB share without stable file IDs),
+  a folder move can't be undone or finished. A playlist matched by its new name before a run was
+  undone keeps that match until Identify games runs again. The full list is in
+  [decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own).
+- **Re-link offers only one clear match.** A picture two games could take, a misspelling, an
+  index prefix, a scraper-style name or a game on several discs recognised disc by disc is never
+  offered, and an absolute media path in a game list is never changed. After Recovery rolls back
+  a re-link's game lists, or an Undo keeps a list changed since the run, the list and the
+  pictures' names disagree until the run is undone or the frontend rescans. A re-link of game
+  list entries only that crashed before its journal was recorded stays "Interrupted" in History
+  ([decision 44](decisions.md#44-re-link-renames-a-leftover-picture-after-the-one-game-that-clearly-matches-it)).
+- **Standardise and re-link share one run table.** A re-link waiting in Recovery refuses a
+  standardise run of that library, and the other way round, and after a reload Tidy up shows
+  only the latest result of either kind (the other is in History).
+
+### Across libraries
+
+- **The list is as each library's last scan saw it.** A file changed in place since that scan
+  (the same name, different bytes) is still listed as a copy; scan both libraries again before
+  removing a copy by hand.
+- **Two mounts of one network share are two libraries.** Their device numbers differ, so the
+  overlap check cannot see it and every file in the share reads as held twice.
+- **The look can freeze the window on a hung share.** After the folder probe it reads each
+  candidate copy's device and inode synchronously in the main process, as Duplicates does.
+- **A copy renamed while the tab looks reads as gone** (a Tidy up, Standardise or re-link run
+  renaming files at that moment), and its set may drop out until **Look again**.
+- **A pair hard-linked inside one library is one file,** so a copy of it in another library is
+  not listed.
+- **It only reports.** Setting copies aside across libraries is planned
+  ([decision 46](decisions.md#46-copies-across-libraries-are-reported-never-tidied)).
+
+### Card sync
+
+- **A card copied with a disk tool keeps the original's id,** so Romperoom takes the copy for
+  the card it was copied from, and syncing both can show more saves as changed on both sides
+  than expected. Nothing is deleted either way.
 
 ### The desktop app
 
+- **The shared announcer does not repeat itself.** A message equal to the last one read out (an
+  Across libraries **Look again** with the same outcome, say) is not read out again; the line on
+  screen still shows it.
 - **Pressing Cancel while the first of several libraries finishes** stops the next library from
   starting, but the announcement says "Scan finished", not "Scan cancelled".
 - **End jumps to the last game loaded so far, not the last game.** The wall loads games a page at
@@ -350,17 +419,16 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   WebRTC off. The per-webContents `setWebRTCIPHandlingPolicy` blocks UDP and the session's dead
   proxy blocks TCP (see [security.md](security.md#network-isolation)). The switch stays as
   a harmless extra layer.
-- **Chromium reaches nothing on the network, the main process's `net` included.** The dead proxy
-  is on every session and the host resolver rules cover the whole process, so Electron `net`
-  requests from the main process fail too (measured: `ERR_PROXY_CONNECTION_FAILED`). The only
-  network code is the game database download, which uses `node:https` in the main process
-  instead, outside Chromium's stack, behind its own exact URL allowlist, address check, pinned
-  TLS roots, caps and request log
+- **Chromium reaches nothing on the network, the main process's `net` included.** The dead proxy is
+  on every session and the host resolver rules cover the whole process, so Electron `net` requests
+  from the main process fail too (measured: `ERR_PROXY_CONNECTION_FAILED`). The only network code is
+  the game database download and cover art, which use `node:https` in the main process instead,
+  outside Chromium's stack, behind its own exact URL allowlist, address check, pinned TLS roots,
+  caps and request log
   ([ADR 40](decisions.md#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked),
-  [security.md](security.md#main-process-requests)). A later feature that needs the network
-  (artwork downloads, updates) should follow that pattern: extend `main/dat-download/`'s
-  allowlist and transport, add its module to the static import list, and leave the renderer's
-  guards unchanged.
+  [security.md](security.md#main-process-requests)). Cover art followed that pattern; a later
+  feature that needs the network (updates) should too: extend `main/dat-download/`'s allowlist and
+  transport, add its module to the static import list, and leave the renderer's guards unchanged.
 - **Page-named hostnames used to be looked up.** Before the host resolver rules, the dead proxy
   and the CSP stopped every connection, but dns-prefetch and TURN server names still reached the
   system resolver (measured in a net log, with the machine's search domain appended to a
@@ -373,26 +441,26 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 
 ### Operations and hashing
 
-- **A cancelled tidy that is never settled stays interrupted.** Cancel leaves the run's journal
-  `running`; until it is finished or undone from its result or the recovery drawer, Health
-  counts it and the next start offers it again, even after a fresh run tidied the same files
+- **A stopped tidy waits until it is settled.** Cancel leaves the run's journal `running`; until it
+  is finished, undone or (a Tidy up run) its rest discarded, Health counts it and the next start
+  offers it again. Discard the rest refuses while a file of the run is not where the run left it
   ([decision 33](decisions.md#33-a-stopped-tidy-is-finished-or-undone-not-undone-in-part)).
-- **Leftover artwork shows the first 200 pictures** of a library; setting them aside and
-  looking again shows the next ones.
+- **Artwork shows the first 200 leftover pictures** of a library, or of the cause shown; setting
+  them aside and looking again shows the next ones.
 - **A journal knows its library by device, inode, real path and top-level names**
   ([decision 29](decisions.md#29-a-journal-knows-its-library-without-writing-to-it)). A remount
   with renamed top-level folders blocks recovery. Journals written before this check have no
   identity; they are only refused when the library folder is empty.
-- **Library health counts duplicates as duplicate cleanup does**: within one library, by
-  whole-file hash, one console only. A copy in another library is neither counted nor moved.
-  Hard links and disc sets are only found on disk, so cleanup may offer fewer than health counts.
+- **Library health counts duplicates as duplicate cleanup does**: within one library, by whole-file
+  hash, one console only. A copy in another library is listed under Across libraries, never counted
+  here or moved. Hard links and disc sets are only found on disk, so cleanup may offer fewer than
+  health counts.
 - **A tidy preview goes stale on any catalog write**, including a deploy record or a scan of a
   different library: the user previews again.
 - **A restored file counts as present but unconfirmed** until the next scan re-hashes it, so it
   is not offered as a duplicate again before then.
-- **The purge checks a file, then deletes it.** A file replaced in the single system call
-  between its final hash and `unlink` is deleted
-  ([security.md](security.md#emptying-the-quarantine)).
+- **The purge checks a file, then deletes it.** A file replaced in the single system call between
+  its final hash and `unlink` is deleted ([security.md](security.md#emptying-the-quarantine)).
 - **Operations leave empty folders behind** and do not fsync the parent folder after a rename. A
   move across volumes copies only the file's contents and mtime, not extended attributes or
   macOS resource forks.

@@ -49,6 +49,9 @@ design history.
 41. [A library gains one writer outside Tidy up](#41-a-library-gains-one-writer-outside-tidy-up)
 42. [Card sync writes into a library and onto a card](#42-card-sync-writes-into-a-library-and-onto-a-card)
 43. [Standardise renames folders and games, and edits two kinds of files other programs own](#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)
+44. [Re-link renames a leftover picture after the one game that clearly matches it](#44-re-link-renames-a-leftover-picture-after-the-one-game-that-clearly-matches-it)
+45. [Removing a library forgets it whole, and touches nothing on disk](#45-removing-a-library-forgets-it-whole-and-touches-nothing-on-disk)
+46. [Copies across libraries are reported, never tidied](#46-copies-across-libraries-are-reported-never-tidied)
 
 ## 1. One repository, four workspaces
 
@@ -433,13 +436,18 @@ stands.
   a crash would. Its result says what moved and what stayed, and offers **Finish or undo…**,
   which settles that journal through recovery (finish the rest, or put back what moved). "Undo
   all" is offered only for a run that ended. The startup prompt opens only when the first health
-  reading counts interrupted work.
+  reading counts interrupted work. A Tidy up run (never a Standardise, re-link or card-sync one)
+  can also **Discard the rest**: what moved stays set aside and undoable, and each step left is
+  recorded as not run, once every one of them is proven not started (its file still where it was
+  and its destination free, or a later run already set that file aside).
 - **Why:** the engine's undo refuses an operation with a running journal, and should: half a
   journal has no settled "before". Recovery already re-checks every file the way a fresh run
   does, so one path covers both a crash and a cancel. A prompt that opened mid-session would
   cover the result the player had just asked for.
-- **Cost:** a stopped run that is neither finished nor undone stays counted as interrupted, and
-  is offered again at the next start, even after a fresh run tidied the same files.
+- **Cost:** a stopped run that is neither finished, undone nor discarded stays counted as
+  interrupted and is offered again at the next start. Discard the rest is refused while a file of
+  the run is not where the run left it, so a run cut short in the middle of a move is still only
+  finished or undone.
 
 ## 34. Duplicates are files with the same bytes
 
@@ -607,7 +615,7 @@ stands.
 
 ## 43. Standardise renames folders and games, and edits two kinds of files other programs own
 
-- **Decision:** **Standardise library** (Tidy up) renames and merges a library's console folders to
+- **Decision:** **Standardise** (a Tidy up tab) renames and merges a library's console folders to
   one device profile's folder names, and renames identified games to their official DAT names
   with the art, saves, disc descriptions (`.cue`), playlists (`.m3u`) and frontend game lists
   (`gamelist.xml`) that name them, only when the user approves a review, and never deletes
@@ -685,3 +693,73 @@ stands.
     new name before the run was undone or rolled back, keeps that name match afterwards, so the
     review leaves its game as not matching; a scan does not clear it (the file's size and time
     are unchanged, so it is not read again), but running Identify games again does.
+
+## 44. Re-link renames a leftover picture after the one game that clearly matches it
+
+- **Decision:** a leftover picture (Tidy up's `no-rom` or `rom-gone`) is offered for a rename
+  only when exactly one game of its console has its title once every tag is ignored (its DAT name
+  when identified, else its file name); the picture takes that game's keeper file name, in its own
+  folder, never overwriting anything. The game lists that name it follow it, and a game list entry
+  whose game file is gone is listed, and re-pointed (its `<path>` only) on one clear match. It runs
+  as a standardise run of kind `relink` (migration 19): the Tidy up journal under the `op` lock
+  through the real-folder operations, a second journal for the game lists with the originals in
+  `.romperoom/lists-backup/<run>/`, Standardise's Undo and Recovery. Nothing is deleted.
+- **Why:** a game renamed outside Romperoom leaves its art behind under the old name, and Tidy up
+  would offer to set it aside (owner decision 1: rename the picture, so every frontend finds it).
+  One clear match only (owner decision 2) keeps it from guessing; listing, never deleting, the
+  entries without a game (owner decision 3) leaves the frontend's list the user's.
+- **Cost:** a picture two games could take, or that matches by a misspelling or an index prefix, is
+  never offered, and neither is one of a game on several discs recognised disc by disc (each disc is
+  its own DAT game). A frontend that wrote a fresh entry for the new name keeps its stale entry
+  listed (`game-has-entry`). An absolute media path in a game list is never changed, so that
+  frontend still finds the old name gone. When Recovery rolls back the game lists' journal, the
+  pictures stay renamed and the lists keep their old text, naming pictures that are gone until the
+  run is undone or the frontend rescans; an Undo that keeps a list changed since the run puts the
+  pictures back while that list keeps naming the new names; a re-link of entries only whose lists'
+  journal is rolled back stays recorded `complete`, with nothing left to undo. A picture whose game
+  already has art of that kind shows twice, unticked in the re-link section and ticked in the
+  leftover list, so setting everything aside still sets it aside. Re-link shares Standardise's run
+  table, so its Undo and History are Standardise's, a re-link waiting in Recovery refuses a
+  standardise run of that library and the other way round, and a reload shows only the window's
+  latest result of either kind (the other is in History). The review is no job: a review a reload
+  forgot is not kept, and like the leftover list it may cache file hashes in the catalog.
+
+## 45. Removing a library forgets it whole, and touches nothing on disk
+
+- **Decision:** Settings › Libraries removes a library by deleting every catalog row of it: its
+  files, pictures, folder lists, identify, cover art, card sync and Standardise records, and (by
+  its path) its journals, steps, operations, Delete forever records and reconnect audit rows.
+  Nothing on disk is touched. It is refused while any scan runs, while a job holds the library's
+  lock, and while Recovery lists anything of it. The last library may be removed: the app goes
+  back to setup. Adding refuses a folder already added (it used to return the existing library)
+  and one inside or around a library, by real path and by device and inode.
+- **Why:** a journal kept for a library Romperoom no longer knows would list its runs in History
+  and Set aside, count its set-aside bytes in Health, and let Undo or Finish move files in a
+  folder the user asked Romperoom to forget. Refusing while something waits in Recovery keeps the
+  journal a stopped run needs. Setup is already the app with no library, and refusing to remove
+  the last one would block "I chose the wrong folder".
+- **Cost:** a removed library's history is gone: what it set aside stays in its
+  `.romperoom-quarantine` folder with nothing offering it back, and adding the folder again starts
+  afresh (a scan, identify, card syncs without their agreed saves). The page still passes the
+  picked folder's path to `addLibrary` (a known gap, [security.md](security.md#gaps)).
+
+## 46. Copies across libraries are reported, never tidied
+
+- **Decision:** Tidy up's **Across libraries** lists the files (the same whole-file hash) held in
+  two or more libraries and does nothing else: no set aside, no catalog write, no lock. A library
+  the catalog cannot vouch for, whose folder does not answer (the Libraries tab's probe), or whose
+  folder overlaps another library's (the rule that refuses adding it, decision 45) is listed as
+  not checked with its reason; the rest are compared. Copies that are one file (the same device
+  and inode) are left out.
+- **Why:** owner decision (2026-10-07): report only first. Setting a copy aside in one library
+  because another library keeps one needs the planner's one-library keeper rules relaxed and a
+  keeper that can go offline; a report needs neither. An unplugged drive or a nested folder must
+  never read as "no copies", nor a file as a copy of itself.
+- **Cost:** the user removes a copy across libraries by hand, or by moving it into one library and
+  using Duplicates. The list is as each library's last scan saw it: a file replaced since with a
+  different one of the same name is still listed, so the guide says to scan both libraries again
+  before removing a copy by hand (a size and modified-time check against the catalog is left for
+  setting copies aside across libraries). Two mounts of one network share added as two libraries
+  are not told apart, so every file reads as held twice. The look reads each candidate copy's
+  device and inode on disk in the main process, as Duplicates does, so a share that stops
+  answering after the folder probe can freeze the window until it answers.

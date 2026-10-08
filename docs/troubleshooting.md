@@ -1,7 +1,7 @@
 # Troubleshooting
 
 Problems you might meet, and what to do. Only Tidy up changes your games: it sets files aside,
-where you can put them back, and Standardise library renames folders and games, which Undo puts
+where you can put them back, and Standardise renames folders and games, which Undo puts
 back; cover art only adds pictures to Romperoom's own `.romperoom/media` folder, when you ask;
 Sync a card only adds the games and saves you approve, and backs up any save it replaces. None of
 these problems can harm your collection.
@@ -14,7 +14,7 @@ these problems can harm your collection.
 - [Some games are missing](#some-games-are-missing)
 - [Some games stay unidentified](#some-games-stay-unidentified)
 - [A game database won't download](#a-game-database-wont-download)
-- [A console says "Not available at this version"](#a-console-says-not-available-at-this-version)
+- [A console says "not available at this version"](#a-console-says-not-available-at-this-version)
 - [Cover art won't download](#cover-art-wont-download)
 - [A picture didn't appear](#a-picture-didnt-appear)
 - [The card's art wasn't imported](#the-cards-art-wasnt-imported)
@@ -23,6 +23,8 @@ these problems can harm your collection.
 - [The scan is slow](#the-scan-is-slow)
 - [The scan didn't finish](#the-scan-didnt-finish)
 - [Starting over](#starting-over)
+- [A folder can't be added as a library](#a-folder-cant-be-added-as-a-library)
+- [A library can't be removed](#a-library-cant-be-removed)
 - [A card doesn't show up](#a-card-doesnt-show-up)
 - [A card is greyed out](#a-card-is-greyed-out)
 - [The games don't fit on the card](#the-games-dont-fit-on-the-card)
@@ -33,13 +35,19 @@ these problems can harm your collection.
 - [Undo this sync left something](#undo-this-sync-left-something)
 - [Tidy up says Romperoom is busy](#tidy-up-says-romperoom-is-busy)
 - [Your library folder isn't available](#your-library-folder-isnt-available)
+- [A library says it can't reach its folder, but it scans](#a-library-says-it-cant-reach-its-folder-but-it-scans)
 - [Your library changed since you looked](#your-library-changed-since-you-looked)
+- [A library says Not checked under Across libraries](#a-library-says-not-checked-under-across-libraries)
+- [Across libraries leaves out a copy, or shows one twice](#across-libraries-leaves-out-a-copy-or-shows-one-twice)
 - [A file couldn't be put back](#a-file-couldnt-be-put-back)
 - [Romperoom was interrupted while tidying](#romperoom-was-interrupted-while-tidying)
 - [Standardise left a folder or game as it was](#standardise-left-a-folder-or-game-as-it-was)
 - [A game list wasn't changed](#a-game-list-wasnt-changed)
 - [A frontend still shows the old names](#a-frontend-still-shows-the-old-names)
 - [Undo this run left something](#undo-this-run-left-something)
+- [A picture wasn't offered for re-linking](#a-picture-wasnt-offered-for-re-linking)
+- [A game list entry wasn't re-pointed](#a-game-list-entry-wasnt-re-pointed)
+- [A frontend can't find a picture after a re-link was undone](#a-frontend-cant-find-a-picture-after-a-re-link-was-undone)
 - [Windows and Linux](#windows-and-linux)
 - [For developers](#for-developers)
 
@@ -79,9 +87,10 @@ folder names it knows is in [systems.md](systems.md).
   again**, then **Scan again**.
 - **The file couldn't be read.** See [below](#files-that-couldnt-be-read).
 - **The file's extension isn't one that console uses.** Such files are skipped.
-- **Two revisions of one game** (such as `(Rev 1)` and the original) show as one game.
-- **A game stored as a folder of files** (some PC and DOS games) shows as several games, or as
-  none. Folder games are handled in a later version.
+- **Two revisions of one game** (such as `(Rev 1)` and the original) show as one game until it
+  is identified (see [Identify your games](user-guide.md#identify-your-games)).
+- **A game stored as a folder of files** (some PC and DOS games) shows as several games (until
+  a game database identifies its files as one game), or as none.
 
 ## Some games stay unidentified
 
@@ -102,10 +111,10 @@ has looked at them since (after removing a database, say): press **Identify game
 
 ## A game database won't download
 
-Download for me and Check for updates (Settings › Game databases) are the only things that
-take Romperoom online, and only to GitHub. Each request is listed under **Network activity**,
-with its outcome. A file that fails leaves nothing behind: no partial file and no change to your
-databases. The message says what happened:
+Download for me and Check for updates (Settings › Game databases), and Get cover art on Health, are
+the only things that take Romperoom online, and only to GitHub. Each request is listed under
+**Network activity**, with its outcome. A file that fails leaves nothing behind: no partial file and
+no change to your databases. The message says what happened:
 
 | The message starts with                     | What to do                                    |
 | ------------------------------------------- | --------------------------------------------- |
@@ -129,7 +138,7 @@ certificate authorities built into Romperoom, not ones your organisation install
 that requires a proxy, or that inspects secure connections with its own certificate, cannot use
 it. Use **Get a database from the official site** instead: your browser does the downloading.
 
-## A console says "Not available at this version"
+## A console says "not available at this version"
 
 The version of libretro-database Romperoom is using has no file for that console (it may have
 been renamed or removed upstream). Press **Check for updates**; if the console still says so,
@@ -252,15 +261,60 @@ Files you set aside in Tidy up stay in the `.romperoom-quarantine` folder inside
 but a fresh start no longer knows about them. Put back what you want first, or move them back
 by hand afterwards: each one sits under a dated folder, at its old path.
 
-There is no button to remove a library in this version.
+To use another folder instead, add it in **Settings** › **Libraries** and remove the old one
+(see [Your libraries](user-guide.md#your-libraries)): nothing in either folder changes.
 
 If your library is gone after updating from a build before 0.1.0: those builds kept their
 catalogue in a folder named `@romperoom/desktop`, and nothing moves it. Quit Romperoom and move
 it to the folder above, or add your library again and re-scan.
 
+## A folder can't be added as a library
+
+**Add a library…** in **Settings** › **Libraries** refuses a folder and says why:
+
+- "That folder is already one of your libraries": it's in the list (perhaps under another name,
+  or reached through a shortcut).
+- "That folder is inside one of your libraries" or "That folder holds one of your libraries":
+  one library inside another would count its games twice. Choose a folder that isn't inside
+  another library, or remove the library inside it first.
+- "Romperoom can't use a whole drive as a library": choose the folder on the drive that holds
+  your console folders.
+- "That isn't a folder": choose the folder that holds your console folders.
+- "Can't reach your game folder" or "Romperoom isn't allowed to open that folder": check the
+  drive is connected and the folder opens in Finder.
+
+Nothing is added when it refuses.
+
+Romperoom looks at each of your libraries' folders when you add one. If a network drive that
+holds one of them has stopped answering, Romperoom stops responding until the drive answers or
+the system gives up on it. Reconnect the drive.
+
+## A library can't be removed
+
+**Remove** in **Settings** › **Libraries** waits for whatever is using the library, and says so:
+
+- "A scan is running": wait for the scan to finish (or cancel it), then try again.
+- "Romperoom can't remove roms right now": Tidy up, Standardise, re-link, cover art, identifying
+  games, a game database import, or a card is busy with that library. Wait for it to finish.
+- "Something Romperoom was doing in roms stopped before it finished", or "This library has an
+  interrupted standardise run": open Tidy up, press **Finish or undo…** on the Overview, settle
+  the run, then remove the library.
+
+Nothing is forgotten when it refuses.
+
+Once a library is removed, Romperoom forgets its Tidy up history: History and Set aside no
+longer list its runs, and Undo, put back and Delete forever no longer offer what it set aside.
+Those files stay in the `.romperoom-quarantine` folder inside that library's folder, each under a
+dated folder at its old path; move back what you want by hand. Adding the folder again later
+starts afresh and doesn't bring the history back.
+
+If you remove a library while **Identify games** is working through all your libraries, it may
+show an error for the library you removed when it gets to it. Nothing is lost, and your other
+libraries are identified as usual.
+
 ## A card doesn't show up
 
-On **Put games on a card**, the **Where** step lists the drives Romperoom could use.
+On **SD card**, the **Where** step lists the drives Romperoom could use.
 
 - Check that the card is in, and that your computer shows it (in Finder, or File Explorer on
   Windows). A card in a reader that isn't mounted can't be listed. Then press **Refresh**.
@@ -302,8 +356,8 @@ stays.
 - Cheap or old cards, and USB 2 card readers, are slow at small files. A faster card or a
   reader in a USB 3 port helps most.
 - **Windows:** antivirus software (Windows Security included) scans every new file on the card,
-  which slows a copy of many files. That is normal; let it finish. Romperoom has not been run on
-  a real Windows PC yet, so tell us how it went.
+  which slows a copy of many files. That is normal; let it finish. Nobody has used Romperoom on
+  Windows by hand yet, so tell us how it went.
 - You can **Cancel the copy** at any time. The next copy picks up from there.
 
 ## A card can't be synced
@@ -344,7 +398,8 @@ be finished or rolled back.
 ## Tidy up says Romperoom is busy
 
 "Romperoom is busy with a scan/copy. Try again when it finishes." means a scan, a copy to a
-card or another tidy is using that library. Nothing was changed. Wait for it to finish (or
+card, another tidy or another job (Standardise, re-link, identifying games, cover art or a card
+sync) is using that library. Nothing was changed. Wait for it to finish (or
 cancel it), then press the button again.
 
 ## Your library folder isn't available
@@ -354,11 +409,77 @@ the library's path is missing, or is not the library that was tidied (a drive th
 empty, or another drive at the same path). Nothing was changed. Reconnect the drive, check it
 opens in Finder, then try again.
 
+## A library says it can't reach its folder, but it scans
+
+Settings › Libraries says "Can't reach its folder" when the library's folder was moved and a
+symbolic link (a shortcut made in Terminal with `ln -s`) was left at its old place. Romperoom
+looks at the folder itself and doesn't follow the link to say it's there, though **Scan now**
+still reads through it and counts its games. Nothing is wrong with your games. To make it read
+normally, remove the library in Settings › Libraries and add the folder where it now is, then
+press **Scan now**. Removing it forgets its Tidy up history, so finish or undo anything waiting
+in Recovery first.
+
 ## Your library changed since you looked
 
 A preview is only good for the library as it was when you looked. A scan, a copy to a card or
 another tidy in between makes it out of date, and Romperoom refuses it rather than move the
 wrong file. Press **Look again** to see what is there now.
+
+## A library says Not checked under Across libraries
+
+**Across libraries** only compares libraries it can vouch for, and lists the others under **Not
+checked** with the reason. The libraries it can check are still compared with each other.
+
+- **It is being scanned now:** wait for the scan to finish; the list updates by itself.
+- **It hasn't been scanned completely** or **its last scan didn't see every file:** press **Scan
+  again** on the tab.
+- **Its folder isn't available:** connect the drive or the network share, then press **Look
+  again**. An unplugged drive's empty folder counts as not available, as in **Settings** ›
+  **Libraries**. A library whose folder was moved and replaced by a symbolic link also reads this
+  way (see [A library says it can't reach its folder, but it
+  scans](#a-library-says-it-cant-reach-its-folder-but-it-scans)).
+- **Part of its folder is also another library:** one library's folder is inside the other's, or
+  both lead to the same folder, so every file would look like a copy of itself. Romperoom refuses
+  to compare them, as **Add a library…** refuses to add such a folder. This usually comes from a
+  drive mounted somewhere else or a moved folder: put the folders back as they were, then press
+  **Look again**. If two libraries really are one folder, remove one in **Settings** ›
+  **Libraries** (removing a library forgets its history; see
+  [Your libraries](user-guide.md#your-libraries)).
+
+## Across libraries leaves out a copy, or shows one twice
+
+**Across libraries** only lists files with exactly the same bytes, so two zips of one game with
+different contents are not copies. It leaves some files out on purpose:
+
+- **A file "has moved or gone since the last scan":** a copy was moved, renamed or deleted
+  after the last scan, so Romperoom can't check it, and its set may be missing from the list.
+  Press **Scan again**, then **Look again**. This can also happen for a moment while Tidy up,
+  Standardise or re-link is renaming files in one of your libraries; press **Look again** when it
+  ends.
+- **A file replaced since the last scan** with a different one of the same name is still listed:
+  the list is as each library's last scan saw it. Scan both libraries again before you remove a
+  copy by hand.
+- **Files that couldn't be read** have nothing to compare, so they are neither listed nor counted.
+  **Health** lists them (see [Files that couldn't be read](#files-that-couldnt-be-read)).
+- **Tracks of a multi-file game** and **the same file in two consoles' folders** are left out
+  and counted, as on **Duplicates**.
+- **A file hard-linked in two places** (one file with two names, made in Terminal with `ln`) is
+  one file, not two copies, so it is not listed. If such a pair sits inside one library, a copy
+  of it in another library is not listed either.
+
+The same network share connected twice (at two different places in Finder) and added as two
+libraries looks like two libraries: every file in it then shows as held twice. Connect the share
+at one place again if you can, as it was when you added it. If you no longer need one of the two
+libraries, remove it in **Settings** › **Libraries** (removing a library forgets its history; see
+[Your libraries](user-guide.md#your-libraries)).
+
+The look checks each possible copy on disk. On a slow network share that stops answering
+part way, the window can stop responding until the share answers again.
+
+With a screen reader: nothing is read out when you open the tab or turn a page (the line above
+the list says where you are). After **Look again** the result is read out once, with how many
+libraries were not checked. A look that fails reads nothing out (the message on the tab says
+what went wrong), and a result the same as the last one read out is not read again.
 
 ## A file couldn't be put back
 
@@ -373,15 +494,22 @@ After an undo or a put-back, the result lists any file that stayed set aside:
 
 ## Romperoom was interrupted while tidying
 
-If Romperoom quit, or you pressed **Cancel**, part way through a tidy, it says "Romperoom was
-interrupted while tidying. Finish it, or undo what was done." At the next start a panel opens
-by itself; after a Cancel, press **Finish or undo…** on the result. For each run:
+If Romperoom quit, or you pressed **Cancel**, part way through a tidy, it says "Something
+Romperoom was tidying stopped before it finished. Finish it or undo what was done. If it was
+setting files aside, you can also discard the rest." At the next start a panel opens by itself;
+after a Cancel, press **Finish or undo…** on the result. For each run:
 
 - **Finish** moves the files that were left, with the same checks as a new run.
 - **Undo what was done** puts back the files that already moved.
+- **Discard the rest** (a Tidy up run only) keeps what already moved set aside and leaves the
+  other files where they are; nothing moves. If it says "Romperoom couldn't discard the rest.", a
+  file of the run isn't where the run left it, so part of it may already have moved: choose
+  **Finish** or **Undo what was done** instead. A Standardise, re-link or card-sync run has no
+  Discard the rest: it is finished or undone as a whole.
 - **Later** leaves it for now. Tidy up's overview keeps offering it until you choose.
 
-If it says your library folder isn't available, reconnect the drive first. An interrupted
+If it says your library folder isn't available, reconnect the drive first: Finish, Undo what
+was done and Discard the rest all need it, and change nothing without it. An interrupted
 delete forever offers **Finish deleting** or **Keep the rest**.
 
 ## Standardise left a folder or game as it was
@@ -426,9 +554,9 @@ A run as a whole can end early, with one of these lines:
 - **"Your library folder isn't available."** The drive went away during the run. Reconnect it;
   Tidy up's **Finish or undo…** finishes or rolls back the rest.
 
-While a run waits under **Finish or undo…**, Romperoom won't start another run of that library,
-and won't remove the library from Romperoom: it says **"An earlier run of this library was
-interrupted"** or **"This library has an interrupted standardise run"**. Finish it or undo it
+While a run waits under **Finish or undo…**, Romperoom won't start another run of that library
+(it says **"An earlier run of this library was interrupted"**) or remove the library in Settings ›
+Libraries (it says **"This library has an interrupted standardise run"**). Finish it or undo it
 first, then try again.
 
 Games that aren't identified are never renamed. When two folders merge, a file whose name is
@@ -447,9 +575,9 @@ sheet or playlist can't be read is not renamed. A game list a frontend keeps out
 ## A frontend still shows the old names
 
 A frontend's own database (as opposed to a game list in your library) cannot be updated: run its
-scan or "update game lists" after standardising. On a card, copy the games again with **Put games
-on a card**. Saves on a card keep their old names, and the next card sync treats the renamed
-game's card save as a save of the old name.
+scan or "update game lists" after standardising. On a card, copy the games again with **SD card**.
+Saves on a card keep their old names, and the next card sync treats the renamed game's card save as
+a save of the old name.
 
 ## Undo this run left something
 
@@ -458,6 +586,49 @@ moved since, or whose old name is now taken, is left and listed. Every game list
 playlist the run replaced keeps its original in `.romperoom/lists-backup/<run>/` in your library.
 A run cut short by a crash or by the library going away waits in Tidy up's **Finish or undo…**,
 like a tidy.
+
+## A picture wasn't offered for re-linking
+
+Re-link offers a picture only when exactly one game of the same console has the same title once
+tags like (USA) or (Rev 1) are ignored. Two games of that title (a USA and a Japanese copy), a
+title that differs by more than tags (a misspelling, a collection number such as `001 - `), a
+picture named the way some scrapers name them (`Tetris-image.png`), a copy Romperoom recognises
+beside one it doesn't, a game on several discs that Romperoom recognises disc by disc (each disc
+counts as a game of its own), or a picture in a folder Romperoom doesn't link to a console, all
+leave it in the leftover list with no suggestion. One that matches but can't be renamed says why
+there: another picture wants the same game, or the new name is taken (often because the game
+already has a picture of that name in the same folder, or because a picture of another game in
+that folder would get the same name) or too long. Re-link needs a full scan, as the leftover list
+does.
+
+## A game list entry wasn't re-pointed
+
+An entry is re-pointed only when one game clearly matches it, no other entry of that list
+already names that game ("The game list already has an entry for this game": your frontend may
+have added a fresh entry after the rename), and no other entry without a game in that list looks
+like the same game ("Another entry without a game looks like the same game, so Romperoom can't
+tell which one to change."). An entry whose path is absolute (such as `/roms/gb/Tetris.gb`) is
+never listed, because Romperoom can't check it inside your library. A game list Romperoom can't
+read with certainty is never changed. Romperoom never deletes an entry.
+
+A picture's reference in a game list is updated only when it is written relative to the console
+folder (`./images/Tetris (USA).png`). One written as an absolute path is never changed, so a
+frontend reading it still looks for the old name.
+
+## A frontend can't find a picture after a re-link was undone
+
+A re-link changes two things, the pictures' names and the game lists, and each can be put back on
+its own:
+
+- If a re-link was interrupted while it was writing the game lists and you chose **Undo what was
+  done** in **Finish or undo…**, the game lists get their old text back but the pictures keep their
+  new names, so the lists name pictures that aren't there. Undo the whole re-link (from the results
+  or **History**, in **Recent re-links**) to give the pictures their old names back too, or let
+  your frontend rescan or re-scrape its game list.
+- If **Undo** kept a game list because it changed after the run, the pictures get their old names
+  back but that list keeps the text it has now, which names the new ones. Let your frontend rescan
+  or re-scrape its game list; the list as it was before the re-link is in
+  `.romperoom/lists-backup/<run>/` in your library.
 
 ## Windows and Linux
 

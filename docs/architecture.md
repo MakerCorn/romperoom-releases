@@ -19,7 +19,7 @@ built `dist/`.
 flowchart TB
   subgraph renderer["Renderer · sandboxed, no Node"]
     direction TB
-    Screens["Wizard · Library · Drawer<br/>Health · Cards · Tidy up"]
+    Screens["Wizard · Library · Drawer<br/>Health · SD card · Tidy up<br/>Settings"]
     Hooks["react-query hooks<br/>ScanProvider"]
     Screens --> Hooks
   end
@@ -83,57 +83,57 @@ The full list of security rules is in
 ## Catalog schema
 
 The catalog is one SQLite file in the app data folder. It is never kept on the NAS. There are
-eighteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
-per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry
-and confirmation columns (`unreadable_count`, `last_error`, `last_verified`,
-`last_complete_scan_id`) and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder`
-so their rows are deleted with their library. Migration 4 adds `ignored_folder`: the top-level
-folders the user said hold no games (see [Ignored folders and scoped scans](#ignored-folders-and-scoped-scans)).
-Migration 5 adds `game.display_title`: the title without a collection's running index, or NULL
-when there is none (see [Collection indexes](#scanning-and-its-safety-guards) below).
-Migration 6 adds `source_root.bios_folder`: the folder whose files a device package copies as
-BIOS, or NULL (see [Deploy planner](#deploy-planner)).
-Migration 7 is for tidying: it adds the `quarantined` status to `file` and `media`, the
-`operation` and `purge_item` tables, the journal's root identity and `blocked_reason`, and the
-step columns that name the catalog row, the copy to keep and the expected content (see
-[Tidying the library](#tidying-the-library)). Migration 8 adds `file.sha1_whole` (the hash of
-the file as stored; for a plain file it is copied from `sha1`, for an archive it is left NULL
-until the next scan) and `file.entry_count`, and rebuilds `operation` (statuses `cancelled` and
-`interrupted`, `fatal_reason`, `fatal_message`) and `op_step` (status `skipped`) with foreign
-keys off for the copy. Migration 9 adds `op_journal.root_names` (the library's top-level folder
-names when the journal was written; NULL on older journals) and the `library_reconnect` audit
-table (see [Operations and the journal](#operations-and-the-journal)). Migration 12 adds the
-headerless hashes (`crc32_nohdr`, `md5_nohdr`, `sha1_nohdr`, `header_skip`), `hash_version`
-(1 on every existing row) and `file_entry` (see [Hash worker pool](#hash-worker-pool)).
-Migration 13 adds stable game keys and each file's DAT match, and migration 14 turns the file's
-rejected DAT game key into a list of every one the user rejected (`rejected_keys`; see
-[Identification](#identification)). Migration 15 adds `dat_origin`: one row per downloaded DAT
-(URL, commit, git SHA, licence, fetch time), written in the transaction that marks the DAT ready
-and deleted with it; a DAT imported from the picker has none. Migration 16 makes `title` a media
-kind (rebuilding `media` and moving rows already read from `.romperoom/media/<system>/title` and
-ES-DE's `titlescreens` folders from `unknown`, so no rescan is needed) and adds cover art's own
-records, deleted with their library: `art_added`, each picture Romperoom wrote into a library
-(path, size, SHA-1, kind, source and the listing it came from), and `art_dir`, each folder it
-created there. Migration 17 adds card sync's records: `card` (each card's id from its
-`.romperoom/card.json`), `card_save` (per card, library and save, the size and SHA-1 both sides
-held when they last agreed), `card_rom_hash` (a card game's hashes, kept until its size or
-mtime changes) and `card_sync` (each sync, its journal and the bases it replaced, for undo); a
+nineteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
+per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry and
+confirmation columns (`unreadable_count`, `last_error`, `last_verified`, `last_complete_scan_id`)
+and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder` so their rows are deleted with
+their library. Migration 4 adds `ignored_folder`: the top-level folders the user said hold no games
+(see [Ignored folders and scoped scans](#ignored-folders-and-scoped-scans)). Migration 5 adds
+`game.display_title`: the title without a collection's running index, or NULL when there is none
+(see [Collection indexes](#scanning-and-its-safety-guards) below). Migration 6 adds
+`source_root.bios_folder`: the folder whose files a device package copies as BIOS, or NULL (see
+[Deploy planner](#deploy-planner)). Migration 7 is for tidying: it adds the `quarantined` status to
+`file` and `media`, the `operation` and `purge_item` tables, the journal's root identity and
+`blocked_reason`, and the step columns that name the catalog row, the copy to keep and the expected
+content (see [Tidying the library](#tidying-the-library)). Migration 8 adds `file.sha1_whole` (the
+hash of the file as stored; for a plain file it is copied from `sha1`, for an archive it is left
+NULL until the next scan) and `file.entry_count`, and rebuilds `operation` (statuses `cancelled` and
+`interrupted`, `fatal_reason`, `fatal_message`) and `op_step` (status `skipped`) with foreign keys
+off for the copy. Migration 9 adds `op_journal.root_names` (the library's top-level folder names
+when the journal was written; NULL on older journals) and the `library_reconnect` audit table (see
+[Operations and the journal](#operations-and-the-journal)). Migration 10 adds
+`op_step.reserved_ctime`, a name reservation's change time, since Linux reuses a deleted file's
+inode at once. Migration 11 adds imported DATs: `dat`, `dat_game`, `dat_rom` and `app_setting` (its
+`dat_generation`; see [Identification](#identification)). Migration 12 adds the headerless hashes
+(`crc32_nohdr`, `md5_nohdr`, `sha1_nohdr`, `header_skip`), `hash_version` (1 on every existing row)
+and `file_entry` (see [Hash worker pool](#hash-worker-pool)). Migration 13 adds stable game keys and
+each file's DAT match, and migration 14 turns the file's rejected DAT game key into a list of every
+one the user rejected (`rejected_keys`; see [Identification](#identification)). Migration 15 adds
+`dat_origin`: one row per downloaded DAT (URL, commit, git SHA, licence, fetch time), written in the
+transaction that marks the DAT ready and deleted with it; a DAT imported from the picker has none.
+Migration 16 makes `title` a media kind (rebuilding `media` and moving rows already read from
+`.romperoom/media/<system>/title` and ES-DE's `titlescreens` folders from `unknown`, so no rescan is
+needed) and adds cover art's own records, deleted with their library: `art_added`, each picture
+Romperoom wrote into a library (path, size, SHA-1, kind, source and the listing it came from), and
+`art_dir`, each folder it created there. Migration 17 adds card sync's records: `card` (each card's
+id from its `.romperoom/card.json`), `card_save` (per card, library and save, the size and SHA-1
+both sides held when they last agreed), `card_rom_hash` (a card game's hashes, kept until its size
+or mtime changes) and `card_sync` (each sync, its journal and the bases it replaced, for undo); a
 library's rows go with it (see [Card sync](#card-sync)). Migration 18 is for Standardise the
-library: `op_step` is rebuilt with foreign keys off so a step may move a whole folder
-(`move-dir`, with the folder's inode in `node_ino` and its device, kept as a record, in
-`node_dev`, and the catalog link `tree`, which moves every row under the folder),
-`library_reconnect` is rebuilt so its `trigger` also allows `standardise`, and three tables are
-added, deleted with their library: `standardise_profile` (each library's chosen device
-profile), `standardise_run` (each run, its two journals, its units and outcome) and
-`standardise_backup` (each game list, cue sheet or playlist a run replaced, and where the
-original went; see Standardise the library below). Opening a catalog written by a newer build
-is refused rather than downgraded.
-Systems are not a table:
-`system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed
-in [systems.md](systems.md)). The connection
-runs in WAL mode with `busy_timeout = 5000` (`BUSY_TIMEOUT_MS` in `catalog/db.ts`): a statement
-waits up to 5 seconds for another connection's lock (a backup tool, the SQLite CLI) before
-failing with `SQLITE_BUSY`.
+library: `op_step` is rebuilt with foreign keys off so a step may move a whole folder (`move-dir`,
+with the folder's inode in `node_ino` and its device, kept as a record, in `node_dev`, and the
+catalog link `tree`, which moves every row under the folder), `library_reconnect` is rebuilt so its
+`trigger` also allows `standardise`, and three tables are added, deleted with their library:
+`standardise_profile` (each library's chosen device profile), `standardise_run` (each run, its two
+journals, its units and outcome) and `standardise_backup` (each game list, cue sheet or playlist a
+run replaced, and where the original went; see Standardise the library below). Migration 19 adds
+`standardise_run.kind` (`standardise` or `relink`): a re-link is a standardise run with the same
+journals, Undo, Recovery and history, and no device profile (see Re-link artwork below). Opening a
+catalog written by a newer build is refused rather than downgraded. Systems are not a table:
+`system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed in
+[systems.md](systems.md)). The connection runs in WAL mode with `busy_timeout = 5000`
+(`BUSY_TIMEOUT_MS` in `catalog/db.ts`): a statement waits up to 5 seconds for another connection's
+lock (a backup tool, the SQLite CLI) before failing with `SQLITE_BUSY`.
 
 ```mermaid
 erDiagram
@@ -291,6 +291,7 @@ erDiagram
     text error
     text reserved_dev "our empty name reservation"
     text reserved_ino
+    text reserved_ctime "its change time, ns, NULL = older"
     text catalog_kind "file, media, tree"
     int catalog_id "a tree's: the library"
     text keeper_path "the copy that must survive"
@@ -394,7 +395,27 @@ erDiagram
 ```
 
 - A file that disappears is marked `missing`, never deleted from the catalog. Removing a library
-  removes its catalog rows only, never files.
+  (Settings › Libraries; `forgetLibrary` in `packages/engine/src/libraries.ts`) removes its
+  catalog rows only, never files: its `file` and `media` rows and its `source_root` row (which
+  cascades to its folder lists, `identify_run`, `art_added`, `art_dir`, `card_save`, `card_sync`,
+  `standardise_profile`, `standardise_run` and `standardise_backup`), then, by its path, its
+  `purge_item`, `op_step`, `op_journal`, `operation` and `library_reconnect` rows, and the games
+  no file holds. It is refused while any scan runs, while a job holds the library's lock, and
+  while anything of it waits in Recovery (a running journal or an interrupted Delete forever).
+  Adding a library refuses a folder that is one already added, or inside or around one, by real
+  path (stored and as it is now) and by device and inode. Settings lists each library through
+  `engine:listLibraries` with `{ details: true }` (`describeLibraries`): its name (`libraryNames`,
+  in the page-safe `@romperoom/engine/format`; Tidy up, card sync, Standardise and the card wizard
+  name libraries by it too), games, last scan, and whether its folder answers
+  (`probeLibraryFolder`, asynchronous, at most 3 seconds, `lstat` then `readdir`, so a library
+  whose stored path is now a symbolic link reads as not reachable while scans still follow the
+  link). The probe gives up after 3 seconds, but a read of a share that hangs keeps one thread of
+  the main process's file-system pool until the share answers; reads of one folder are shared, so
+  that is at most one stuck thread per hung library. `addLibrary` stays synchronous and reads each
+  existing library's folder once, so with a share that hangs Romperoom stops responding until the
+  drive answers or the system gives up on it. An identify run over every library fixes its list
+  when it starts; a library removed before the run reaches it fails that part with a foreign-key
+  error (its `identify_run` row has no library), and the other libraries' parts run as usual.
 - A game is identified by `game_key` (migration 13): a filename game by its system, title and
   region, an identified game by its DAT game name, so two revisions of one title are two games.
   An identified game's title, region, revision and flags are parsed from the DAT game's
@@ -438,29 +459,29 @@ erDiagram
 
 ### Cover art writer
 
-`packages/engine/src/art/writer.ts` is the only code outside Tidy up that writes into a library
-([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)). A session takes the `art`
-lock on every library its games' pictures go to, removes the part files a crashed run left in
-`.romperoom/tmp`, and refuses to start unless each volume has its share of the review's bytes
-plus 256 MiB free. Each picture is saved as
-`.romperoom/media/<system>/<box|screenshot|title>/<ROM file stem>.png` (or `.jpg` from a card):
-a randomly named part file in `.romperoom/tmp`, fsynced and closed, then hard-linked into place,
-so an existing file is never overwritten, even one that appears during the write; it counts as
-already present. Where the file system has no hard links (SMB shares, FAT, exFAT), the target is
-checked to be absent and the part file is renamed into place: never copied there, so no
-half-written picture is ever visible at its name (the residual window is in ADR 41). Every folder on the way is
-checked by `isRealFolderChain` (`art/fsutil.ts`): each component is a directory to `lstat`,
-never a link, and its real path is inside the library's. The media row is linked to its game in
-the transaction that records the file in `art_added` (a record left at that path by a picture
-the player deleted is replaced: the exclusive link just proved its file gone); folders the writer
-made go to `art_dir`. A game whose picture name is too long or unsafe, whose picture would not
-link back to it (a stem another game shares, a folder mapped to another system), or whose file
-system refuses the name, is "not available" and never stops the run. `art/remove.ts` (Remove downloaded art) deletes only
-recorded files whose size and SHA-1 still match, under the same lock and the same folder check,
-then the recorded folders that are empty, deepest first. A record must have a shape the writer
-makes (`.romperoom/media/<system>/<kind>/<name>`, or one of its five folders), with no `.` or
-`..` segment; anything that fails a check is left and counted. A session's `end()` releases the
-lock only once every save in flight has settled.
+`packages/engine/src/art/writer.ts` was the first code outside Tidy up to write into a library
+([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)); card sync and Standardise
+reuse its real-folder checks. A session takes the `art` lock on every library its games' pictures go
+to, removes the part files a crashed run left in `.romperoom/tmp`, and refuses to start unless each
+volume has its share of the review's bytes plus 256 MiB free. Each picture is saved as
+`.romperoom/media/<system>/<box|screenshot|title>/<ROM file stem>.png` (or `.jpg` from a card): a
+randomly named part file in `.romperoom/tmp`, fsynced and closed, then hard-linked into place, so an
+existing file is never overwritten, even one that appears during the write; it counts as already
+present. Where the file system has no hard links (SMB shares, FAT, exFAT), the target is checked to
+be absent and the part file is renamed into place: never copied there, so no half-written picture is
+ever visible at its name (the residual window is in ADR 41). Every folder on the way is checked by
+`isRealFolderChain` (`art/fsutil.ts`): each component is a directory to `lstat`, never a link, and
+its real path is inside the library's. The media row is linked to its game in the transaction that
+records the file in `art_added` (a record left at that path by a picture the player deleted is
+replaced: the exclusive link just proved its file gone); folders the writer made go to `art_dir`. A
+game whose picture name is too long or unsafe, whose picture would not link back to it (a stem
+another game shares, a folder mapped to another system), or whose file system refuses the name, is
+"not available" and never stops the run. `art/remove.ts` (Remove downloaded art) deletes only
+recorded files whose size and SHA-1 still match, under the same lock and the same folder check, then
+the recorded folders that are empty, deepest first. A record must have a shape the writer makes
+(`.romperoom/media/<system>/<kind>/<name>`, or one of its five folders), with no `.` or `..`
+segment; anything that fails a check is left and counted. A session's `end()` releases the lock only
+once every save in flight has settled.
 
 ## Scanning and its safety guards
 
@@ -547,15 +568,15 @@ flowchart LR
   (`downloaded_media`, `.romperoom/media`) never vouch for the ROMs. This guard runs before any
   folder is judged, so confirming a removal does not lift it.
 - **Storage failures.** Timeouts, worker crashes and storage I/O errors while hashing count as
-  infrastructure failures. 25 in a row end the scan `could-not-read` once at least 5 of them
-  were on new or changed files. A retry of a file that is already `unreadable` at the same size
-  and mtime is expected to fail again (a bad sector fails every time), so a run made of retries
-  does not end it however long it gets: only 500 failed retries in a row, in a scan where
-  nothing else answered (no file hashed and no content failure), end it `could-not-read`. A
-  library whose bad files sit among good ones therefore stays `complete`, scan after scan. Content failures and successes end a streak; held-back
-  failures are written only if the scan completes. A file that fails to hash for another reason
-  becomes `unreadable`, never `missing`. A path the walker could not read (for any code but
-  `ENOENT`) keeps every catalogued row under it.
+  infrastructure failures. 25 in a row end the scan `could-not-read` once at least 5 of them were on
+  new or changed files. A retry of a file that is already `unreadable` at the same size and mtime is
+  expected to fail again (a bad sector fails every time), so a run made of retries does not end it
+  however long it gets: only 500 failed retries in a row, in a scan where nothing else answered (no
+  file hashed and no content failure), end it `could-not-read`. A library whose bad files sit among
+  good ones therefore stays `complete`, scan after scan. Content failures and successes end a
+  streak; held-back failures are written only if the scan completes. A file that fails to hash for
+  another reason becomes `unreadable`, never `missing`. A path the walker could not read (for any
+  code but `ENOENT`) keeps every catalogued row under it.
 - **Files changing under the scan.** Each hash is given the size the walk saw. A file whose
   size no longer matches (still being copied onto the NAS, rewritten or truncated) fails with
   `file changed during scan: ...`, an infrastructure failure: the file is `unreadable`, and the
@@ -587,16 +608,15 @@ flowchart LR
   `mediaAbsentFolders`) and its own confirmation (`confirmRemoval.mediaFolders`). Confirming
   "the artwork was removed" can never retire ROMs, and confirming ROMs never retires art. The
   health page offers the two as separate buttons, per library.
-- **What is catalogued.** A file in a system folder is a ROM when its extension is in that
-  system's `extensions` (`packages/profiles/data/systems.json`, taken from ES-DE and Batocera;
-  see [systems.md](systems.md)). Most systems take `.zip` and `.7z`; engines and ports take
-  their own launch files. Each file of a disc image is its own row: a `.cue` and its `.bin`, or the discs and
-  the `.m3u` playlist of a multi-disc game, are files of one game, so sizes count the whole
-  image. Identify groups a cue sheet with its tracks (see [Identification](#identification)).
-  Release documentation
-  (`isDocumentationName`: a basename starting with the word readme, license, licence,
-  changelog, notes or copying, with a md, txt, nfo, url, html or pdf extension) is never a ROM
-  and never a manual, even where `.md` is a Genesis extension.
+- **What is catalogued.** A file in a system folder is a ROM when its extension is in that system's
+  `extensions` (`packages/profiles/data/systems.json`, taken from ES-DE and Batocera; see
+  [systems.md](systems.md)). Most systems take `.zip` and `.7z`; engines and ports take their own
+  launch files. Each file of a disc image is its own row: a `.cue` and its `.bin`, or the discs and
+  the `.m3u` playlist of a multi-disc game, are files of one game, so sizes count the whole image.
+  Identify groups a cue sheet with its tracks (see [Identification](#identification)). Release
+  documentation (`isDocumentationName`: a basename starting with the word readme, license, licence,
+  changelog, notes or copying, with a md, txt, nfo, url, html or pdf extension) is never a ROM and
+  never a manual, even where `.md` is a Genesis extension.
 - **Ignored files are counted.** `ignored` counts everything skipped. `ignoredByExtension`
   breaks the files skipped for their extension down by extension (at most 32 keys; the rest add
   up under `(other)`), and health lists the top 5 over all libraries, so a missing extension
@@ -656,11 +676,13 @@ does not look at is never judged, so nothing under it becomes `missing`.
   and after a could-not-read (no previous complete scan) nothing is carried: only a full scan
   confirms them again. Ignored folders are carried the same way.
 - The desktop app's wizard offers both: "Not a console — ignore this folder" in each unmapped
-  folder's picker, "Ignore all remaining" when more than five need a console, and health's
-  "Include again". A scoped scan has no screen yet; the test seam `ROMPEROOM_TEST_SCAN_ONLY`
-  (see [configuration.md](configuration.md#environment-variables)) drives it in live runs. A screen that
-  offers it must say which folders will not be checked, since their rows are kept unverified by
-  this scan.
+  folder's picker, "Ignore all remaining" when more than five need a console, and health's "Include
+  again". The one screen that starts a scoped scan is Sync a card's **Scan these consoles**,
+  which scans only the console folders the sync added games to; otherwise the test seam
+  `ROMPEROOM_TEST_SCAN_ONLY` (see [configuration.md](configuration.md#environment-variables))
+  drives it in live runs. A screen that
+  offers it must say which folders will not be checked, since their rows are kept unverified by this
+  scan.
 - **Choosing is not assigning.** A picker only chooses: type-ahead in a focused `<select>`
   changes its value once per key, so assigning on change would assign every console the keys
   pass through. Each folder has its own button, disabled until something is chosen, labelled
@@ -771,12 +793,12 @@ stateDiagram-v2
   the recorded one, or at least 80% of the folders must be the same (Jaccard overlap of the
   recorded `root_names` and today's, NFC and case folded). It takes the work lock and never
   writes to the library.
-- A complete, unscoped scan does the same by itself (trigger `scan`) so a network share's new
-  device number every mount does not block undo later, but only at the recorded real path,
-  with at least 80% of the folders the same (a journal older than migration 9 only when it
-  still passes the device-and-inode-or-fingerprint check), and only when no journal of the library is
-  running or blocked and no purge of it stopped part way (`scanRefreshProblem`). A failure
-  there is logged, never fails the scan.
+- A complete, unscoped scan does the same by itself (trigger `scan`) so a network share's new device
+  number every mount does not block undo later, but only at the recorded real path, with at least
+  80% of the folders the same (a journal older than migration 9 only when it still passes the
+  device-and-inode-or-fingerprint check), and only when no journal of the library is running or
+  blocked and no purge of it stopped part way (`scanRefreshProblem`). A failure there is logged,
+  never fails the scan.
 - A step that names a catalog row (`catalog_kind`, `catalog_id`) updates that row in the same
   transaction as the step's status: `done` moves the row to its quarantine path with status
   `quarantined`, `undone` puts it back as `present`, `purged` deletes it.
@@ -817,7 +839,7 @@ nothing: a refused scan records no scan result.
 | sync             | refused | refused | refused | refused  | refused | refused |
 
 - `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal, a
-  purge, removing a library, and a standardise run or its undo (see
+  purge, removing a library, and a standardise or re-link run or its undo (see
   [Standardise the library](#standardise-the-library)). `deploy`: a deploy reads its source
   libraries (the deploy facade itself runs one deploy at a time). `identify`: an identify run
   holds the library it is identifying; replacing or removing a DAT takes every library's
@@ -927,6 +949,10 @@ stateDiagram-v2
   then clean (no `[b]`, `[h]`, `(Beta)`, `(Proto)` and similar tags), then plain over an archive
   (`prefer: 'archive'` reverses it), then the shallowest folder, the shortest path, the lowest
   id. A caller may pick the keeper of any group or skip groups.
+- The facade gives each group of the page it returns a picture, `coverMediaId`
+  (`duplicateCover`): the suggested keeper's game's first present box art, else its screenshot
+  (the Library's own cover rule), else another copy's game's; null when none has one. It reads
+  only, so the look's id stays good for planning.
 - One plan per library: every other copy goes to `.romperoom-quarantine/<date>/<its path>`.
 - The last-copy guard: when a step runs, the copy to keep is checked first (a regular file,
   inside the library, reached through no link: its real path is the library's real path plus
@@ -934,19 +960,47 @@ stateDiagram-v2
   fails and the copy stays. The copy to move must still have the content it was found with, be
   reached through no link, and not be the same file (device and inode) as any copy to keep.
 
+### Copies across libraries
+
+`findAcrossLibraries` (`tidy/across.ts`) lists the files held in two or more libraries. It is a
+report: it writes no catalog row, stores no id and takes no lock, so a duplicate look made before
+it still plans.
+
+- **Which libraries.** A library is compared only when the catalog vouches for it
+  (`acrossScanProblem`: a complete scan, no present file the last complete scan did not verify,
+  else `not-scanned` or `partial`; `scanning` while the engine scans it), its folder answers
+  (`probeLibraryFolder`, the folder probe of Settings › Libraries, else `offline`), and it
+  overlaps no other compared library (`overlapRefusal`, the rule that refuses adding such a
+  folder: the same real path or device and inode, inside or around; else `overlap`, both). Every
+  library is returned with its problem, or null.
+- **Sets.** From confirmed, non-empty rows of compared libraries, the whole-file hashes held by two
+  or more libraries. A hash under two consoles is skipped; a copy whose file does not answer is
+  `gone`; copies sharing a device and inode are one file and left out; a disc-set member (the same
+  fail-closed check as duplicates) is skipped; what is left is a set only when it is still in two
+  libraries. Sets are keyed by the hash, ordered by `extraBytes` (size × (libraries − 1)), then
+  key.
+- The facade's `findAcrossLibraries` pages the sets (the summary counts them all) and gives each
+  set of the page its picture (`duplicateCover`). The host serves it on `tidy:findDuplicates` with
+  `across: true`, names each library as Settings › Libraries does (`libraryNames`) and passes no
+  path.
+
 ### Unused artwork
 
-`detectOrphans(rootId)` returns `{ status: 'ok', items, notRecognised }` or, when the catalog cannot tell,
-`{ status: 'not-evaluated', reason }` (no complete scan, a file or picture the last scan did
+`detectOrphans(rootId)` returns `{ status: 'ok', items, notRecognised }` or, when the catalog cannot
+tell, `{ status: 'not-evaluated', reason }` (no complete scan, a file or picture the last scan did
 not see, or an unreadable ROM). "Could not check" is never "nothing unused". A picture is unused
 when:
 
 | Cause             | Meaning                                                                |
 | ----------------- | ---------------------------------------------------------------------- |
 | `no-rom`          | No ROM of its system in its library has its name                       |
-| `rom-gone`        | It was linked to a game that has no file left in its library           |
+| `rom-gone`        | It was linked to a game that has no file left (a scan unlinks it)      |
 | `duplicate`       | Another picture of the same system, kind and name has the same content |
 | `unmapped-system` | Listed apart in `notRecognised`, never cleaned (see below)             |
+
+A scan unlinks a picture whose ROM is gone (`scanner/link-media.ts`), so after a scan such a
+picture reads `no-rom`: `rom-gone` shows only for a picture still linked to a game whose files
+went since that scan.
 
 A ROM in quarantine still counts (it may come back), so its art is not unused. Duplicates are
 found by name and size first, then by content hash, cached in `media.checksum` (a scan that sees
@@ -956,6 +1010,37 @@ console folder's `images/` or `Imgs/`) is never listed as a duplicate. Art in a 
 console is mapped to is "folder not recognised": what reads it is unknown, so it is listed in
 `notRecognised` and a plan skips it. The plan carries the same last-copy guard as duplicates, so
 it never removes the last copy of art for a ROM that exists.
+
+The facade's `detectOrphans` takes an optional `cause` (`no-rom`, `rom-gone` or `duplicate`): it
+filters the items before cutting the page, so a page is that cause's first items, and it returns
+`byCause` (`orphanTally`), every listed item counted by cause whatever was asked. The Artwork
+tab's **Show** row uses both. The re-link review's pictures carry their cause and size,
+so the list leaves the pictures offered above out of every count and size exactly.
+
+### Re-link artwork
+
+`reviewRelink` (`packages/engine/src/tidy/relink.ts`) reads only. It takes the leftover pictures
+`detectOrphans` gives with cause `no-rom` or `rom-gone`, and keys each by its title with every tag
+dropped (`relinkKey`: `parseStem`, then `nameKey`). A game's key is its DAT name's, else its shown
+file-name title's; two copies of one game are one `game_id`. A picture that exactly one game of
+its console matches is offered, named after that game's keeper file (a playlist, then a disc
+sheet, then Tidy up's keeper order) with its own extension, in its own folder. Two pictures of one
+folder wanting one game are `contested`; a new name taken (also by another picture of the folder),
+too long or not checkable is refused; a game that already has art of the picture's kind starts
+unticked. A library folder gone when the review (or Standardise's) first reads it fails as "the
+library folder" is not reachable (`readLibraryFolder`), never naming its path. Each console folder's
+`gamelist.xml` is read with the strict reader (`readGamelistEntries`): an entry whose relative path
+no present or set-aside file has, and nothing on disk has, is listed, and offered a new path on one
+clear match. `runRelink` (`tidy/relink-run.ts`) runs the chosen part as a standardise run of kind
+`relink`: one `move` step per picture (its media row follows it), then the game lists in a second
+journal through `rewriteLists` with `relinkGamelist` (renamed pictures' media references and
+re-pointed `<path>`s, every other byte kept). Undo and Recovery are Standardise's; after each the
+moved media rows' stems follow (`followSteps`) and the media are linked again (`linkMediaForRoot`).
+
+A game on several discs that identify recognises disc by disc is several games (each disc its own
+DAT game, the sheets and playlist a file-name game of their own), so its pictures and entries are
+never offered. A picture whose game already has art of that kind is in the re-link section,
+unticked, and in the leftover list too, so it can still be set aside.
 
 ### Emptying the quarantine
 
@@ -967,7 +1052,11 @@ file is checked again just before it is deleted (see
 [security.md](security.md#emptying-the-quarantine)). Emptied folders are removed, deepest first,
 retrying a folder another process holds open. A file whose restore was blocked stays listed
 (`status: 'undo-blocked'`, with `blockedReason`) and can be restored again; a purge keeps it
-unless asked with `includeUndoBlocked`.
+unless asked with `includeUndoBlocked`. `olderThanDays` (30 or 90) narrows the preview to the
+files whose run began before the engine's own clock minus that many days (`setAsideBefore`,
+compared with `op_journal.created_at`); the purge still deletes only the previewed ids, each
+checked again. `listQuarantine` returns `olderThan`, the count and size for each age
+(`quarantinedBefore`).
 
 ### Recovery
 
@@ -979,20 +1068,31 @@ of a fresh run. `health().interruptedOperations` counts them. While a purge is u
 restore or undo of its files is refused; finishing it never deletes a file that was restored
 meanwhile (it is kept, "it was restored meanwhile", and the purge ends `partial`).
 
+`discardJournal(id)` (the facade's `resolveJournal` with `how: 'discard'`) settles a Tidy up
+run's journal without moving anything. Under the work lock, on the library only, it proves every
+pending step not started (its file is still a regular file where it was and its destination is
+free, or a later run already set that same file aside), then records each `failed` with
+`not run: cancelled` and closes the journal. Anything unclear refuses the whole discard
+(`DiscardRefusedError`) and writes nothing. `recoverJournals` says which journals are
+`discardable`: a `tidy` operation's that no standardise run and no card sync names.
+
 ### The tidy facade
 
-`engine.tidy` is the surface the desktop host calls
-([The Tidy up screens](#the-tidy-up-screens)). Every input is checked at run time (zod,
-strict), every result is plain JSON, and it accepts ids, never paths. What a caller saw is held under a random id (at most 16, for 30 minutes, least recently
+`engine.tidy` is the surface the desktop host calls ([The Tidy up screens](#the-tidy-up-screens)).
+Every input is checked at run time (zod, strict), every result is plain JSON, and it accepts ids,
+never paths. What a caller saw is held under a random id (at most 16, for 30 minutes, least recently
 used dropped first) and bound to the catalog's write generation: an id from before any catalog
-change is refused with `plan-stale`, an unknown or expired one with `plan-unknown`, one of the
-wrong kind with `plan-kind`. Plans and purge previews are single use.
+change is refused with `plan-stale`, an unknown or expired one with `plan-unknown`, one of the wrong
+kind with `plan-kind`. Plans and purge previews are single use.
 
 ### The Tidy up screens
 
-`#/tidy` (`apps/desktop/src/renderer/tidy`) has five tabs: Overview, Duplicates, Leftover
-artwork, History and Set aside. The words are plain: "set aside", never "quarantine", and the
-folder is named once, in the preview.
+`#/tidy` (`apps/desktop/src/renderer/tidy`) has seven tabs: Overview, Duplicates, Across
+libraries, Artwork, Standardise, History and Set aside. Across libraries is a report: it asks
+`tidy:findDuplicates` with `across: true` and starts no job. On it the Library choice above the
+tabs is hidden in place (`visibility: hidden`) and the note "Every library is compared here."
+shares its grid cell, so the tab strip does not move. The words are plain: "set aside", never
+"quarantine", and the folder is named once, in the preview.
 
 ```mermaid
 flowchart LR
@@ -1025,7 +1125,8 @@ flowchart LR
 - **A stopped run is finished or undone, not undone in part.** Cancel stops between files and
   leaves the run's journal `running`, so the engine refuses to undo it as a whole. Its result
   says what moved and what stayed, and offers **Finish or undo…**, which opens the recovery
-  drawer for that run (`tidy:resolveJournal`).
+  drawer for that run (`tidy:resolveJournal`). A Tidy up run there can also **Discard the rest**
+  (`how: 'discard'`): what moved stays set aside, the rest is recorded as not run.
 - **Recovery at startup.** When the first health reading counts interrupted work, a drawer
   offers to finish or undo each item. A run stopped later in the same session is offered from
   its own result instead. When the drawer closes by itself, focus goes to `<main>`.
@@ -1160,14 +1261,14 @@ run ends, so a rescan of several libraries identifies each of them in turn.
 
 **Phases.** `identifyRoot` (`identify/job.ts`) runs four phases in order:
 
-1. **rehash** re-reads only the files whose hashes are not enough yet: present, hashed files
-   written by an older hasher (`hash_version` below `HASH_VERSION`) in a system with header
-   rules, or zips that may hold 2 to 64 entries, in a system with at least one ready DAT, and
-   only when no full hash already matches a DAT rom of their system. A system's files are
-   re-read once a DAT for it is imported (the import moves the generation). A re-read whose bytes differ from the scan's (the sha1, or a zip's
-   whole-file sha1) is counted as changed since the scan and left for the next scan. A failed
-   read leaves the file's match exactly as it was and counts as not evaluated; if the library
-   folder is then gone, or 20 reads in a row failed, the run ends `could-not-finish`.
+1. **rehash** re-reads only the files whose hashes are not enough yet: present, hashed files written
+   by an older hasher (`hash_version` below `HASH_VERSION`) in a system with header rules, or zips
+   that may hold 2 to 64 entries, in a system with at least one ready DAT, and only when no full
+   hash already matches a DAT rom of their system. A system's files are re-read once a DAT for it is
+   imported (the import moves the generation). A re-read whose bytes differ from the scan's (the
+   sha1, or a zip's whole-file sha1) is counted as changed since the scan and left for the next
+   scan. A failed read leaves the file's match exactly as it was and counts as not evaluated; if the
+   library folder is then gone, or 20 reads in a row failed, the run ends `could-not-finish`.
 2. **match** applies the matcher to every hashed present file, and to unreadable files (by name
    only), 1,000 files per transaction. A playlist that joined a DAT game is left alone: only
    the group pass judges it.
@@ -1328,7 +1429,7 @@ fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it 
 ```mermaid
 flowchart LR
   subgraph R["Renderer (no network)"]
-    P["Put games on a card ›<br/>Sync a card"]
+    P["SD card ›<br/>Sync a card"]
   end
   subgraph M["Main process"]
     H["sync-host<br/>argument checks · safe card"]
@@ -1348,7 +1449,7 @@ flowchart LR
   RN -- "card-save backups" --> BAK
 ```
 
-**Sync a card** (Put games on a card › Sync a card) brings a handheld's new games and in-game
+**Sync a card** (SD card › Sync a card) brings a handheld's new games and in-game
 saves into a library and newer saves back to the card, after a review, offline
 ([ADR 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
 The page sends a listed volume id, a device profile id, a library id, back the review's opaque
@@ -1383,7 +1484,7 @@ back. Stop finishes or discards the file being copied; what was copied before st
 ```mermaid
 flowchart LR
   subgraph R["Renderer (no network)"]
-    P["Tidy up ›<br/>Standardise library"]
+    P["Tidy up ›<br/>Standardise"]
   end
   subgraph M["Main process"]
     H["standardise-host<br/>argument checks"]
@@ -1402,9 +1503,9 @@ flowchart LR
   J --> Q[(".romperoom-quarantine")]
 ```
 
-**Standardise library** (Tidy up) renames a library's console folders to one device profile's
-folder names and identified games to their official DAT names, with what names them, after a
-review ([ADR 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
+**Standardise** (a Tidy up tab) renames a library's console folders to one device profile's folder
+names and identified games to their official DAT names, with what names them, after a review
+([ADR 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
 The chosen profile is remembered per library (`standardise_profile`).
 
 **Review** (`packages/engine/src/standardise/review.ts`) reads only. Each top-level folder is
@@ -1456,13 +1557,16 @@ the folder is provably the one the run's journal recorded and each of them recor
 library; so a remount after renamed top-level folders does not lock them out. A library at the path
 with other top-level folder names is refused; one with the same names is taken for the same library,
 as the existing fingerprint rule takes it, and the re-record then records its device and inode.
+A re-link (`standardise_run.kind = 'relink'`, see Re-link artwork) is settled by the same Undo and
+Recovery, which rebuild its game lists from its saved pictures and entries.
 
 ## Deploy planner
 
 `packages/engine/src/deploy` plans a device package: which files go where on an SD card, and
 how many bytes that takes on the card. It writes nothing: the [card writer](#card-writer) does.
 The desktop's deploy host (`apps/desktop/src/main/deploy-host.ts`) drives both for the card
-wizard, so the page never names a path ([decisions.md](decisions.md), ADR 18, and
+wizard, so the page never names a path
+([ADR 23](decisions.md#23-the-page-never-names-a-path-to-write-to), and
 [security.md](security.md)); the engine object exposes them
 (`planDeploy`, `getDeployPlan`, `discardDeployPlan`, `listProfiles`, `setBiosFolder`,
 `listVolumes`, `deployPlan`, `cancelDeploy`).
@@ -1494,10 +1598,10 @@ flowchart LR
   (`unconfirmed-files`), so a region preference falls through to the next region rather than
   copying half a game.
 - **Identified titles.** A game's name on the card is `COALESCE(display_title, title)`: once
-  identify links a file to a DAT game, that row's title (its description, else its name, minus
-  the region and revision tags) is what the gamelist shows, with no deploy-side lookup. The reader also groups
-  games of one system, title and region into one card entry (`CatalogGame.memberIds`), exactly
-  as M1 grouped them before stable game identity split two DAT revisions into two rows: so
+  identify links a file to a DAT game, that row's title (its description, else its name, minus the
+  region and revision tags) is what the gamelist shows, with no deploy-side lookup. The reader also
+  groups games of one system, title and region into one card entry (`CatalogGame.memberIds`),
+  exactly as M1 grouped them before stable game identity split two DAT revisions into two rows: so
   `onePerGame` still keeps the newer revision, and selecting a game by any of its member ids
   (`PackageDef.selection.gameIds`) selects the whole merged entry.
 - **Selection order.** Archive and extension rules run first, then one region per title (by the
@@ -1564,12 +1668,13 @@ The write-time check is in [security.md](security.md#deploy-containment).
 `deployPlan(planId, target, options, onProgress)` joins the two: one deploy at a time,
 cancellable with `cancelDeploy()`, and refused when the volume listing fails.
 
-**Volume listing.** Each OS's own listing command, run with `execFile` (no shell, fixed
-arguments, a timeout and an output cap): `diskutil list -plist` and `diskutil info -plist` on
-macOS (read by a small plist reader that refuses entity declarations), a fixed PowerShell
-script on Windows (`Get-Partition`, `Get-Volume`, `Get-Disk`, mapped network drives), `lsblk` and `findmnt` JSON on Linux. Free space and the cluster
-size come from `statfs`. A listing that fails is `{ ok: false, reason }`, never an empty list.
-The Windows and Linux readers are tested from recorded fixtures only.
+**Volume listing.** Each OS's own listing command, run with `execFile` (no shell, fixed arguments, a
+timeout and an output cap): `diskutil list -plist` and `diskutil info -plist` on macOS (read by a
+small plist reader that refuses entity declarations), a fixed PowerShell script on Windows
+(`Get-Partition`, `Get-Volume`, `Get-Disk`, mapped network drives), `lsblk` and `findmnt` JSON on
+Linux. Free space and the cluster size come from `statfs`. A listing that fails is
+`{ ok: false, reason }`, never an empty list. The Windows and Linux readers are tested from
+recorded fixtures only.
 
 **Safe-target rules** (`checkSafeTarget`), each a refusal with a code: not mounted, unreachable,
 the system disk or a system volume, a protected path (a file system root, the home folder or
@@ -1609,8 +1714,9 @@ flowchart TB
 - **Outcomes:** `complete`, `partial` (some files failed or conflicted, the rest are done),
   `dry-run`, `refused` (nothing was written), `cancelled`, `card-full`, `card-unavailable`,
   `library-unavailable` and `card-error` (an unexpected error after the first write, or 25 card
-  errors in a row: the manifest is saved once more and the report comes back in full). Progress reports a phase (`checking`, `removing`, `writing`,
-  `finishing`, `done`), files and bytes, at most every 100 ms plus a final event.
+  errors in a row: the manifest is saved once more and the report comes back in full). Progress
+  reports a phase (`checking`, `removing`, `writing`, `finishing`, `done`), files and bytes, at most
+  every 100 ms plus a final event.
 - **Ownership.** A file on the card is the writer's only when the manifest lists it with the
   same size and modification time, or the same SHA-1 (a FAT card keeps local time, so a
   time-zone change moves every mtime). An identical file it did not write is adopted. Anything

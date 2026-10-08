@@ -18,7 +18,8 @@ entry or a device profile: `loadShippedProfiles()` skips both by name, the same 
 **Status:** four profiles ship: `batocera`, `es-de`, `muos` and `onion`. All are `community`.
 The [deploy planner](architecture.md#deploy-planner) reads them to lay
 out an SD card, and the card wizard ([user guide](user-guide.md#put-games-on-an-sd-card)) copies
-to that layout. The wizard marks a `community` profile with a **Community** badge and says it
+to that layout. Sync a card, cover art from a card and Standardise (its folder names) read them
+too. The wizard marks a `community` profile with a **Community** badge and says it
 was set up from what other players shared and has not been tested by us yet.
 
 ## Contents
@@ -158,7 +159,7 @@ Known judgement calls, all reasons the profiles stay `community`:
   `gamelist.xml`, and its own generator (`miyoogamelist_gen.sh`) writes `./<rom>` paths and
   `./Imgs/<stem>.png` images, but the profile names no game list, so none is written and
   Standardise does not change one.
-- **Standardise library** reads the game list of the formats the shipped profiles name
+- **Standardise** and **re-link** read the game list of the formats the shipped profiles name
   (`gamelist.xml`: Batocera's, and ES-DE's when it reads lists from the ROM folders) in each
   console folder of a library: its `<game>` and `<folder>` entries' `<path>`, relative to the
   folder (ES-DE `Gamelist.cpp`/`GamelistFileParser.cpp`, batocera-emulationstation

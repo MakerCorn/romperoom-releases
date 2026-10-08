@@ -21,8 +21,8 @@ variables set, CI spends no hosted minutes.
 | Linux | `LINUX_RUNNER_LABELS` | `ubuntu-latest` |
 
 Open pull requests as drafts while iterating; mark them ready for review to get the Windows and
-Linux legs and the packaging check before merging. Commitlint and the secret scan always run, on the self-hosted Mac when
-`MAC_RUNNER_LABELS` is set (else on Ubuntu).
+Linux legs and the packaging check before merging. The secret scan always runs, and commitlint on
+every pull request, on the self-hosted Mac when `MAC_RUNNER_LABELS` is set (else on Ubuntu).
 
 A self-hosted runner needs nothing installed beyond what its section below lists: the workflows
 install Node themselves, and the release jobs that run on the Mac (or Ubuntu) fetch a pinned,
@@ -52,8 +52,9 @@ Unset the variable and every leg goes back to `macos-latest` (hosted minutes).
 
 ## A Windows machine
 
-A Windows PC can serve the Windows legs, taking the remaining hosted minutes to zero. Set it up,
-or set it up again on a fresh machine, with one script, `scripts/windows-runner.ps1`:
+A Windows PC can serve the Windows legs, taking the remaining hosted minutes to zero. Set it up, or
+set it up again on a fresh machine, with one script,
+`scripts/windows-runner.ps1`:
 
 1. On any machine with the `gh` CLI, make a registration token (valid for an hour):
    `gh api -X POST repos/MakerCorn/romperoom/actions/runners/registration-token --jq .token`

@@ -27,13 +27,15 @@ a person publishes it.
 electron-builder 26 (`apps/desktop/electron-builder.yml`, the version pinned in
 `apps/desktop/package.json`) builds, per release:
 
-| File                            | What it is                                                  |
-| ------------------------------- | ----------------------------------------------------------- |
-| `Romperoom-X.Y.Z-mac-arm64.dmg` | macOS disk image, Apple silicon, macOS 12 or later          |
-| `Romperoom-X.Y.Z-mac-arm64.zip` | The same app as a zip archive                               |
-| `Romperoom-X.Y.Z-win-x64.exe`   | Windows installer (NSIS), per user, no administrator rights |
-| `Romperoom-X.Y.Z-win-x64.zip`   | The same app as a zip archive, no installer                 |
-| `SHA256SUMS.txt`                | SHA-256 of every file above, for `shasum -a 256 -c`         |
+| File                                    | What it is                                                         |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| `Romperoom-X.Y.Z-mac-arm64.dmg`         | macOS disk image, Apple silicon, macOS 12 or later                 |
+| `Romperoom-X.Y.Z-mac-arm64.zip`         | The same app as a zip archive                                      |
+| `Romperoom-X.Y.Z-win-x64.exe`           | Windows installer (NSIS), per user, no administrator rights        |
+| `Romperoom-X.Y.Z-win-x64.zip`           | The same app as a zip archive, no installer                        |
+| `Romperoom-X.Y.Z-linux-amd64.deb`       | Linux x64 package (Ubuntu, Debian); installs the sandbox helper    |
+| `Romperoom-X.Y.Z-linux-x86_64.AppImage` | The same app as an AppImage, for other distributions               |
+| `SHA256SUMS.txt`                        | SHA-256 of every file above, for `shasum -a 256 -c`                |
 
 - App id `app.romperoom.desktop`, product name `Romperoom`. The data folder is named after the
   product name ([configuration.md](configuration.md#data-folder)), so renaming the product would
@@ -71,8 +73,8 @@ npm run e2e:packaged -w @romperoom/desktop    # --self-check, refused switches, 
 npm run package -w @romperoom/desktop         # installers, archives and SHA256SUMS.txt
 ```
 
-- Output goes to `apps/desktop/release/` (ignored by git). macOS builds macOS artifacts and
-  Windows builds Windows artifacts; there is no cross-building.
+- Output goes to `apps/desktop/release/` (ignored by git). macOS builds macOS artifacts, Windows
+  builds Windows artifacts and Linux builds Linux artifacts; there is no cross-building.
 - `package` takes `--arm64` or `--x64` (default: this machine's). `verify:package` takes
   `--arch` and an optional app path; `e2e:packaged` reads `PACKAGED_APP_PATH`
   ([configuration.md](configuration.md#packaging-and-release-variables)).
@@ -95,7 +97,7 @@ It asks `api.github.com` (three unauthenticated requests) for libretro-database'
 commit and its `metadat/no-intro` and `metadat/redump` listings, and rewrites the shipped
 listing, keeping the console mapping. Review the diff before committing it: a new commit, files
 added or removed, and any `mapping problems` the script prints (a mapped file no longer in the
-listing shows "Not available at this version" until the mapping is fixed). A diff of
+listing shows "not available at this version" until the mapping is fixed). A diff of
 `recordedAt` alone means nothing changed upstream; it need not be committed. The listing is
 metadata only (names, sizes, git SHAs), never a DAT.
 
@@ -116,10 +118,9 @@ between `master` and `main` (cover art asks only for the recorded branch, so a m
 Then two checks for identify, run on the packaged app
 (`npm run package:dir -w @romperoom/desktop`) and recorded with the release:
 
-- **No game database ships.** Users import their own DATs or have Romperoom download them when
-  they ask; the app bundles none (see [user guide](user-guide.md#identify-your-games)). List the
-  archive, and search the
-  unpacked files and the rest of the resources folder; expect no output from either:
+- **No game database ships.** Users import their own DATs or have Romperoom download them when they
+  ask; the app bundles none (see [user guide](user-guide.md#identify-your-games)). List the archive,
+  and search the unpacked files and the rest of the resources folder; expect no output from either:
 
   ```sh
   RES=apps/desktop/release/mac-arm64/Romperoom.app/Contents/Resources
@@ -146,8 +147,8 @@ Then two checks for identify, run on the packaged app
 
 ## Cutting a release, step by step
 
-1. **Green main.** Every CI job is green for the commit to release, on macOS and Windows,
-   including `package`. Review the non-blocking `npm audit` findings in the CI summary.
+1. **Green main.** Every CI job is green for the commit to release, on macOS, Windows and
+   Linux, including `package`. Review the non-blocking `npm audit` findings in the CI summary.
 2. **Bump the version** in `package.json` and `apps/desktop/package.json`, run `npm install`
    so the lockfile agrees, and merge that as `chore(release): X.Y.Z` through a pull request.
 3. **Tag the merged commit** and push the tag:
@@ -260,8 +261,9 @@ read that step's environment. An ephemeral runner for release builds would close
 
 ## Publishing to the public repository
 
-The public repository is created from `releases-repo-template/` (a README with the download
-table, install help and checksum instructions; `SECURITY.md`). It holds no source.
+The public repository, `MakerCorn/romperoom-releases` (the `PUBLIC_RELEASES_REPO` variable),
+was created from `releases-repo-template/` (a README with the download table, install help and
+checksum instructions; `SECURITY.md`). It holds no source.
 
 **Once:**
 
@@ -314,21 +316,21 @@ draft's notes, update the README table, publish.
 
 **What the documentation sync does** (`scripts/publish-docs.mjs`, the same on both paths):
 
-- It copies every `docs/*.md` except `docs/superpowers/**` (the design specs and plans stay
-  private) into the public `docs/`, with every picture and file they link, inline
-  (`![alt](path)`) or reference-style (`![alt][label]` and `[label]: path`). Containment is
-  checked on the real path, not the link's text: a file is refused if it or any folder on its
-  way is a symbolic link, or if its real path (in the disk's own letter case) is outside `docs/`
-  or inside `docs/superpowers`. A refused file stops the run before anything is written. Public
-  `docs/` files the source no longer has are removed. Nothing outside `docs/` is touched except one section of
-  the README; `SECURITY.md` and the README's download table never change.
-- Links into private material (`docs/superpowers/`, `packages/`, `apps/`, `.github/`, `scripts/`
-  and `ci/`) become their visible text, a path as inline code. A different letter case of those
-  paths (`SuperPowers/`) is not converted: the check below fails it. A link to a heading in a private
+- It copies every `docs/*.md` except `docs/superpowers/**` (the design specs and plans stay private)
+  into the public `docs/`, with every picture and file they link, inline (`![alt](path)`) or
+  reference-style (`![alt][label]` and `[label]: path`). Containment is checked on the real path,
+  not the link's text: a file is refused if it or any folder on its way is a symbolic link, or if
+  its real path (in the disk's own letter case) is outside `docs/` or inside `docs/superpowers`. A
+  refused file stops the run before anything is written. Public `docs/` files the source no longer
+  has are removed. Nothing outside `docs/` is touched except one section of the README;
+  `SECURITY.md` and the README's download table never change.
+- Links into private material (`docs/superpowers/`, `packages/`, `apps/`, `.github/`, `scripts/` and
+  `ci/`) become their visible text, a path as inline code. A different letter case of those paths
+  (`SuperPowers/`) is not converted: the check below fails it. A link to a heading in a private
   document names the section instead ("design spec (Live verification section)"). Links to
   `releases-repo-template/README.md` and `SECURITY.md` point to the public repository's own
-  `README.md` and `SECURITY.md`; links to the source's root `README.md` already land on the
-  public one. Links between published documents, anchors included, stay as they are.
+  `README.md` and `SECURITY.md`; links to the source's root `README.md` already land on the public
+  one. Links between published documents, anchors included, stay as they are.
 - The README's **Documentation** section, between its `docs-index` markers, is replaced by the
   block between the same markers in `releases-repo-template/README.md`: edit the table there,
   with links relative to the template (`../docs/user-guide.md`, so this repository's docs tests
@@ -457,11 +459,10 @@ process, verify signatures, and so needs signed builds first.
 
 ## Open items
 
-- The public releases repository's name and owner.
 - Signing identities, and who provisions them.
 - **OWNER DECISION: the licence for the released binaries.** The end-user licence (EULA text)
   is undecided. Until the owner decides, the public README says "All rights reserved" and
   nothing in either repository may describe Romperoom as open source or name an open-source
   licence for it. The third-party notices that ship with the app are not its licence.
-- A first install by hand on a real Windows PC. CI runs the packaged Windows app on GitHub's
-  runners only.
+- A first install by hand on a real Windows PC. CI runs the packaged Windows app on CI runners
+  only (the self-hosted Windows PC, else GitHub's).

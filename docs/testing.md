@@ -20,6 +20,10 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live cover art run](#live-cover-art-run)
 - [Live card sync run](#live-card-sync-run)
 - [Live standardise run](#live-standardise-run)
+- [Live re-link run](#live-re-link-run)
+- [Live tidy up batch run](#live-tidy-up-batch-run)
+- [Live libraries run](#live-libraries-run)
+- [Live across libraries run](#live-across-libraries-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -127,18 +131,24 @@ cannot be deleted.
 `apps/desktop/e2e` drives the **built** app (`out/main/index.js`) with Playwright's Electron
 support, so run `npm run build` first. There is no browser to install.
 
-| Spec                   | What it covers                                                                                                                                                         |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                    |
-| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                        |
-| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, hostile IPC, zoom, gamepad    |
-| `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all" |
-| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                            |
-| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                     |
-| `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way, a crash and recovery, delete forever, busy, keyboard only, 320 px          |
-| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages |
-| `standardise.spec.ts`  | Standardise library on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark |
-| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                   |
+| Spec                   | What it covers                                                                                                                                                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                              |
+| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                  |
+| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, hostile IPC, zoom, gamepad                                                                              |
+| `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                           |
+| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                      |
+| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                               |
+| `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries (Across libraries) |
+| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages                                                                           |
+| `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                   |
+| `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                           |
+| `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Health, a scan that identifies by itself, a file that is not a DAT refused                                                                              |
+| `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Health card    |
+| `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                  |
+| `libraries.spec.ts`    | Settings › Libraries by keyboard: a second library added, scanned and removed, then the last one, with nothing in either folder changed                                                                                                          |
+| `packaged.spec.ts`     | Not in this run: `npm run e2e:packaged -w @romperoom/desktop` runs it on the packaged app ([release.md](release.md#what-packaging-guarantees))                                                                                                   |
+| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                                                                                             |
 
 How the harness (`e2e/support.ts`) works:
 
@@ -152,8 +162,9 @@ How the harness (`e2e/support.ts`) works:
 - On failure, a screenshot and a Playwright trace per launched app are kept in
   `apps/desktop/test-results/e2e/`. The HTML report goes to `apps/desktop/playwright-report/`.
   Open a trace with `npx playwright show-trace <trace.zip>`.
-- The windows open on screen while the suite runs. The CI runners have a desktop session, so no
-  virtual framebuffer is set up.
+- The windows open on screen while the suite runs. The macOS and Windows CI runners have a
+  desktop session, so no virtual framebuffer is set up; the Linux runner has none, and CI wraps
+  the suite in `xvfb-run`.
 - The CI runners (macOS and Windows) show classic scrollbars, which take about 15 px of the
   window; a Mac with a trackpad shows overlay scrollbars, which take none. At 300% zoom that is
   5 CSS px, so a layout can fit locally and scroll sideways in CI. To see what CI sees on such a
@@ -323,16 +334,19 @@ To run the same wizard against a FAT32 disk image by hand, attach an image as in
 
 ## CI jobs
 
-`.github/workflows/ci.yml` runs on pull requests and on pushes to `main`. A newer push to the
-same ref cancels the run in progress. Every job uses Node 22.
+`.github/workflows/ci.yml` runs on pull requests, on pushes to `main` and on **Run workflow**. A
+newer push to the same ref cancels the run in progress. Every job uses Node 22.
 
-| Job          | Runs on          | What it does                                                         |
-| ------------ | ---------------- | -------------------------------------------------------------------- |
-| `test`       | macOS, Windows   | `npm ci`, lint, type-check, `test:coverage`                          |
-| `e2e`        | macOS, Windows   | After `test`: build, the Playwright suite, traces on failure         |
-| `package`    | macOS, Windows   | After `test`: build, `package:dir`, `verify:package`, `e2e:packaged` |
-| `security`   | Ubuntu           | gitleaks over the full history; `npm audit`, reported only           |
-| `commitlint` | Ubuntu, PRs only | Each commit of the pull request, with `commitlint.config.js`         |
+| Job          | Runs on                                 | What it does                                                         |
+| ------------ | --------------------------------------- | -------------------------------------------------------------------- |
+| `test`       | macOS, Windows, Linux                   | `npm ci`, lint, type-check, `test:coverage`                          |
+| `e2e`        | macOS, Windows, Linux                   | After `test`: build, the Playwright suite, traces on failure         |
+| `package`    | macOS, Windows, Linux                   | After `test`: build, `package:dir`, `verify:package`, `e2e:packaged` |
+| `security`   | The self-hosted Mac, else Ubuntu        | gitleaks over the full history; `npm audit`, reported only           |
+| `commitlint` | The self-hosted Mac, else Ubuntu; PRs   | Each commit of the pull request, with `commitlint.config.js`         |
+
+A draft pull request runs `test` and `e2e` on macOS only, and no `package`; each OS's legs run
+on its self-hosted runner when its variable is set ([ci-runners.md](ci-runners.md)).
 
 CI first ran on 2026-09-30 (commit 5a751e4) and failed on both runners. Windows stopped in
 `npm ci`, which tried to compile better-sqlite3 (fixed by turning install scripts off, see
@@ -349,8 +363,9 @@ passing, plus `security` and, for pull requests, `commitlint`.
 `npm ci` runs no install scripts (`.npmrc`), so every job that launches Electron runs
 `node node_modules/electron/install.js` itself.
 
-- `security` downloads the gitleaks release at `GITLEAKS_VERSION` and checks it against
-  `GITLEAKS_SHA256` before running it. Bump both together.
+- `security` downloads the gitleaks release at `GITLEAKS_VERSION` and checks it against the
+  pinned checksum for its runner (`GITLEAKS_SHA256_LINUX_X64` or `GITLEAKS_SHA256_DARWIN_ARM64`)
+  before running it. Bump all three together.
 - The audit step does not block, on purpose. An advisory in a runtime dependency often has no
   fixed release yet, and a red build nobody can act on teaches everyone to ignore CI. Findings
   go to the run's summary and a warning annotation. Review them before each release.
@@ -363,7 +378,7 @@ passing, plus `security` and, for pull requests, `commitlint`.
   and a launch of the packaged app ([release.md](release.md#what-packaging-guarantees)). The
   packaged app refuses the switches Playwright attaches through, so these tests run it as a
   plain process and read its exit code, output, files and ports. It caches Electron as `e2e`
-  does. It has not run on GitHub yet: the packaged checks have passed on macOS only, by hand.
+  does, and runs Linux's launch under `xvfb-run`.
 
 `.github/workflows/release.yml` builds the installers on a `v*` tag or **Run workflow** and drafts
 a release; [release.md](release.md#the-release-workflow) describes it.
@@ -372,20 +387,21 @@ a release; [release.md](release.md#the-release-workflow) describes it.
 
 - **macOS** is where Romperoom is built and checked: unit tests, the end-to-end suite, the smoke
   and manual runs.
-- **Windows is checked by CI only.** The `test` job runs the unit suites on `windows-latest` and the
-  `e2e` job runs the built app there; both have passed (see [CI jobs](#ci-jobs)). Nobody has run the
-  app on Windows by hand. NTFS refuses control characters in names, so the hostile-name e2e cases
-  that contain them run on macOS only. Symlink cases run only where the `canSymlink` probe
-  (`test/fs-caps.ts` in the engine and the desktop app) can make links, which includes the elevated
-  CI runner, and the survey script's POSIX cases are replaced by one that expects it to refuse.
-  Without the symlink cases the engine falls below its coverage thresholds, so the full gate on
-  Windows needs Administrator or Developer Mode. `ROMPEROOM_TEST_NO_SYMLINKS=1` skips them on any
-  OS. Junctions need no privilege on Windows, so the deploy tests for a junction on the card
-  that leads outside it, and for a guarded folder given through one, run on every Windows
-  runner (elsewhere the same tests make a folder symlink). `ROMPEROOM_FIXTURE_SIMULATE_WIN32=1` builds the fixture's Windows shape on macOS (no locked
-  folder, no symlink loop). That shows the suites pass without those parts. It does not show that
-  anything works on Windows. The CI runners do load the native SQLite binding and launch the
-  built app there. Never checked on a real Windows PC:
+- **Windows is checked by CI only.** The `test` job runs the unit suites on the Windows runner (the
+  self-hosted PC when `WIN_RUNNER_LABELS` is set, else `windows-latest`) and the `e2e` job runs the
+  built app there; both have passed (see [CI jobs](#ci-jobs)). Nobody has run the app on Windows by
+  hand. NTFS refuses control characters in names, so the hostile-name e2e cases that contain them
+  run on macOS only. Symlink cases run only where the `canSymlink` probe (`test/fs-caps.ts` in the
+  engine and the desktop app) can make links, which includes the elevated CI runner, and the survey
+  script's POSIX cases are replaced by one that expects it to refuse. Without the symlink cases the
+  engine falls below its coverage thresholds, so the full gate on Windows needs Administrator or
+  Developer Mode. `ROMPEROOM_TEST_NO_SYMLINKS=1` skips them on any OS. Junctions need no privilege
+  on Windows, so the deploy tests for a junction on the card that leads outside it, and for a
+  guarded folder given through one, run on every Windows runner (elsewhere the same tests make a
+  folder symlink). `ROMPEROOM_FIXTURE_SIMULATE_WIN32=1` builds the fixture's Windows shape on macOS
+  (no locked folder, no symlink loop). That shows the suites pass without those parts. It does not
+  show that anything works on Windows. The CI runners do load the native SQLite binding and launch
+  the built app there. Never checked on a real Windows PC:
   - drive letters and backslashes in real Electron (the pure path checks refuse them);
   - line endings;
   - the data folder location.
@@ -728,7 +744,7 @@ never committed:
    replace with each DAT before importing it. Set up the library (Choose your ROM folder, Go to my
    library), import each DAT (a header the app cannot place, such as
    `Sega - Mega Drive - Genesis`, asks for its console), then Identify games.
-3. **Review.** Tidy up › Standardise library, choose ES-DE, Review the changes. Record the
+3. **Review.** Tidy up › Standardise, choose ES-DE, Review the changes. Record the
    folders (renamed, merged, left and why), the games (offered, left and why, what follows), the
    clashes and the game lists. `standardiseReview` through the bridge gives the same as data.
 4. **Run.** Tick the identical clash, Standardise. Check: folders and games have their new names;
@@ -803,6 +819,318 @@ the share) was **not evaluated**. What it measured:
 - the network: **observed**; the request log was empty and `network-log.json` absent;
 - throughout, every SHA-1 from before was in the library after each run, stop, finish and kill.
 
+## Live re-link run
+
+CI never re-links a real library: the end-to-end suite builds its own scratch library
+(`e2e/relink-fixtures.ts`). Only a live run shows real No-Intro titles, a game list as a real
+frontend writes it, and the built app's screens over a whole run. Run it before a release that
+changes `packages/engine/src/tidy/relink.ts`, `tidy/relink-run.ts`, the list rewriter
+(`standardise/lists.ts`) or the standardise host's re-link calls. Drive it with a throwaway
+Playwright script over the built app (`npm run build`), in the manner of `e2e/support.ts`, kept
+outside the repository and never committed:
+
+1. **Library.** Build a scratch library outside the repository and outside your library's share.
+   If the share is mounted, copy two console folders from it with their `images/` and
+   `gamelist.xml` (read only; never write to the share), and fingerprint the share's folders
+   before and after: they must be identical. If it is not mounted, build the folders by hand,
+   named with real No-Intro and Redump titles, with a DAT per console written for them (a logiqx
+   file with the real header name), as a ROM manager would have left them after renaming:
+   - `gb/`: `Tetris (World).gb` with its old pictures `images/Tetris (USA).png` and
+     `snaps/Tetris (USA).png`; `Super Mario Land (World) (Rev 1).gb` (a `(Rev 1)` added) with
+     `images/Super Mario Land (World).png`; two games of one title (`Donkey Kong (Japan, USA)
+     (En).gb` and `Donkey Kong (World) (Rev 1) (SGB Enhanced).gb`) and a picture
+     `images/Donkey Kong (World).png`; `Dr. Mario (World).gb` with its box art in `images/` and an
+     old `images/Dr. Mario (Japan, USA).png` (its new name is taken); `Alleyway (World).gb` with
+     box art in `covers/` and an old `images/Alleyway (USA).png` (the game already has box art);
+     and `snaps/001 - Super Mario Land (World).png` (an index prefix). Its `gamelist.xml` starts
+     with a byte order mark, has CRLF line ends and a comment, and names the old Tetris and Super
+     Mario Land files with `<image>` and `<thumbnail>` elements, a game that is gone (Link's
+     Awakening) and `./Donkey Kong (World).gb`.
+   - `megadrive/`: `Sonic the Hedgehog (USA, Europe).md` (renamed from `Sonic The Hedgehog
+     (USA).md`, letter case too) and `Columns (World).md`, with their old pictures, and a list
+     with LF line ends naming both old files, plus a fresh entry for `./Columns (World).md` (a
+     frontend that rescanned after the rename).
+   - `psx/`: a two-disc game identified disc by disc (`Final Fantasy VII (USA) (Disc 1).cue` and
+     `.bin`, `Disc 2`, and `Final Fantasy VII (USA).m3u`), an old picture and an entry naming
+     `./Final Fantasy VII (Europe).m3u`.
+   - `gbc/`: 1,200 games recognised by file name, each renamed from `(USA)` to `(World)` with its
+     old picture and entry, so that Stop and a kill land part way (a whole run took 1.4 seconds).
+
+   Fingerprint the scratch library: the path, size, modification time and SHA-1 of every file. A
+   fingerprint that fails to read is "not evaluated", never "unchanged".
+2. **Scan and identify.** Launch with a fresh `ROMPEROOM_DATA_DIR`, the scratch library through
+   `ROMPEROOM_TEST_PICK_FOLDER`, and one path through `ROMPEROOM_TEST_PICK_FILE` whose file you
+   replace with each DAT before importing it (`Sega - Mega Drive - Genesis` needs its console
+   named); Choose your ROM folder, Go to my library, then identify.
+3. **Review.** Tidy up › Artwork. Record the section: the pictures offered (and which
+   start unticked), the entries offered and listed, and every reason; and the leftover list below
+   it. `standardiseRelinkReview` through the bridge gives the same as data. Expected: Tetris (both
+   pictures), Super Mario Land, Sonic, Columns and every `gbc` picture offered; Alleyway unticked
+   in the section and in the leftover list with its note; Dr. Mario only in the leftover list,
+   with "That name is already taken."; Donkey Kong, the index-prefixed picture and
+   Final Fantasy VII in the leftover list with no suggestion; the Tetris, Super Mario Land, Sonic
+   and `gbc` entries offered, the Columns entry listed "The game list already has an entry for
+   this game.", and the Link's Awakening, Donkey Kong and Final Fantasy VII entries listed with no
+   match.
+4. **Run.** Re-link with the defaults. Check: each offered picture has its game's file name in its
+   own folder; each `gamelist.xml` differs, line by line, only in the renamed pictures' media
+   elements and the re-pointed entries' `<path>` (the byte order mark, line ends and comment kept;
+   the `psx` list untouched); its original is in `.romperoom/lists-backup/<run>/`; every SHA-1
+   from before is somewhere after; the leftover list no longer shows the renamed pictures, and
+   the game's cover (`listGames`' `coverMediaId`, and the Tetris tile on the library wall) is the
+   renamed picture without a scan.
+5. **Undo from the results.** The fingerprint outside `.romperoom` equals the one before,
+   modification times included.
+6. **Stop, then Finish or undo….** Done, then Re-link again and press Stop as soon as the progress
+   passes the first picture; the results say Stopped and the run waits in Recovery. While it
+   waits, a standardise run of the library through the bridge (an empty choice, so nothing could
+   be written) is refused. Press Finish or undo…, then Finish: every picture is renamed and the
+   game lists are rewritten. Undo the run from History › Recent re-links: the fingerprint equals
+   the one before.
+7. **A kill.** Review and run again through the bridge, and `SIGKILL` the app part way. Start it
+   again with the same data folder: the "Finish tidying up" panel opens by itself; Undo what was
+   done. The fingerprint outside `.romperoom` equals the one before.
+8. **A reload.** Take a re-link review through the bridge, reload the window, and run that
+   review's plan id: it is refused ("this review belongs to another window, or has expired") and
+   nothing changes.
+9. **A frontend.** If ES-DE or Batocera is installed, point it at the scratch library after a run
+   and rescan: the renamed pictures show on their games.
+10. **Throughout.** At the end the request log is empty and `network-log.json` absent.
+
+What it cannot observe: Windows and Linux; FAT32, exFAT and network shares (the library is on the
+Mac's own disk); a frontend that rewrites its own list after the rename; the reverse refusal (a
+standardise run waiting in Recovery refusing a re-link, covered by the engine tests); a reload
+showing only the window's latest result of either kind (covered by the host tests); and the file
+hashes a review caches in the catalog.
+
+**Last run: 2026-10-07,** macOS, the built app, a scratch library of 2,429 files (133 MiB) named
+with real No-Intro and Redump titles across Game Boy, Mega Drive, PlayStation and Game Boy Color,
+with four `gamelist.xml` files. Your library's share was not mounted, so the share run (copying
+real folders and fingerprinting the share) was **not evaluated**. What it measured:
+
+- the review: **observed**; 1,207 pictures, 1,205 offered, 1 starting unticked (Alleyway, which
+  already had box art, also in the leftover list with "You can re-link it above instead."), 1 left
+  (Dr. Mario, `name-taken`, in the leftover list with its reason); Donkey Kong, the
+  index-prefixed picture and the two-disc game's picture stayed in the leftover list with no
+  suggestion; 1,207 entries, 1,203 offered and 4 listed (Columns with `game-has-entry`, Link's
+  Awakening, Donkey Kong and Final Fantasy VII with no match); the review refused no game list;
+  the button read "Re-link 2,408 items";
+- the run: **observed**; "Renamed 1,205 pictures and fixed 1,203 game list entries" in 1.4 seconds;
+  every offered picture had its new name in its own folder and the Alleyway and Dr. Mario pictures
+  were still at their old names; the `gb`, `megadrive` and `gbc` lists equalled the expected text
+  exactly (the `gb` list's byte order mark, CRLF line ends and comment kept; 5 lines changed in
+  `gb`, 3 in `megadrive`, the Columns stale entry's `<image>` followed its picture while its
+  `<path>` stayed), the `psx` list was untouched, and the 3 originals were in
+  `.romperoom/lists-backup/1/`; no content was lost; the leftover list no longer showed the renamed
+  pictures, and Tetris's cover went from none to the renamed picture, shown on its tile, with no
+  scan;
+- Undo from the results: **observed**; "Undid this re-link: 1,211 changes put back.", the
+  fingerprint outside `.romperoom` equal to the one before, modification times included;
+- Stop, then Finish or undo…: **observed**; Stop pressed at picture 13 of 1,205 ended the run
+  Stopped with 44 pictures renamed, no game list touched and "2,364 items did not run."; the run
+  waited in Recovery; Finish renamed the rest and wrote all three lists as the full run had; Undo
+  from History › Recent re-links restored the fingerprint exactly;
+- a re-link waiting in Recovery refuses a standardise run: **observed** (at the bridge, with an
+  empty choice; the screen's wording not seen); "a standardise run of this library waits in
+  Recovery: finish or undo it first";
+- the reverse, a standardise run waiting in Recovery refusing a re-link: **not evaluated** (engine
+  tests);
+- a reload showing only the window's latest result of either kind: **not evaluated** (host
+  tests);
+- the file hashes a review caches in the catalog: **not evaluated** (the catalog was not
+  inspected);
+- a kill part way, then rollback: **observed**; killed at picture 40, with 41 pictures renamed
+  and no content lost; the next start opened the panel with the run Interrupted, and Undo what was
+  done restored the fingerprint outside `.romperoom` exactly;
+- a review a reload forgot: **observed**; refused, nothing changed;
+- a frontend rescan: **not evaluated**; no frontend that reads a ROM folder or `gamelist.xml` is
+  installed on this Mac (OpenEmu is, but it keeps its own library);
+- the share: **not evaluated**, the share was not mounted;
+- the network: **observed**; the request log was empty and `network-log.json` absent.
+
+## Live tidy up batch run
+
+CI never runs these on a real library: the unit suites build their own temp libraries
+(`packages/engine/test/tidy-batch.test.ts`) and the end-to-end suite its own sandbox
+(`e2e/tidy.spec.ts`). Run it before a release that changes `tidy/orphans.ts`, `tidy/dedupe.ts`'s
+`duplicateCover`, `tidy/purge.ts`'s ages or `tidy/recovery.ts`'s `discardJournal`. Drive the
+built app (`npm run build`) by hand or with a throwaway Playwright script kept outside the
+repository:
+
+1. **Library.** A scratch library outside the repository and outside your library's share: copy
+   two console folders with their art from the share if it is mounted (read only; fingerprint
+   the share before and after: it must be identical), else build them by hand. Include leftover
+   pictures of each cause (a picture with no game, one of a game whose file you removed, and an
+   identical copy of a kept picture in a folder no frontend reads), and a few pairs of identical
+   games, one with box art. A game removed before a scan leaves its picture unlinked, so it reads
+   "No game in your library", not "Game removed". Fingerprint the scratch library (path, size,
+   modification time and SHA-1 of every file; a fingerprint that fails to read is "not
+   evaluated").
+2. **Scan,** with a fresh `ROMPEROOM_DATA_DIR` and the library through
+   `ROMPEROOM_TEST_PICK_FOLDER`.
+3. **Artwork.** Record the **Show** row's counts and sizes, choose each cause, check that
+   the list, **Select all**, **Select none** and **Set aside N files** speak of the pictures shown,
+   and that a picture unticked in one cause stays unticked in All. Set aside one cause's pictures.
+4. **Duplicates.** Each set shows its game's picture or the plain square; narrow the window to
+   320 px and check nothing overflows sideways (`document.documentElement.scrollWidth`).
+5. **Delete forever by age.** Quit, back-date the journals of the run from step 3 in the scratch
+   catalog (`UPDATE op_journal SET created_at = …` by 40 days), start again, and check the
+   select's counts (30 days: those files; 90 days: none, with the button unavailable and its
+   reason), then delete the 30-day files forever and check only they are gone.
+6. **Discard the rest.** Start setting aside the duplicates with a slowed run
+   (`ROMPEROOM_TEST_TIDY_DELAY_MS`), press **Cancel** part way, then **Finish or undo…** ›
+   **Discard the rest**: what moved stays set aside, nothing else moved (fingerprint), the
+   overview no longer offers the run, and History says "Stopped: the rest was discarded". Then
+   repeat with a kill part way instead of Cancel and record whether Discard the rest settles it
+   or is refused.
+7. **Record** each step as observed, failed or not evaluated, with the counts, in this section.
+
+What it cannot observe: Windows and Linux; FAT32, exFAT and network shares (the library is on the
+Mac's own disk); a real 30-day wait (the age comes from a back-dated catalog); and a killed run
+that Discard the rest settles, since the test delay waits after a step reserves its name, so every
+kill leaves that reservation behind (the engine tests cover a clean one).
+
+**Last run: 2026-10-07,** macOS, the built app, a scratch library of 43 files (2.3 MB) built by
+hand: 8 pairs of identical games (two with box art), 3 kept games with an identical copy of their
+box art in `covers/`, 2 games whose files were removed after the first scan, and 12 pictures with
+no game. Your library's share was not mounted, so the share run was **not evaluated**. What it
+measured:
+
+- the scan: **observed**; nothing changed in the library but the two files removed by hand.
+- **Show:** **observed**; "All · 17 pictures (1.7 MB)", "No game in your library · 14 pictures
+  (1.4 MB)" and "Extra copies · 3 pictures (308.1 KB)". The two removed games' pictures counted as
+  "No game in your library" (see step 1), so **Game removed** never showed. Each choice listed
+  only its pictures; Select none left "Set aside 0 files (0 B)", unavailable; Select all ticked
+  the view again; Ghost 01 unticked under No game in your library stayed unticked under All
+  ("Set aside 16 files (1.6 MB)"). Setting aside Extra copies moved exactly the 3 copies, and the
+  Show row then hid (one cause left).
+- **Duplicates:** **observed**; the two sets with box art showed it (`alt=""`, loaded), the six
+  without showed the plain square. At 320 px Duplicates, Leftover artwork, Set aside and History
+  had `scrollWidth` 320 of 320.
+- **Delete forever by age:** **observed**; with the Extra copies run back-dated 40 days and the
+  Gone pictures' run left as it was, the select read "Everything set aside (5 files)", "Set aside
+  more than 30 days ago (3 files)" and "Set aside more than 90 days ago (0 files)" (the labels have
+  since been shortened to "Everything", "Older than 30 days" and "Older than 90 days"). At 90 days
+  **Delete forever…** was unavailable, described by "Nothing was set aside more than 90 days
+  ago."; at 30 days the preview said "3 files (308.1 KB) set aside in library more than 30 days
+  ago will be deleted forever.", and only those 3 files left the set-aside folder.
+- **Discard the rest after Cancel:** **observed**; Cancel stopped a run of 8 after 3; after a
+  restart the panel opened by itself with the new words, "3 files done, 5 files left" and Discard
+  the rest with its line. Discarding changed nothing on disk (modification times included), the
+  overview counted 0 interrupted and no longer showed the banner, and History read "Stopped: the
+  rest was discarded".
+- **Three kills (`SIGKILL`):** **observed**; three runs (5 duplicates, then two runs of 6
+  pictures) each killed during a move, each leaving one empty reservation in the set-aside folder
+  and no content lost. At the next start the panel listed all three. Discard the rest on the
+  first was **refused** with "Romperoom couldn't discard the rest." and nothing changed; Undo what
+  was done then put it back, and focus moved to the next run's heading; Finish moved the second
+  run's 6 pictures, focus again on the next heading; Undo what was done put the third run's
+  pictures back, and the panel closed with focus on the screen, not the page.
+- the end: **observed**; every file's content from the start was still in the library, except the
+  two games removed by hand.
+
+## Live libraries run
+
+CI never runs it on a real library: the unit suites build their own temp libraries
+(`packages/engine/test/libraries.test.ts`) and the end-to-end suite its own sandbox
+(`e2e/libraries.spec.ts`). Run it before a release that changes `packages/engine/src/libraries.ts`,
+`addLibrary` or `removeLibrary` in `engine.ts`, or `renderer/settings/Libraries.tsx`. Drive the
+built app (`npm run build`) by hand or with a throwaway Playwright script kept outside the
+repository:
+
+1. **Libraries.** Three scratch libraries outside the repository: two folders named `roms`, each
+   with a few pairs of identical games (copies of two console folders from the share if it is
+   mounted, read only, fingerprinting the share before and after: it must be identical; else
+   built by hand), and a third big enough that its scan lasts a few seconds. Fingerprint all
+   three (path, size, modification time and SHA-1 of every file; a fingerprint that fails to read
+   is "not evaluated") before and after each add and remove.
+2. **Setup** with the first, a fresh `ROMPEROOM_DATA_DIR` and `ROMPEROOM_TEST_PICK_FOLDER`. Quit
+   and start again with the second as the picked folder and a slowed Tidy up
+   (`ROMPEROOM_TEST_TIDY_DELAY_MS`).
+3. **Add.** Settings › Libraries › **Add a library…**: the second is listed as `roms (2)`, "Not
+   scanned yet", focus on its **Scan now**, and nothing scans. **Scan now**: its games and "Last
+   scanned" with today's date.
+4. **Refusals.** Pick, in turn, the second again, the first's `GBA` folder, the first's parent, a
+   symbolic link to the second, and a folder that doesn't exist: "That folder is already one of
+   your libraries", "That folder is inside one of your libraries", "That folder holds one of your
+   libraries", "That folder is already one of your libraries", "Can't reach your game folder";
+   nothing is added.
+5. **Remove while a scan runs.** Add the third and press its **Scan now**: every **Scan now** says
+   why it waits and the third reads "Scanning now". **Remove** `roms (2)` meanwhile: "A scan is
+   running", the confirmation stays, nothing is forgotten.
+6. **Not reachable.** Rename the second library's folder away, then switch tabs and back at once:
+   its row stays, marked "Can't reach its folder. Is the drive connected?". Put it back. Then
+   move it and leave a symbolic link at its old path: the row reads "Can't reach its folder" and
+   **Scan now** still counts its games. Put it back.
+7. **Remove while Tidy up runs.** Set aside some of `roms (2)`'s duplicates (a finished run), then
+   start a slowed run of the rest and **Remove** it meanwhile: "Romperoom can't remove roms (2)
+   right now", nothing forgotten.
+8. **Remove while Recovery waits.** Start a slowed run of the first library's duplicates, kill the
+   app (`SIGKILL`) once a file has moved, and start again: **Remove** `roms` says "Something
+   Romperoom was doing in roms stopped before it finished", nothing forgotten or moved. Undo the
+   run.
+9. **Remove** `roms (2)`: asked first in place of the list, then gone from the list, announced,
+   focus on "Your libraries"; its folder byte-identical (its `.romperoom-quarantine` too), the
+   others untouched, its games gone from the wall, nothing of it in History or Set aside.
+10. **The network log** (`datsNetworkLog`, and no `network-log.json`) is empty.
+11. **Remove** the third, then `roms`: the confirmation says it's the only library, setup opens,
+    Settings closes and focus is on `<main>`. Every folder is as it was before its remove.
+12. **Record** each step as observed, failed or not evaluated, with the counts, in this section.
+
+What it cannot observe: Windows and Linux; a share that hangs (the 3-second limit is pinned by the
+engine tests' seam, and Add waiting on one is not tried); one folder reached by two real paths
+(macOS has no bind mounts: the device and inode rule is pinned by the unit tests); an identify
+run overtaken by a removal (the timing is not reachable by hand); a Standardise run waiting in
+Recovery (pinned by the engine tests).
+
+**Last run: 2026-10-07,** macOS, the built app, three scratch libraries built by hand: `roms`
+(20 files: 8 pairs of identical Game Boy Advance games and 4 Super Nintendo games), `roms (2)` (18
+files: 8 pairs and 2 NES games) and `slow` (2,403 files, 954 MB, its scan about 2 seconds). Your
+library's share was not mounted, so the share run was **not evaluated**. The picked folder was
+changed between adds through the same `ROMPEROOM_TEST_PICK_FOLDER` seam (the host reads it each
+time the picker opens). What it measured, in 33 checks (31 observed, 1 failed and since fixed, 1
+not evaluated; the 33rd is the failed cell's re-run below):
+
+- setup, add and scan: **observed**; `roms (2)` listed as "0 games · Not scanned yet" with focus on
+  **Scan now: roms (2)**, "Added roms (2). Press Scan now to count its games." announced and no
+  scan running; after **Scan now** "10 games · Last scanned Oct 7, 2026". Neither folder changed.
+- the five refusals: **observed**; each said the words above, focus stayed on **Add a library…**,
+  and the list kept 2 libraries; no folder changed.
+- remove while a scan runs: **observed**; during the third library's scan all three **Scan now**
+  were `aria-disabled` and described by "A scan is running. Scan now works again when it
+  finishes.", the third read "0 games · Scanning now", and **Remove from Romperoom** on `roms
+  (2)` said "A scan is running" while the scan still ran; 3 libraries stayed.
+- not reachable at once: **failed**; with the folder renamed away, switching to Appearance and
+  back left the row without the line, though the host's own answer was already `unreachable`:
+  the tab showed the list it had read less than 30 seconds before. Fixed in 356e7f3
+  (`refetchOnMount: 'always'`, unit-tested).
+- not reachable at once, re-run after the fix: **observed**; the built app at e254edb, two
+  scratch libraries of 2 files each: with the folder present the row had no line; renamed away,
+  switching to Appearance and back at once (0 seconds after the tab's last read) showed "Can't
+  reach its folder. Is the drive connected?" within 0.1 seconds, the host answering
+  `unreachable`; put back, the next switch cleared it. The folder was byte-identical afterwards.
+- not reachable after 30 seconds: **observed**; the row stayed, marked "Can't reach its folder. Is
+  the drive connected?".
+- behind a symbolic link: **observed**; "Can't reach its folder", and **Scan now** counted its 10
+  games ("Last scanned" moved on).
+- remove while Tidy up runs: **observed**; with a slowed run of 6 copies going, "Romperoom can't
+  remove roms (2) right now / Wait for Tidy up or Standardise to finish, then try again.", 3
+  libraries stayed, and the run finished (6 moved).
+- remove while Recovery waits: **observed**; after a `SIGKILL` during a run of 8, the next start
+  opened the recovery panel (Later), Recovery listed the run, **Remove** `roms` said "Something
+  Romperoom was doing in roms stopped before it finished", and the folder was identical; Undo
+  then settled the run.
+- the remove: **observed**; the confirmation in place with focus on its heading, then "Removed
+  roms (2) from Romperoom." with focus on "Your libraries". Its folder was byte-identical,
+  modification times and its 8 set-aside files included; the other two were untouched. Its games
+  left the catalog (a search for one of them: 1, then 0; the NES console left the wall), its 2
+  runs left History and its 8 set-aside files left Set aside (0 left), and History kept the first
+  library's undone run.
+- the network log: **observed**; empty, and no `network-log.json`.
+- the last library: **observed**; "It's your only library, so Romperoom goes back to setup
+  afterwards.", then setup, Settings closed, focus on `<main>`, no library left. Every folder was
+  as before its remove, and no content was lost over the run.
+
 ## Real-card run
 
 `packages/engine/test/real-card.test.ts` runs the card writer against a real FAT32 file system:
@@ -851,6 +1179,93 @@ What the last run measured on macOS (Darwin 27, a 512 MiB image, 4 KiB clusters)
 - macOS writes a 4096-byte `._` AppleDouble file beside every file and folder on FAT, and moves
   them with their files. Space freed on FAT shows up in `statfs` a little later.
 
+## Live across libraries run
+
+CI never runs this on a real library: the unit suites build their own temp libraries
+(`packages/engine/test/tidy-across.test.ts`) and the end-to-end suite its own sandbox
+(`e2e/tidy.spec.ts`). Run it before a release that changes `tidy/across.ts` or
+`renderer/tidy/Across.tsx`. Drive the built app (`npm run build`) by hand or with a throwaway
+Playwright script kept outside the repository:
+
+1. **Libraries.** Scratch libraries outside the repository and outside your library's share:
+   copy one console folder from the share into two of them if it is mounted (read only;
+   fingerprint the share before and after: it must be identical), else build them by hand. Two
+   folders named `roms` sharing games (more than 50, so the list pages), each also holding a
+   game only it has, a pair inside the first only, the same bytes under two consoles, a disc set
+   in both, and a file hard-linked into both; a third sharing three of the games; a fourth left
+   unscanned; a fifth big enough that its scan lasts a few seconds; and two small ones that will
+   come to overlap others. Fingerprint every library (path, size, modification time and SHA-1 of
+   every file; a fingerprint that fails to read is "not evaluated") before and after each look.
+2. **One library.** Set up with the first (a fresh `ROMPEROOM_DATA_DIR`, the folder through
+   `ROMPEROOM_TEST_PICK_FOLDER`): **Across libraries** says "Only one library".
+3. **Two and three libraries.** Quit, start again, add the others in **Settings** ›
+   **Libraries** (**Add a library…**, then **Scan now**; the host reads the picker seam each time
+   it opens). Record the sets, the line above them, the badges, the skipped count, the pager,
+   the live region and where focus goes with **Look again** and **Scan again**, and whether the
+   Library choice is hidden with its note.
+4. **Not checked.** The unscanned library; a folder of the third made unreadable (`chmod 000`)
+   and the library scanned again; the fifth's scan running; the second's folder moved away, then
+   an empty folder at its place; a copy moved off since the scan; a parent folder of a library
+   swapped for a symbolic link into another library (nested), or to another library's own
+   folder (the same folder); a library's own folder swapped for a link. Put each back.
+5. **During a tidy.** Start again with a slowed Tidy up (`ROMPEROOM_TEST_TIDY_DELAY_MS`), set
+   aside the first library's pairs, look across while it runs, then undo the run.
+6. **Nothing changed.** Every fingerprint identical; the network log empty.
+
+What it cannot observe: Windows and Linux; a network share or a removable drive unplugged for real
+(the folder is moved away); two mounts of one share; a share that hangs during the look.
+
+**Last run: 2026-10-08,** macOS, the built app at 69431ef, seven scratch libraries built by hand
+(your library's share was not mounted, so the share cells were **not evaluated**): `roms` (83
+files) and `roms (2)` (76 files) sharing 8 Game Boy Advance and 60 Super Nintendo games and 4
+games `roms` holds twice, `more` (5 files, three of the shared games), `fresh` (1 file, never
+scanned at first), `slow` (3,007 files, 3.0 GB, its scan about 3.4 seconds), and `GBA` and
+`roms (3)` (1 file each). What it measured, in 48 checks (46 observed, 0 failed, 2 not
+evaluated):
+
+- one library: **observed**; "Only one library", no **Look again**.
+- two libraries: **observed**; named `roms` and `roms (2)`, both compared; 72 sets, "72 sets of
+  copies in more than one library · 92.6 KB in extra copies" (the sum of the shared sizes);
+  each card "Super Nintendo · In 2 libraries · 1.5 KB" with a `roms` and a `roms (2)` badge
+  before each path; 6 skipped (the two-console pair and the disc set's two files in each), the
+  hard-linked file neither listed nor counted, the game only one holds and the pair inside one
+  library not listed; a pair one library holds twice is one set of 3 copies in 2 libraries.
+- paging: **observed**; "Showing 1–50 of 72 sets", **Next** showed 22 with focus kept on it.
+- live region: **observed**; nothing said on opening or paging; **Look again** pressed with
+  Enter kept focus and said "72 sets of copies in more than one library · 92.6 KB in extra
+  copies" once; pressed again with the same outcome, nothing new was said (the shared
+  announcer's known limit).
+- the Library choice: **observed**; on this tab the choice is `visibility: hidden` (Shift+Tab
+  from the tab skips it) and "Every library is compared here." shows; on Duplicates the choice
+  shows again.
+- three libraries: **observed**; the three games read "In 3 libraries", extra twice their size.
+- not scanned: **observed**; "fresh: It hasn't been scanned completely. Scan it again to include
+  it.", the other three compared, and **Look again** said the outcome with " · 1 library not
+  checked" (not on screen). **Scan again** by keyboard scanned it; when it left, focus moved to
+  the heading, and the list updated by itself.
+- partial: **observed**; with a folder unreadable the scan completed and `more` read "Its last
+  scan didn't see every file"; readable again, **Scan again** on the tab made it compared.
+- scanning: **observed**; **Scan again** pressed by keyboard on `slow` stayed focused,
+  `aria-disabled` and described by "A scan is running. This list updates when it finishes.";
+  **Look again** meanwhile read "slow: It is being scanned now."; when the scan ended the list
+  updated by itself and only "Scan finished: 92 games found" was said.
+- offline: **observed**; folder moved away, and an empty folder with only `.DS_Store` at its
+  place, both read "roms (2): Its folder isn't available. Is the drive connected?", the other
+  four compared (3 sets); back, compared again.
+- gone: **observed**; one copy moved off: "1 file has moved or gone since the last scan — scan
+  again to check it", **Scan again** offered, its set not listed; put back, listed again.
+- overlap: **observed**; nested and the same folder through a link both read "Part of its folder
+  is also another library, so its files could be counted twice." for both libraries and none of
+  their files were listed; a library whose own path became a link read "Its folder isn't
+  available" (the open limit); links removed, all seven compared.
+- during a tidy: **observed** through the page's bridge (the window running a job shows its job
+  panel in place of the tabs); sampled every 1.5 seconds while 5 copies were set aside: each
+  moved copy left its set at once, no file read as gone, and the 72 sets stayed. **Not
+  evaluated** during a Standardise or re-link run: the delay seam slows only Tidy up's renames.
+- nothing changed: **observed**; every look left every library byte-identical; after the undo,
+  `roms` had every file back with the same content and modification time, and nothing
+  left set aside; the network log was empty.
+
 ## Screenshots
 
 `docs/screenshots/` is generated, never edited by hand:
@@ -863,12 +1278,21 @@ The script (`apps/desktop/scripts/capture-screenshots.mjs`) runs `e2e/capture` a
 built app and the fixture library. The window is 1280 x 800 at a device scale factor of 1. It
 captures in Console Shelf, light and dark:
 
-- Settings, the wizard and an unmapped folder;
+- Settings (Appearance, Libraries and Game databases, with the download review and results),
+  the wizard and an unmapped folder;
 - the library and the game drawer;
 - Health, unreadable files and the removal review;
+- Health's Identify card and the name matches to check;
+- cover art: the Health card, its review and its results;
 - the card wizard's device and check steps (where to and done in light only);
-- Tidy up's overview and duplicates (the set-aside preview and the Set aside tab in light
-  only).
+- Sync a card's review and results;
+- Standardise's review and results, and the re-link review and results;
+- Tidy up's overview, duplicates, across libraries and artwork tabs (the set-aside preview and
+  the Set aside tab in light only). The artwork shot scans its own small library (one game, a
+  picture no game has and an extra copy of a kept picture), so its Show row has two causes and no
+  other shot changes. The across libraries shot scans two small libraries of its own ("roms" and
+  "more", the second added in Settings › Libraries), sharing two games, in a window 900 pixels
+  tall so both sets show whole.
 
 It also captures the library in CRT Neon and Clean Modern (dark). It writes `manifest.json`,
 which records for each file the surface, theme, mode, viewport, command and app commit. The

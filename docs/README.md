@@ -8,7 +8,7 @@ README is listed here; a test fails if one is not.
 | Document                              | What it covers                                                        |
 | ------------------------------------- | --------------------------------------------------------------------- |
 | [User guide](user-guide.md)           | Every screen, the keyboard and gamepad controls, and common questions |
-| [Troubleshooting](troubleshooting.md) | Unreachable folders, missing games, unreadable files, starting over   |
+| [Troubleshooting](troubleshooting.md) | Unreachable folders, missing games, libraries, cards, Tidy up, Standardise and re-link |
 | [Supported systems](systems.md)       | Every system and the folder names that map to it (generated)          |
 | [Roadmap](roadmap.md)                 | What is built, what is planned, and the known gaps                    |
 
@@ -16,13 +16,13 @@ README is listed here; a test fails if one is not.
 
 | Document                                   | What it covers                                                                             |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| [Architecture](architecture.md)            | Processes and IPC, the catalog schema, the scan and its guards, the journal, the hash pool, identification |
+| [Architecture](architecture.md)            | Processes and IPC, the catalog schema, the scan and its guards, the journal, Tidy up, the hash pool, identification, cover art, card sync, Standardise, the deploy planner and card writer |
 | [Development](development.md)              | Commands, the Electron binary, native modules, the renderer, known limitations             |
 | [Testing](testing.md)                      | Test strategy, the fixture library, e2e suites, coverage, mutation testing, CI             |
 | [Configuration](configuration.md)          | The data folder, environment variables, test seams, saved settings                         |
 | [Device profiles and systems](profiles.md) | Every profile field, path safety, adding a system or a device                              |
 | [Release](release.md)                      | Versioning, installers, the release workflow, publishing, signing, rollback                |
-| [CI runners](ci-runners.md)                | Actions minutes, what runs where, the self-hosted Mac and Windows runners                  |
+| [CI runners](ci-runners.md)                | Actions minutes, what runs where, the self-hosted Mac, Windows and Linux runners           |
 
 ## For reviewers
 
@@ -35,7 +35,7 @@ README is listed here; a test fails if one is not.
 
 | Package                                                     | What it is                                      |
 | ----------------------------------------------------------- | ----------------------------------------------- |
-| `packages/engine`                                           | Catalog, scanner, hash pool, file operations and identify |
+| `packages/engine`                                           | Catalog, scanner, hash pool, file operations, identify, deploy and sync |
 | `packages/profiles`                                         | The systems catalog and device profiles (data)  |
 | `packages/ui`                                               | Themes, tokens and primitives                   |
 | `apps/desktop`                                              | The Electron app                                |
@@ -59,7 +59,9 @@ implementation plan record how the foundation was
 designed and built, task by task. They are kept as history: where they disagree with the pages
 above, the pages above are current. The Milestone 2
 design spec does the same for offline DAT
-identification.
+identification, and every later feature (game database downloads, cover art, card sync,
+Standardise, re-link, the Tidy up batch, libraries and copies across libraries) has its own spec
+and plan beside them.
 
 ## Screenshots
 

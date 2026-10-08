@@ -1,7 +1,8 @@
 # Configuration
 
 Romperoom has no settings file. A player changes the theme and light or dark mode in the
-Settings drawer, and everything else works without configuration. This page lists what an
+Settings drawer (which also lists the libraries and the game databases), and everything else
+works without configuration. This page lists what an
 engineer or a scripted install can set.
 
 ## Contents
@@ -118,8 +119,8 @@ Details:
   and "Source" append the exact URL and a newline to that file. A relative path stops startup
   with "ROMPEROOM_TEST_OPEN_EXTERNAL must be an absolute path".
 - **`ROMPEROOM_TEST_DEPLOY_DELAY_MS`**, **`ROMPEROOM_TEST_TIDY_DELAY_MS`** and
-  **`ROMPEROOM_TEST_VOLUME_BYTES`** are ignored unless they are whole numbers in range. The byte cap applies only together with
-  `ROMPEROOM_TEST_VOLUME`.
+  **`ROMPEROOM_TEST_VOLUME_BYTES`** are ignored unless they are whole numbers in range. The byte cap
+  applies only together with `ROMPEROOM_TEST_VOLUME`.
 - **`ROMPEROOM_TEST_SCAN_ONLY`** is meant for live runs against a large share: scan a few
   consoles instead of all of them. It replaces any `onlyFolders` the page passed. Other scan
   options, such as `confirmRemoval`, are kept. Blank entries are dropped, and an empty list means
@@ -234,14 +235,23 @@ Tests pass two more on the command line: `--force-device-scale-factor=1` (screen
 
 ## Saved settings
 
-The page saves the player's look in localStorage. It is the only key the app writes:
+The page saves two keys in localStorage:
 
-| Key                     | Value                            | Default                   |
-| ----------------------- | -------------------------------- | ------------------------- |
-| `romperoom.settings.v1` | JSON `{ "theme": …, "mode": … }` | `console-shelf`, `system` |
+| Key                     | Value                                                                                 | Default                                   |
+| ----------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `romperoom.settings.v1` | JSON `{ "theme": …, "mode": … }`                                                      | `console-shelf`, `system`                 |
+| `romperoom.deploy.v1`   | JSON: the card wizard's last device, consoles, region order and options; never a card | Every console of the device, box art only |
 
 - `theme` is one of `console-shelf`, `crt-neon` or `clean-modern`.
 - `mode` is one of `light`, `dark` or `system` ("Match my computer").
 - A missing or unreadable value falls back to the defaults.
 - The page reads the value synchronously, so `<html>` has its `data-theme` and `data-mode`
   before the first paint (`src/renderer/lib/settings.ts`).
+- `romperoom.deploy.v1` (`src/renderer/deploy/choices.ts`) is read when the wizard opens; a
+  missing or unreadable value, or a field out of range, falls back to the defaults.
+- Three sessionStorage keys only remember, for the window's life, which Tidy up, standardise and
+  re-link result was already shown or closed (`romperoom.tidy.seen`,
+  `romperoom.standardise.dismissed`, `romperoom.relink.dismissed`).
+- Choices made per library are kept in the catalog, not the page: the BIOS folder
+  (`source_root.bios_folder`) and the device Standardise names folders by
+  (`standardise_profile`).
