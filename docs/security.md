@@ -678,10 +678,17 @@ for the download (the official-site path still works).
   learns whether one is saved; it is decrypted in the main process only to build a lookup's
   request. Whether one is saved is read from the file without decrypting it, so opening Health
   or Settings never asks the keychain; an account the keychain can no longer read (a reset, or a
-  data folder from another computer) stops a lookup before any request, asking for it again. Romperoom's own ScreenScraper developer details are not in the repository or the
-  build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV` (see
-  [configuration.md](configuration.md#environment-variables)), and they come from the
-  maintainer's cloud secret store.
+  data folder from another computer) stops a lookup before any request, asking for it again.
+  Reading the account for a lookup, saving it and forgetting it run one after another in the
+  order asked (a queue), so when the keychain asks for the account to be encrypted again during a
+  lookup's read, that write can never bring back an account the player forgot, or overwrite one
+  saved, while it ran: the file always ends as the last Save or Forget left it. A lookup already
+  running keeps the account it read when it started and goes on using it for its requests; a
+  Forget or Save affects the next lookup. Whether one is saved is not queued (it never decrypts),
+  so it never waits behind a keychain prompt. Romperoom's own ScreenScraper developer details are
+  not in the repository or the build: an unpackaged run may read them from
+  `ROMPEROOM_SCREENSCRAPER_DEV` (see [configuration.md](configuration.md#environment-variables)),
+  and they come from the maintainer's cloud secret store.
 - **Settings** (theme and light or dark) live in the renderer's localStorage, under the key
   `romperoom.settings.v1`, the card wizard's last choices under `romperoom.deploy.v1`, and its
   saved packages under `romperoom.deploy.packages.v1` (see

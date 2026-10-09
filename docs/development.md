@@ -388,7 +388,9 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   not listed.
 - **A set-aside copy whose kept copy cannot be proven stays set aside.** Delete forever keeps it
   while the kept library is unplugged, removed, or its copy changed; Put back always works.
-  Finish waits for the kept library; Roll back does not need it.
+  Finish waits for the kept library only while a file it has left to move is kept there (steps
+  that already landed need nothing of it); Roll back does not need it. A Finish that stops on
+  it can ask to reconnect that library from the Recovery drawer.
 - **Standardise in a kept library re-records other libraries' record of it.** A Standardise
   run (or its Undo or Recovery) records its library again on its own journals and on the record
   another library's Across run keeps of it (`op_keeper_root`), in the same audit row, only when

@@ -1010,7 +1010,8 @@ it still plans.
   never waiting), checks each kept library answers, is not empty and does not overlap by real
   path (`KeeperLibraryError`, a `LibraryUnavailableError`, otherwise), and re-hashes each kept
   copy just before its step moves. `op_keeper_root` records the kept libraries as the run found
-  them: Finish locks them and checks they are still the same folders; Delete forever keeps a step
+  them: Finish locks them and checks each is still the same folder before a step that needs it
+  moves anything (one whose remaining steps all landed needs none); Delete forever keeps a step
   while its kept library was removed, is unplugged or is another folder, or its copy changed (it
   locks them to finish, not to roll back); Undo or Roll back needs only the library the copies
   sit in. Reconnecting a library refreshes the record other libraries' journals keep of it, by
@@ -1104,9 +1105,17 @@ checked again. `listQuarantine` returns `olderThan`, the count and size for each
 stopped mid-run) or `blocked-root` (the folder at the library path is not the library). Nothing
 in them is failed. `resolveJournal(id, 'finish' | 'rollback')` and
 `resolvePurge(id, 'finish' | 'rollback')` settle one, under the work lock and with every check
-of a fresh run. `health().interruptedOperations` counts them. While a purge is unfinished, a
-restore or undo of its files is refused; finishing it never deletes a file that was restored
-meanwhile (it is kept, "it was restored meanwhile", and the purge ends `partial`).
+of a fresh run. Finish checks a library of kept copies the journal recorded only when a step is
+about to move a file kept there (`needKeeperLibrary`): a step that already landed, or one whose
+kept copy is elsewhere, needs nothing of it, so a Finish whose remaining steps all landed works
+while that library is unplugged, and one that does need it stops at that step
+(`KeeperLibraryError`) with it and every later step still pending. The hard-link check reads only
+the kept copies in libraries checked so far (and again after each one more is checked), so a hung
+kept library a Finish does not need is never read, nor blamed on the journal's own library.
+`recoverJournals` lists each journal's kept libraries (`keeperRoots`).
+`health().interruptedOperations` counts them. While a purge is unfinished, a restore or undo of its
+files is refused; finishing it never deletes a file that was restored meanwhile (it is kept, "it was
+restored meanwhile", and the purge ends `partial`).
 
 `discardJournal(id)` (the facade's `resolveJournal` with `how: 'discard'`) settles a Tidy up
 run's journal without moving anything. Under the work lock, on the library only, it proves every
@@ -1169,9 +1178,29 @@ flowchart LR
   says what moved and what stayed, and offers **Finish or undo…**, which opens the recovery
   drawer for that run (`tidy:resolveJournal`). A Tidy up run there can also **Discard the rest**
   (`how: 'discard'`): what moved stays set aside, the rest is recorded as not run.
+- **A run of several plans** (Across libraries: one plan per library) is one job, the plans one
+  after another. The result names the library the last run worked in (`libraryName`) and, when a
+  run stopped part way, the page says "It stopped at roms (2)."; a later plan that could not start
+  is named by its library too (`laterError: { name, library }`), and the files of every plan that
+  never started (after a Cancel between plans, a stop, or a plan that could not start) are counted
+  as `notStarted`, apart from the stopped run's own `notRun` (which Finish or undo… settles). A run
+  stopped because a kept library did not answer names that library (`keptLibrary`, from the
+  engine's `fatal.keeperRoot`). Every name is the library's name as Settings › Libraries gives it
+  (a library removed since: its folder's last name), never a path.
 - **Recovery at startup.** When the first health reading counts interrupted work, a drawer
   offers to finish or undo each item. A run stopped later in the same session is offered from
-  its own result instead. When the drawer closes by itself, focus goes to `<main>`.
+  its own result instead. When the drawer closes by itself, focus goes to `<main>`. Each run
+  there lists the libraries its kept copies are in (`keptIn`, by name and id); when its Finish
+  cannot reach one (`KeeperLibraryError`), the host names that library in the error
+  (`KEPT_LIBRARY_UNREACHABLE` plus its name, never its path), and the drawer asks about that one
+  only, while it is still in Romperoom, whether it is still the library that keeps the other
+  copies; **Yes, reconnect** runs the same reconnect as for the run's own library
+  (`tidy:reconnectLibrary` on the kept library, which refreshes the record other libraries'
+  journals keep of it). One removed since is named, not offered. After any failed Finish the
+  drawer reads its list again (a Finish may record what had landed before it stopped).
+- **No path in an error.** Every error a tidy job or a reconnect sends the page has each library's
+  path replaced by its name (a kept library's by `nameByPath`), so "Details" never shows a
+  folder path.
 - **Errors** are plain words with the technical text under "Details": busy (a scan or a copy to
   a card holds the library), the library folder not available, or "your library changed since
   you looked" (a stale plan), which offers "Look again".
@@ -1481,13 +1510,18 @@ fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it 
 
 **Look up on ScreenScraper** (`main/scraper/`). The player's account is kept by
 `scraper/account.ts`: Electron's `safeStorage` encrypts it into
-`<dataDir>/screenscraper-account.json` (mode 0600), and the page learns only `saved`, `none` or
-`unprotected` (no keychain, so nothing is saved) through `art:scraperAccount`; it sends the
+`<dataDir>/screenscraper-account.json` (mode 0600), a run's read, a save and a forget run one
+after another (a promise queue, so a re-encrypting read never undoes a later Save or Forget) while
+`state` (never decrypting) is not queued, so Health and Settings never wait for a keychain prompt,
+and the page learns only `saved`, `none` or `unprotected` (no keychain, so nothing is saved) through
+`art:scraperAccount`; it sends the
 account once through `art:setScraperAccount`. Romperoom's developer details are not in the
 build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV`, a packaged build
 reads nothing, and without them the review and Health say "This copy of Romperoom can't use
 ScreenScraper yet." (so every release build does today). The review (`artReview({ source: 'screenscraper' })`) asks nothing: it
-counts the games missing a chosen kind or a description (`listScrapeWanted`). A run
+counts the games missing a chosen kind or a description (`listScrapeWanted`); a game no picture
+can be saved for (`blocked`) counts for its description only, and a run never looks it up for
+pictures, so the count of games the review shows is the number of lookups sent. A run
 (`scraper/service.ts`) asks `api.screenscraper.fr` one game at a time (`/api2/jeuInfos.php` with
 the file's SHA-1, MD5, CRC, name, size and the console's ScreenScraper number), at most 1,000
 games, one request a second until the first answer gives the account's pace, then one every
@@ -1496,9 +1530,26 @@ the account's daily limit or any status that is not about one game. Only an answ
 (`exact`); a picture comes from `/api2/mediaJeu.php`, is checked against the answer's size and
 SHA-1, and goes through the same art writer with the source `screenscraper`; a description is
 cleaned and kept in `game_description` (at most 4,000 characters), shown in the game's drawer. A
-run that asks only for descriptions takes no `art` lock. The transport's allowlist has the third
-host with exactly those two paths; the account, the developer details and the checksums travel
-only in the query, and the request log and every error keep the host and path alone.
+run holds no lock across its requests: before the first one it opens and ends a session (a busy,
+full or unwritable library stops the run there), then each picture is saved in a session of its
+own (`begin` for that one game and its bytes, `save`, `end`), so the `art` lock is held only while
+that picture is written and a scan, a copy to a card, Tidy up or Identify may run between two
+pictures. Each session works out again where the game's picture goes, whether the kind is still
+missing and whether there is room, so a library that changed or went away since reads as it is
+then (not available, present, or a stop on no space). Before each picture's download a session
+for that game opens and ends at once: a library busy then skips the picture under `busy` without
+downloading it (no daily request spent); one busy at the write is skipped the same way after it.
+Each row of `failed` is one reason and message, so a busy row names the work that held the
+library. Every save carries the file the lookup asked about (`asked`: its catalog id and SHA-1):
+the writer, under the lock, and `saveDescription` refuse it (`changed`) unless the game's pictures
+are still named after that file with that SHA-1, so a game id the catalog reused (Identify drops
+empty games, and `game.id` is not AUTOINCREMENT) or a game whose files changed takes nothing, and
+a run asks nothing about a game whose file changed since the review. A description is one
+synchronous catalog insert that never replaces one (`ON CONFLICT DO NOTHING`, `no-game` when the
+game went) and needs no lock; a run that asks only for descriptions takes none. The transport's
+allowlist has the third host with exactly those two paths; the account, the developer details and
+the checksums travel only in the query, and the request log and every error keep the host and path
+alone.
 
 ## Card sync
 

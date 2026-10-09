@@ -207,7 +207,17 @@ app details. **Look up N games** asks about one game at a time, at most 1,000 a 
 and stops when your account's daily limit is reached. A game is filled only when ScreenScraper
 matched it by its checksums; one it found only by name gets nothing. The results say how many
 pictures and descriptions were saved, and for how many games ScreenScraper had nothing. Like
-Get cover art, it only fills gaps: get cover art from libretro-thumbnails first.
+Get cover art, it only fills gaps: get cover art from libretro-thumbnails first. A game Romperoom
+can't save a picture for (its file name is too long for a picture's name, for example) is counted
+and looked up only for a description, so ticking only picture kinds spends no lookup on it.
+A lookup can take an hour or more; scanning, copying to a card, Tidy up and identifying still work
+meanwhile, because a library is held only while a picture is being saved into it. That has a
+cost: while one of those holds a library, each picture for its games is skipped and counted ("The
+library is busy with a scan. Try again when it finishes."). A skipped picture is not downloaded,
+so it spends none of your account's daily lookups, but the lookup does not wait for it either:
+look up again once that work is done to fill it. If a scan or Identify changes a game's file
+during a lookup, Romperoom saves nothing from the answer for that game, since the answer was for
+the file it asked about.
 
 **Remove downloaded art** deletes the pictures Romperoom added, and only those still exactly as
 it saved them; it asks first, in place, saying how many there are and their size. A picture you
@@ -726,9 +736,14 @@ Duplicates) and setting aside the copies in the others. **Keep the copy in a dif
 chooses another library for that set, or **Keep every copy** leaves the set alone.
 **Set aside the extra copies** opens the preview: each copy goes to the set-aside folder of its
 own library, never to another drive, and you can put it back from History or Set aside as with
-any tidy. Just before anything moves Romperoom checks each kept copy again (it must still be
-there, with the same contents), and both libraries must be connected and scanned. Copies inside
-the kept library are never touched here: **Duplicates** handles those. With one library there is
+any tidy. It is unavailable, saying why, while a scan runs or while **Look again** is fetching
+the list. The libraries are tidied one after another; if one stops part way (or you press
+**Cancel**), the result names the library it stopped at, counts the files of the libraries it
+never reached ("3 files in the other libraries were not started. Look again to set them
+aside."), and names the kept library to connect when that is the reason. Just before anything
+moves Romperoom checks each kept copy again (it must still be there, with the same contents),
+and both libraries must be connected and scanned. Copies inside the kept library are never
+touched here: **Duplicates** handles those. With one library there is
 nothing to compare: add another in **Settings** › **Libraries** (see
 [Your libraries](#your-libraries)). The **Library** choice at the top of Tidy up doesn't apply
 to this tab, which compares every library: "Every library is compared here." stands in its place.
@@ -804,7 +819,11 @@ Romperoom says so and changes nothing, so connect it first. See
 **History** lists every tidy with what is still set aside, and **Undo** for each. A run whose
 rest you discarded says **Stopped: the rest was discarded**. A run from Across libraries also
 names the library that kept the copies ("· more · kept in roms"). **Finish** of such a run waits
-until the kept library is connected; **Undo** does not need it.
+until the kept library is connected when a file it has left to move is kept there; **Undo** does
+not need it. When Finish can't reach the kept library, the **Finish tidying up** drawer asks
+"Is roms still the library that keeps the other copies?": answer **Yes, reconnect** if the drive
+was remounted or the folder moved back, as for the run's own library, or **Not now**, then connect
+it and press **Finish** again.
 
 **Set aside** lists the files waiting, grouped by when they were set aside. **Put back** returns
 one file, and **Put all back** a whole group. Romperoom never overwrites: if another file now

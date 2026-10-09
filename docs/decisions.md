@@ -871,7 +871,9 @@ Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
   safe only while that other copy provably exists, so every later step that could lose the last
   copy checks it again; a set-aside copy staying in its own library keeps Put back a rename.
 - **Cost:** a copy whose kept library is unplugged, removed or changed stays set aside (Delete
-  forever keeps it; Put back always works). Finish waits for the kept library. Copies inside the
+  forever keeps it; Put back always works). Finish waits for the kept library when a file it
+  has left to move is kept there (a step that already landed needs nothing of it), and Recovery
+  offers to reconnect that library. Copies inside the
   kept library are left for Duplicates. The look is kept only while it is the newest, so a plan
   made from an older look is refused and the player looks again.
 

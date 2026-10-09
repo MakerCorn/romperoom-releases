@@ -245,6 +245,11 @@ Romperoom won't save a password, so ScreenScraper can't be used there.
   ScreenScraper refused Romperoom's own registration, and "ScreenScraper no longer accepts this
   version of Romperoom. Update Romperoom." means this version is too old for it. Neither is
   about your account; what was saved before it stopped is kept.
+- **A picture skipped because the library was busy.** "The library is busy with a scan. Try
+  again when it finishes." (or copying to a card, Tidy up or Standardise, identifying games):
+  that work held the picture's library, so the picture was skipped, usually before it was
+  downloaded (no daily lookup spent). Nothing else changed; look up again once that work is done
+  and only what is still missing is asked for.
 - **A game skipped.** "Romperoom couldn't ask ScreenScraper about this game, so it was skipped."
   The game's file name or size can't be sent as it is (for example a name with a backslash); the
   lookup goes on with the next game.
@@ -557,8 +562,15 @@ empty, or another drive at the same path). Nothing was changed. Reconnect the dr
 opens in Finder, then try again.
 
 A run from **Across libraries** needs both libraries: the one its copies were set aside in, and
-the one that kept the other copy. Setting aside and **Finish** say the library that holds the kept
-copies is not reachable until it is connected; **Undo** works without it.
+the one that kept the other copy. Setting aside says "The library that keeps the other copies
+isn't connected" and names it ("Connect roms, then finish from Tidy up."). **Finish** needs it
+only for files it still has to move (files that had already moved before the stop need nothing
+of it); when it can't reach it, the **Finish tidying up** drawer asks "Is roms still the library
+that keeps the other copies?". If the drive was mounted again or the folder put back, **Yes,
+reconnect** records it as it is now, then press **Finish** again; otherwise choose **Not now**,
+connect it, and finish. **Undo** works without it. When several libraries were tidied together and
+one stopped, the result says which ("It stopped at roms (2).") and how many files of the
+libraries after it were not started: look again on **Across libraries** to set those aside.
 
 ## A library says it can't reach its folder, but it scans
 
