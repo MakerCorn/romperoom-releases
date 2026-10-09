@@ -56,6 +56,11 @@ design history.
 48. [Copies that differ send Tidy's keeper, and say so](#48-copies-that-differ-send-tidys-keeper-and-say-so)
 49. [Saved packages live in the page's storage](#49-saved-packages-live-in-the-pages-storage)
 50. [Make it fit suggests, and the player applies](#50-make-it-fit-suggests-and-the-player-applies)
+51. [Copies across libraries are set aside in their own library](#51-copies-across-libraries-are-set-aside-in-their-own-library)
+52. [Card art is made smaller by Romperoom's own PNG code](#52-card-art-is-made-smaller-by-romperooms-own-png-code)
+53. [BIOS files are recognised by libretro's list](#53-bios-files-are-recognised-by-libretros-list)
+54. [ScreenScraper uses the player's account and fills gaps by checksum](#54-screenscraper-uses-the-players-account-and-fills-gaps-by-checksum)
+55. [The screenshots show generated covers](#55-the-screenshots-show-generated-covers)
 
 ## 1. One repository, four workspaces
 
@@ -137,8 +142,8 @@ design history.
 - **Why:** a ROM library is private. CSP alone does not stop WebRTC or DNS lookups.
 - **Cost:** each later network feature must allowlist its one host, from the main process.
 
-Superseded by ADR 40 for downloading game databases and by ADR 41 for cover art; every other part
-stands.
+Superseded by ADR 40 for downloading game databases, by ADR 41 for cover art and by ADR 54 for
+ScreenScraper lookups; every other part stands.
 
 ## 11. One typed IPC table
 
@@ -537,8 +542,8 @@ stands.
   DAT-o-MATIC or Redump; Romperoom requests nothing) and "Download for me": libretro-database
   DATs (CC BY-SA 4.0) from `raw.githubusercontent.com` at a pinned commit, after the user
   reviews the files, sizes, source and licence. "Check for updates" asks `api.github.com` (at
-  most 3 requests) only when pressed. Main process only, `node:https`, exact URL allowlist, no
-  redirects, timeouts and byte caps, every file checked against its listed size and git SHA,
+  most 4 requests since batch 3 added the `dat` listing) only when pressed. Main process only,
+  `node:https`, exact URL allowlist, no redirects, timeouts and byte caps, every file checked against its listed size and git SHA,
   imported through the two-phase import. The renderer's CSP, dead proxy, resolver rules and
   WebRTC policy do not change.
 - **Why:** finding the right DAT is the hardest step after Milestone 2. DAT-o-MATIC and Redump
@@ -773,6 +778,8 @@ stands.
   device and inode on disk in the main process, as Duplicates does, so a share that stops
   answering after the folder probe can freeze the window until it answers.
 
+Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
+
 ## 47. An export folder on a network drive asks first
 
 - **Decision:** an export folder on a network drive, or one whose drive cannot be told, is
@@ -847,3 +854,82 @@ stands.
 - **Cost:** largest first can leave out a big game when only a little is over (one press of
   **Keep this one** asks again); asking plans the package again up to three times; a list belongs
   to one plan, so changing anything means asking again.
+
+## 51. Copies across libraries are set aside in their own library
+
+- **Decision:** **Set aside the extra copies** on Across libraries moves each extra copy into the
+  set-aside folder of its own library, never onto another drive, and never deletes. The library
+  that keeps a set is chosen per set (suggested by Duplicates' keeper rules). A run locks its
+  library and every kept library together, checks each kept library answers, is not empty and
+  does not overlap the others by real path, and re-hashes each kept copy just before its step moves. The journal records
+  its kept libraries (`op_keeper_root`), so Finish and Delete forever check them again (Delete
+  forever also checks the kept library is still in Romperoom); Undo and Roll back need only the
+  library the copies sit in. "The kept copy" means a proven copy with the same bytes in that
+  library: the recorded file, or, when nothing is at its path any more (Standardise renamed it),
+  a present copy the library's catalog holds with that hash, proven by the same checks.
+- **Why:** owner decision (2026-10-09). A copy set aside because another library keeps one is
+  safe only while that other copy provably exists, so every later step that could lose the last
+  copy checks it again; a set-aside copy staying in its own library keeps Put back a rename.
+- **Cost:** a copy whose kept library is unplugged, removed or changed stays set aside (Delete
+  forever keeps it; Put back always works). Finish waits for the kept library. Copies inside the
+  kept library are left for Duplicates. The look is kept only while it is the newest, so a plan
+  made from an older look is refused and the player looks again.
+
+## 52. Card art is made smaller by Romperoom's own PNG code
+
+- **Decision:** a device profile may give a media kind a `maxWidth` (Onion's box art: 250
+  pixels). The card writer then writes a smaller copy of a PNG picture, made by Romperoom's own
+  PNG reader, resizer and writer on `node:zlib` (`packages/engine/src/image/png.ts`), at write
+  time, in the main process. The source is copied as it is when it is no wider, cannot be read,
+  or when the smaller copy would take more bytes. The manifest records the width and a version,
+  and a later copy compares those instead of the bytes.
+- **Why:** no image dependency (a native module needs install scripts, which the repository turns
+  off) and no JPEG code to own; the resize is deterministic and tested byte for byte. A smaller
+  picture saves card space and is what the device shows anyway.
+- **Cost:** JPEG art is copied at full size. The plan counts art at full size, so a card keeps a
+  little more room than shown. About 15 ms a picture in the main process: a large copy makes the
+  window answer a little slower. Raising `RESIZE_VERSION` makes every card's smaller pictures
+  again.
+
+## 53. BIOS files are recognised by libretro's list
+
+- **Decision:** Download for me also offers libretro's `dat/System.dat`, from the same pinned
+  commit, stored whole in the catalog. A card copy reads each BIOS file's SHA-1 and copies a
+  recognised file under every name the list gives it for the chosen consoles; an unrecognised
+  file keeps its own name. Which consoles need a BIOS is an explicit table (`BIOS_SECTIONS`), not a
+  match of names.
+- **Why:** players keep BIOS files under many names, and a device finds them only by the exact
+  name its emulator looks for; the checksum is the only reliable identity. The list comes from the
+  source the app already trusts for DATs.
+- **Cost:** a file listed under several names takes card space once per name. Only files directly
+  in a BIOS folder are read. A "missing" line means the list names files for a console and none
+  was found, not that every game needs one. The table is maintained by hand.
+
+## 54. ScreenScraper uses the player's account and fills gaps by checksum
+
+- **Decision:** Look up on ScreenScraper uses the player's own account, kept by the system
+  keychain through Electron's `safeStorage` (never on a computer without one), and Romperoom's
+  developer details, which are not in the repository or the build (an unpackaged run may read them
+  from the environment; release builds wait for the maintainer to register Romperoom). It asks
+  one game at a time, at most 1,000 a run, stops at the daily limit, and fills a gap only from an
+  answer that matched the file's checksums. The review asks nothing and says exactly what each
+  lookup sends: the file's checksums, name and size, its console, the player's user name and
+  password and Romperoom's app name, developer id and developer password (plus `output=json` and
+  `romtype=rom`), then one request per picture with the game's number, console and media name.
+- **Why:** ScreenScraper's terms tie lookups to an account and a registered app; a name-only match
+  would attach the wrong picture with confidence. Credentials in a file or a build would leak.
+- **Cost:** it cannot be used until the maintainer registers Romperoom. Its statuses and answer
+  shapes are written from its documentation and not yet confirmed live. The account and
+  checksums travel in the query, as its API requires (the log keeps host and path only).
+
+## 55. The screenshots show generated covers
+
+- **Decision:** the published screenshots show cover art drawn by a committed generator
+  (`packages/engine/test/fake-cover.ts`): pure TypeScript into an RGBA buffer, written with the
+  engine's PNG writer, seeded by the title, kind and console. No third-party picture, font or logo
+  is used; the only words drawn are the fixture's titles and a closed list of the generator's own.
+- **Why:** real box art cannot be published in the repository; plain colour boxes made the
+  screenshots unconvincing. Drawing in Node (not SVG in Chromium) keeps the pixels the same on
+  every machine, with no dependency.
+- **Cost:** the pictures are simple; a change to the generator changes every screenshot with art
+  (its pixel hashes are pinned, so the change is deliberate).

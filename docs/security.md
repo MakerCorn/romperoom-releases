@@ -9,7 +9,7 @@ The short version:
 - Scans are read-only.
 - The window cannot reach the network.
 - Romperoom itself goes online only when you press Download for me, Check for updates or Get
-  cover art, and then only to two GitHub hosts.
+  cover art (two GitHub hosts), or Look up N games (ScreenScraper's API host).
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
 - Only Tidy up moves games and artwork in a library: into its set-aside folder after a preview, or,
@@ -240,101 +240,103 @@ channel in the `IPC` table (`src/shared/ipc.ts`), plus eight push listeners (`on
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
 
-| Channel                   | Direction   | What it does                                                             | Writes?      |
-| ------------------------- | ----------- | ------------------------------------------------------------------------ | ------------ |
-| `engine:addLibrary`       | page → host | Adds an absolute folder as a library (not a filesystem root, not one already added, not inside or around one) | catalog only |
-| `engine:removeLibrary`    | page → host | Forgets a library's catalog rows, journals and runs; never touches files; refused while a scan runs, a job holds it or something of it waits in Recovery | catalog only |
-| `engine:listLibraries`    | page → host | Lists libraries; with `{ details: true }` (nothing else is accepted) also each one's name, game count, last scan and whether its folder answers (the host reads each library's own folder, at most 3 s) | no           |
-| `engine:scan`             | page → host | Scans a library read-only; progress comes back on `scanProgress`         | catalog only |
-| `engine:cancelScan`       | page → host | Cancels the running scan                                                 | no           |
-| `engine:listSystems`      | page → host | Systems that have games, with counts                                     | no           |
-| `engine:listKnownSystems` | page → host | Every known system, for assigning a folder                               | no           |
-| `engine:listGames`        | page → host | A page of games (at most 500), filtered, searched and sorted             | no           |
-| `engine:listUnreadable`   | page → host | Files the scans could not read, with reasons                             | no           |
-| `engine:assignFolder`     | page → host | Maps a top-level folder to a system                                      | catalog only |
-| `engine:unassignFolder`   | page → host | Undoes `assignFolder`                                                    | catalog only |
-| `engine:ignoreFolder`     | page → host | Marks a top-level folder as not a console                                | catalog only |
-| `engine:unignoreFolder`   | page → host | Includes an ignored folder again                                         | catalog only |
-| `engine:listIgnored`      | page → host | A library's ignored folders                                              | no           |
-| `engine:health`           | page → host | The Health page's summary                                                | no           |
-| `engine:sizes`            | page → host | Space used per console                                                   | no           |
-| `app:pickFolder`          | page → host | Opens the native folder dialog                                           | no           |
-| `app:scanStatus`          | page → host | The scan the host is running for this window, if any                     | no           |
-| `engine:scanProgress`     | host → page | Scan progress pushes                                                     | no           |
-| `deploy:listProfiles` | page → host | The device profiles, with their folders, limits and sources | no |
-| `deploy:listVolumes` | page → host | Connected drives by id (never a mount path), each judged by the safe-target rules | no |
-| `deploy:plan` | page → host | Plans a package for a volume id, a card size or an export-folder token | no |
-| `deploy:dryRun` | page → host | What a start would do, file by file, without writing | no |
-| `deploy:start` | page → host | Writes a kept plan to its card or folder, after listing and judging it again | the card |
-| `deploy:cancel` | page → host | Stops this window's deploy after the current chunk | no |
-| `deploy:status` | page → host | This window's running or last deploy (a reloaded page adopts it) | no |
-| `deploy:pickExportFolder` | page → host | Opens the native folder dialog; returns a token and the folder's name | no |
-| `deploy:pickBiosFolder` | page → host | Opens the native folder dialog and stores a library's BIOS folder | catalog only |
-| `deploy:clearBiosFolder` | page → host | Forgets a library's BIOS folder | catalog only |
-| `deploy:listBiosFolders` | page → host | Each library's BIOS folder, by name | no |
-| `deploy:progress` | host → page | Deploy progress, then the report, to the window that started it | no |
-| `tidy:overview` | page → host | Duplicate, leftover-artwork and set-aside totals per library, by name | no |
-| `tidy:findDuplicates` | page → host | One library's duplicate groups under a keeper policy; returns a window-bound id. With `across: true`, the files held in two or more libraries, by library name (a report, no id) | no |
-| `tidy:groups` | page → host | Another page of the same groups (refused once they changed) | no |
-| `tidy:planDuplicateCleanup` | page → host | Plans setting aside every copy but the keeper, with per-group choices | no |
-| `tidy:detectOrphans` | page → host | Artwork no game uses, by media id and cause (optionally of one cause), with a count per cause | catalog only (checksums) |
-| `tidy:planOrphanCleanup` | page → host | Plans setting aside the chosen artwork, by media id | no |
-| `tidy:apply` | page → host | Runs a plan once: moves its files into `.romperoom-quarantine` | the library |
-| `tidy:cancel` | page → host | Stops this window's tidy run after the current file | no |
-| `tidy:status` | page → host | This window's running or last tidy job (a reloaded page adopts it) | no |
-| `tidy:undo` | page → host | Puts an operation's set-aside files back | the library |
-| `tidy:listOperations` | page → host | Past tidy and delete operations, with what each still has set aside | no |
-| `tidy:listQuarantine` | page → host | Set-aside files, library-relative, by library or operation | no |
-| `tidy:restore` | page → host | Puts chosen set-aside files (by item id) or an operation's files back | the library |
-| `tidy:purgePreview` | page → host | What deleting set-aside files forever (all, or those set aside more than 30 or 90 days ago) would delete, and the words to type | no |
-| `tidy:purge` | page → host | Deletes a previewed set forever; the engine checks the typed words and size | the quarantine |
-| `tidy:recoverList` | page → host | Tidy runs and deletions a crash interrupted, by library name | no |
-| `tidy:resolveJournal` | page → host | Finishes or undoes one interrupted run or deletion, or discards the rest of a Tidy up run (catalog only) | the library |
-| `tidy:reconnectLibrary` | page → host | After "Is this still your library?": re-points a library's runs at the folder now at its path (`{ confirm: true }`; the engine refuses an empty or different folder) | no (reads the library folder) |
-| `tidy:progress` | host → page | Tidy progress, then the result, to the window that started it | no |
-| `identify:importDat` | page → host | Opens the host's file picker and imports the picked game database (DAT); no path from the page | catalog only (reads the picked file) |
-| `identify:listDats` | page → host | The imported game databases | no |
-| `identify:removeDat` | page → host | Removes a game database by id and reverts the matches it made | catalog only |
-| `identify:run` | page → host | Identifies one library, or every library, against the game databases | catalog only (re-reads library files) |
-| `identify:cancel` | page → host | Stops this window's identify run | no |
-| `identify:status` | page → host | This window's running or last identify run (a reloaded page adopts it) | no |
-| `identify:listReview` | page → host | Matches waiting for review, library-relative | no |
-| `identify:listUnidentified` | page → host | Present files with no DAT match and why, library-relative | no |
-| `identify:decideReview` | page → host | Accepts or rejects matches on the review list, by file id | catalog only |
-| `identify:game` | page → host | One game's identity: its database name, confidence, flags and reasons | no |
-| `identify:progress` | host → page | Identify progress, then the result, to the window that started it | no |
-| `dats:plan` | page → host | What "Download for me" would fetch (files, sizes, commit, licence), computed without a request | no |
-| `dats:openLink` | page → host | Opens one of four fixed pages in the browser, by key (`no-intro`, `redump`, `licence`, `source`) | no |
-| `dats:download` | page → host | Downloads, verifies and imports the chosen consoles' DATs from the pinned listing; console ids and the reviewed commit only | catalog and data folder |
-| `dats:cancel` | page → host | Stops this window's download job | no |
-| `dats:status` | page → host | This window's running or last download job (a reloaded page adopts it) | no |
-| `dats:checkForUpdates` | page → host | Asks GitHub for a newer listing and moves the pin forward | data folder (pin) |
-| `dats:networkLog` | page → host | Every request attempt, newest first | no |
-| `dats:progress` | host → page | Download progress, then the result, to the window that started it | no |
-| `art:review` | page → host | Lists the libretro-thumbnails pictures for consoles with gaps (GitHub listings; cached a day) and returns a review | data folder (listing cache) |
-| `art:download` | page → host | Downloads, verifies and saves the reviewed pictures; plan id, console ids and kinds only | library (`.romperoom/media`) and catalog |
-| `art:cancel` | page → host | Stops this window's cover art run | no |
-| `art:status` | page → host | This window's running or last cover art run (a reloaded page adopts it) | no |
-| `art:cardReview` | page → host | Reads a listed card's art through a device profile; volume id and profile id only | no |
-| `art:importCard` | page → host | Saves the reviewed card pictures | library (`.romperoom/media`) and catalog |
-| `art:remove` | page → host | Deletes the pictures cover art added that are unchanged | library and catalog |
-| `art:progress` | host → page | Cover art progress, then the result, to the window that started it | no |
-| `sync:review` | page → host | Reads a listed card through a device profile against a library (hashing card games, offline) and returns a review; volume id, profile id and library id only | catalog (card game hashes of a known card) |
-| `sync:run` | page → host | Imports the chosen games and syncs the chosen saves; the review's plan id, its item ids and a side per conflict only | library (console folders, `.romperoom/saves`, `.romperoom/saves-backup`, `.romperoom/tmp`), the card (saves, `.romperoom/card.json`) and catalog |
-| `sync:cancel` | page → host | Stops this window's card sync (the file being copied is finished or discarded) | no |
-| `sync:status` | page → host | This window's running or last card sync (a reloaded page adopts it) | no |
-| `sync:undo` | page → host | Undo this sync: what it wrote into the library goes back where unchanged; a sync id only | library and catalog |
-| `sync:list` | page → host | The latest syncs, newest first | no |
-| `sync:progress` | host → page | Card sync progress, then the result, to the window that started it | no |
-| `standardise:review` | page → host | Reads a library against a device profile and returns a review (nothing written but the chosen profile); library id and profile id only | catalog (the library's chosen profile) |
-| `standardise:run` | page → host | Renames and merges the chosen console folders and renames the chosen games, with their art, saves, cue sheets, playlists and game lists; the review's plan id and its item ids only | library (console folders, games, art, saves, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`, `.romperoom-quarantine`) and catalog |
-| `standardise:cancel` | page → host | Stops this window's standardise review or run, or its re-link run (a run stops between units, a re-link run between pictures) | no |
-| `standardise:status` | page → host | This window's running or last standardise run (a reloaded page adopts it) | no |
-| `standardise:undo` | page → host | Undo this run: what it renamed and replaced goes back where unchanged; a run id only | library and catalog |
-| `standardise:list` | page → host | Each library's chosen profile and the latest standardise runs | no |
-| `standardise:relinkReview` | page → host | Reads a re-link review of a library: leftover pictures one game clearly matches, and game list entries whose game file is gone; a library id only | catalog only (checksums) |
-| `standardise:relinkRun` | page → host | Renames the chosen pictures after their game and updates the game lists that name them, and re-points the chosen entries; the re-link review's plan id and its item ids only | library (pictures, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`) and catalog |
-| `standardise:progress` | host → page | Standardise progress, then the result, to the window that started it | no |
+| Channel                     | Direction   | What it does                                                                                                                                                                                            | Writes?                                                                                                                                          |
+| --------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `engine:addLibrary`         | page → host | Adds an absolute folder as a library (not a filesystem root, not one already added, not inside or around one)                                                                                           | catalog only                                                                                                                                     |
+| `engine:removeLibrary`      | page → host | Forgets a library's catalog rows, journals and runs; never touches files; refused while a scan runs, a job holds it or something of it waits in Recovery                                                | catalog only                                                                                                                                     |
+| `engine:listLibraries`      | page → host | Lists libraries; with `{ details: true }` (nothing else is accepted) also each one's name, game count, last scan and whether its folder answers (the host reads each library's own folder, at most 3 s) | no                                                                                                                                               |
+| `engine:scan`               | page → host | Scans a library read-only; progress comes back on `scanProgress`                                                                                                                                        | catalog only                                                                                                                                     |
+| `engine:cancelScan`         | page → host | Cancels the running scan                                                                                                                                                                                | no                                                                                                                                               |
+| `engine:listSystems`        | page → host | Systems that have games, with counts                                                                                                                                                                    | no                                                                                                                                               |
+| `engine:listKnownSystems`   | page → host | Every known system, for assigning a folder                                                                                                                                                              | no                                                                                                                                               |
+| `engine:listGames`          | page → host | A page of games (at most 500), filtered, searched and sorted                                                                                                                                            | no                                                                                                                                               |
+| `engine:listUnreadable`     | page → host | Files the scans could not read, with reasons                                                                                                                                                            | no                                                                                                                                               |
+| `engine:assignFolder`       | page → host | Maps a top-level folder to a system                                                                                                                                                                     | catalog only                                                                                                                                     |
+| `engine:unassignFolder`     | page → host | Undoes `assignFolder`                                                                                                                                                                                   | catalog only                                                                                                                                     |
+| `engine:ignoreFolder`       | page → host | Marks a top-level folder as not a console                                                                                                                                                               | catalog only                                                                                                                                     |
+| `engine:unignoreFolder`     | page → host | Includes an ignored folder again                                                                                                                                                                        | catalog only                                                                                                                                     |
+| `engine:listIgnored`        | page → host | A library's ignored folders                                                                                                                                                                             | no                                                                                                                                               |
+| `engine:health`             | page → host | The Health page's summary                                                                                                                                                                               | no                                                                                                                                               |
+| `engine:sizes`              | page → host | Space used per console                                                                                                                                                                                  | no                                                                                                                                               |
+| `app:pickFolder`            | page → host | Opens the native folder dialog                                                                                                                                                                          | no                                                                                                                                               |
+| `app:scanStatus`            | page → host | The scan the host is running for this window, if any                                                                                                                                                    | no                                                                                                                                               |
+| `engine:scanProgress`       | host → page | Scan progress pushes                                                                                                                                                                                    | no                                                                                                                                               |
+| `deploy:listProfiles`       | page → host | The device profiles, with their folders, limits and sources                                                                                                                                             | no                                                                                                                                               |
+| `deploy:listVolumes`        | page → host | Connected drives by id (never a mount path), each judged by the safe-target rules                                                                                                                       | no                                                                                                                                               |
+| `deploy:plan`               | page → host | Plans a package for a volume id, a card size or an export-folder token                                                                                                                                  | no                                                                                                                                               |
+| `deploy:dryRun`             | page → host | What a start would do, file by file, without writing                                                                                                                                                    | no                                                                                                                                               |
+| `deploy:start`              | page → host | Writes a kept plan to its card or folder, after listing and judging it again                                                                                                                            | the card                                                                                                                                         |
+| `deploy:cancel`             | page → host | Stops this window's deploy after the current chunk                                                                                                                                                      | no                                                                                                                                               |
+| `deploy:status`             | page → host | This window's running or last deploy (a reloaded page adopts it)                                                                                                                                        | no                                                                                                                                               |
+| `deploy:pickExportFolder`   | page → host | Opens the native folder dialog; returns a token and the folder's name                                                                                                                                   | no                                                                                                                                               |
+| `deploy:pickBiosFolder`     | page → host | Opens the native folder dialog and stores a library's BIOS folder                                                                                                                                       | catalog only                                                                                                                                     |
+| `deploy:clearBiosFolder`    | page → host | Forgets a library's BIOS folder                                                                                                                                                                         | catalog only                                                                                                                                     |
+| `deploy:listBiosFolders`    | page → host | Each library's BIOS folder, by name                                                                                                                                                                     | no                                                                                                                                               |
+| `deploy:progress`           | host → page | Deploy progress, then the report, to the window that started it                                                                                                                                         | no                                                                                                                                               |
+| `tidy:overview`             | page → host | Duplicate, leftover-artwork and set-aside totals per library, by name                                                                                                                                   | no                                                                                                                                               |
+| `tidy:findDuplicates`       | page → host | One library's duplicate groups under a keeper policy; returns a window-bound id. With `across: true`, the files held in two or more libraries, by library name (a report, no id)                        | no                                                                                                                                               |
+| `tidy:groups`               | page → host | Another page of the same groups (refused once they changed)                                                                                                                                             | no                                                                                                                                               |
+| `tidy:planDuplicateCleanup` | page → host | Plans setting aside every copy but the keeper, with per-group choices                                                                                                                                   | no                                                                                                                                               |
+| `tidy:detectOrphans`        | page → host | Artwork no game uses, by media id and cause (optionally of one cause), with a count per cause                                                                                                           | catalog only (checksums)                                                                                                                         |
+| `tidy:planOrphanCleanup`    | page → host | Plans setting aside the chosen artwork, by media id                                                                                                                                                     | no                                                                                                                                               |
+| `tidy:apply`                | page → host | Runs a plan once: moves its files into `.romperoom-quarantine`                                                                                                                                          | the library                                                                                                                                      |
+| `tidy:cancel`               | page → host | Stops this window's tidy run after the current file                                                                                                                                                     | no                                                                                                                                               |
+| `tidy:status`               | page → host | This window's running or last tidy job (a reloaded page adopts it)                                                                                                                                      | no                                                                                                                                               |
+| `tidy:undo`                 | page → host | Puts an operation's set-aside files back                                                                                                                                                                | the library                                                                                                                                      |
+| `tidy:listOperations`       | page → host | Past tidy and delete operations, with what each still has set aside                                                                                                                                     | no                                                                                                                                               |
+| `tidy:listQuarantine`       | page → host | Set-aside files, library-relative, by library or operation                                                                                                                                              | no                                                                                                                                               |
+| `tidy:restore`              | page → host | Puts chosen set-aside files (by item id) or an operation's files back                                                                                                                                   | the library                                                                                                                                      |
+| `tidy:purgePreview`         | page → host | What deleting set-aside files forever (all, or those set aside more than 30 or 90 days ago) would delete, and the words to type                                                                         | no                                                                                                                                               |
+| `tidy:purge`                | page → host | Deletes a previewed set forever; the engine checks the typed words and size                                                                                                                             | the quarantine                                                                                                                                   |
+| `tidy:recoverList`          | page → host | Tidy runs and deletions a crash interrupted, by library name                                                                                                                                            | no                                                                                                                                               |
+| `tidy:resolveJournal`       | page → host | Finishes or undoes one interrupted run or deletion, or discards the rest of a Tidy up run (catalog only)                                                                                                | the library                                                                                                                                      |
+| `tidy:reconnectLibrary`     | page → host | After "Is this still your library?": re-points a library's runs at the folder now at its path (`{ confirm: true }`; the engine refuses an empty or different folder)                                    | no (reads the library folder)                                                                                                                    |
+| `tidy:progress`             | host → page | Tidy progress, then the result, to the window that started it                                                                                                                                           | no                                                                                                                                               |
+| `identify:importDat`        | page → host | Opens the host's file picker and imports the picked game database (DAT); no path from the page                                                                                                          | catalog only (reads the picked file)                                                                                                             |
+| `identify:listDats`         | page → host | The imported game databases                                                                                                                                                                             | no                                                                                                                                               |
+| `identify:removeDat`        | page → host | Removes a game database by id and reverts the matches it made                                                                                                                                           | catalog only                                                                                                                                     |
+| `identify:run`              | page → host | Identifies one library, or every library, against the game databases                                                                                                                                    | catalog only (re-reads library files)                                                                                                            |
+| `identify:cancel`           | page → host | Stops this window's identify run                                                                                                                                                                        | no                                                                                                                                               |
+| `identify:status`           | page → host | This window's running or last identify run (a reloaded page adopts it)                                                                                                                                  | no                                                                                                                                               |
+| `identify:listReview`       | page → host | Matches waiting for review, library-relative                                                                                                                                                            | no                                                                                                                                               |
+| `identify:listUnidentified` | page → host | Present files with no DAT match and why, library-relative                                                                                                                                               | no                                                                                                                                               |
+| `identify:decideReview`     | page → host | Accepts or rejects matches on the review list, by file id                                                                                                                                               | catalog only                                                                                                                                     |
+| `identify:game`             | page → host | One game's identity: its database name, confidence, flags and reasons                                                                                                                                   | no                                                                                                                                               |
+| `identify:progress`         | host → page | Identify progress, then the result, to the window that started it                                                                                                                                       | no                                                                                                                                               |
+| `dats:plan`                 | page → host | What "Download for me" would fetch (files, sizes, commit, licence), computed without a request                                                                                                          | no                                                                                                                                               |
+| `dats:openLink`             | page → host | Opens one of four fixed pages in the browser, by key (`no-intro`, `redump`, `licence`, `source`)                                                                                                        | no                                                                                                                                               |
+| `dats:download`             | page → host | Downloads, verifies and imports the chosen consoles' DATs from the pinned listing; console ids and the reviewed commit only                                                                             | catalog and data folder                                                                                                                          |
+| `dats:cancel`               | page → host | Stops this window's download job                                                                                                                                                                        | no                                                                                                                                               |
+| `dats:status`               | page → host | This window's running or last download job (a reloaded page adopts it)                                                                                                                                  | no                                                                                                                                               |
+| `dats:checkForUpdates`      | page → host | Asks GitHub for a newer listing and moves the pin forward                                                                                                                                               | data folder (pin)                                                                                                                                |
+| `dats:networkLog`           | page → host | Every request attempt, newest first                                                                                                                                                                     | no                                                                                                                                               |
+| `dats:progress`             | host → page | Download progress, then the result, to the window that started it                                                                                                                                       | no                                                                                                                                               |
+| `art:review` | page → host | Lists the libretro-thumbnails pictures for consoles with gaps (GitHub listings; cached a day) and returns a review; with `{ source: 'screenscraper' }` it returns ScreenScraper's review instead, from the catalog, asking nothing | data folder (listing cache)                                                                                                                      |
+| `art:download` | page → host | Downloads, verifies and saves the reviewed pictures; plan id, console ids and kinds only. For a ScreenScraper review's plan it runs the lookup: requests to `api.screenscraper.fr` with each chosen game's checksums, file name, size and console number, and saves pictures and descriptions | library (`.romperoom/media`) and catalog (and `game_description`) |
+| `art:cancel`                | page → host | Stops this window's cover art run                                                                                                                                                                       | no                                                                                                                                               |
+| `art:status`                | page → host | This window's running or last cover art run (a reloaded page adopts it)                                                                                                                                 | no                                                                                                                                               |
+| `art:cardReview`            | page → host | Reads a listed card's art through a device profile; volume id and profile id only                                                                                                                       | no                                                                                                                                               |
+| `art:importCard`            | page → host | Saves the reviewed card pictures                                                                                                                                                                        | library (`.romperoom/media`) and catalog                                                                                                         |
+| `art:remove`                | page → host | Deletes the pictures cover art added that are unchanged                                                                                                                                                 | library and catalog                                                                                                                              |
+| `art:scraperAccount`        | page → host | Whether ScreenScraper can be used: the account's state and whether this copy has developer details; never the name or password                                                                          | no                                                                                                                                               |
+| `art:setScraperAccount`     | page → host | Saves the player's ScreenScraper account in the system keychain (`{ user, password }`), or forgets it (`{ forget: true }`); returns the state only                                                      | the account file (ciphertext)                                                                                                                    |
+| `art:progress`              | host → page | Cover art progress, then the result, to the window that started it                                                                                                                                      | no                                                                                                                                               |
+| `sync:review`               | page → host | Reads a listed card through a device profile against a library (hashing card games, offline) and returns a review; volume id, profile id and library id only                                            | catalog (card game hashes of a known card)                                                                                                       |
+| `sync:run`                  | page → host | Imports the chosen games and syncs the chosen saves; the review's plan id, its item ids and a side per conflict only                                                                                    | library (console folders, `.romperoom/saves`, `.romperoom/saves-backup`, `.romperoom/tmp`), the card (saves, `.romperoom/card.json`) and catalog |
+| `sync:cancel`               | page → host | Stops this window's card sync (the file being copied is finished or discarded)                                                                                                                          | no                                                                                                                                               |
+| `sync:status`               | page → host | This window's running or last card sync (a reloaded page adopts it)                                                                                                                                     | no                                                                                                                                               |
+| `sync:undo`                 | page → host | Undo this sync: what it wrote into the library goes back where unchanged; a sync id only                                                                                                                | library and catalog                                                                                                                              |
+| `sync:list`                 | page → host | The latest syncs, newest first                                                                                                                                                                          | no                                                                                                                                               |
+| `sync:progress`             | host → page | Card sync progress, then the result, to the window that started it                                                                                                                                      | no                                                                                                                                               |
+| `standardise:review`        | page → host | Reads a library against a device profile and returns a review (nothing written but the chosen profile); library id and profile id only                                                                  | catalog (the library's chosen profile)                                                                                                           |
+| `standardise:run`           | page → host | Renames and merges the chosen console folders and renames the chosen games, with their art, saves, cue sheets, playlists and game lists; the review's plan id and its item ids only                     | library (console folders, games, art, saves, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`, `.romperoom-quarantine`) and catalog       |
+| `standardise:cancel`        | page → host | Stops this window's standardise review or run, or its re-link run (a run stops between units, a re-link run between pictures)                                                                           | no                                                                                                                                               |
+| `standardise:status`        | page → host | This window's running or last standardise run (a reloaded page adopts it)                                                                                                                               | no                                                                                                                                               |
+| `standardise:undo`          | page → host | Undo this run: what it renamed and replaced goes back where unchanged; a run id only                                                                                                                    | library and catalog                                                                                                                              |
+| `standardise:list`          | page → host | Each library's chosen profile and the latest standardise runs                                                                                                                                           | no                                                                                                                                               |
+| `standardise:relinkReview`  | page → host | Reads a re-link review of a library: leftover pictures one game clearly matches, and game list entries whose game file is gone; a library id only                                                       | catalog only (checksums)                                                                                                                         |
+| `standardise:relinkRun`     | page → host | Renames the chosen pictures after their game and updates the game lists that name them, and re-points the chosen entries; the re-link review's plan id and its item ids only                            | library (pictures, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`) and catalog                                                          |
+| `standardise:progress`      | host → page | Standardise progress, then the result, to the window that started it                                                                                                                                    | no                                                                                                                                               |
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
 
@@ -450,9 +452,9 @@ Adding a channel: add the `Engine` method and its `IPC` entry together, since
 ## Network isolation
 
 Romperoom makes no network request unless the user presses Download for me or Check for updates
-under Game databases, or Get cover art under Health (and then Download in its review), and the page
-cannot make one at all. The CSP stops `fetch`, XHR and sockets. Three more layers cover what CSP
-does not govern.
+under Game databases, or Get cover art under Health (and then Download in its review), or Look up N
+games in a ScreenScraper review, and the page cannot make one at all. The CSP stops `fetch`, XHR and
+sockets. Three more layers cover what CSP does not govern.
 
 WebRTC is outside CSP: `connect-src 'none'` does not stop a peer connection. Also, any
 same-origin frame an injected script makes (about:blank, `srcdoc`, nested) has its own
@@ -513,10 +515,10 @@ rules (ADR 40).
 
 `main/dat-download/transport.ts` is the only module that opens a socket (enforced twice: the
 import list and the lint rules under "Static tests" and "Lint rules" below). It requests nothing
-on its own: its only callers are the game database download, "Check for updates" and Get cover
-art (its listings, then its review's Download), each started by a press. Cover art shares the
-game database download's one transport, so the allowlist, the transport rules and the request
-log below apply to it unchanged.
+on its own: its only callers are the game database download, "Check for updates", Get cover
+art (its listings, then its review's Download) and a ScreenScraper lookup, each started by a
+press. Cover art and ScreenScraper share the game database download's one transport, so the
+allowlist, the transport rules and the request log below apply to them unchanged.
 
 **Allowlist** (`main/dat-download/allowlist.ts`). `checkDatUrl` runs before every request; a
 refused URL never reaches a socket and is logged as `refused`. A URL passes only when all of
@@ -525,15 +527,23 @@ these hold:
 - the URL is exactly its canonical serialization: a spelling the parser would normalise (upper
   case, `:443`, a backslash, a tab, dot segments, full-width letters) is refused, not rewritten;
 - `https:`, no username or password, no port, no fragment;
-- the parsed host is exactly `raw.githubusercontent.com` or `api.github.com` (string equality:
-  no suffix, prefix, trailing dot or wildcard);
+- the parsed host is exactly `raw.githubusercontent.com`, `api.github.com` or
+  `api.screenscraper.fr` (string equality: no suffix, prefix, trailing dot or wildcard);
 - on `raw.githubusercontent.com`: the path is
   `/libretro/libretro-database/<40 lower-case hex>/metadat/(no-intro|redump)/<name>.dat`, the
   name is a safe DAT name in the exact encoding the app builds (no `%2F`, no `..`, no
   alternative escapes), and there is no query;
 - on `api.github.com`: exactly `/repos/libretro/libretro-database/branches/master` with no
-  query, or `/repos/libretro/libretro-database/contents/metadat/(no-intro|redump)` with the
-  query exactly `ref=<40 lower-case hex>`;
+  query, or `/repos/libretro/libretro-database/contents/metadat/(no-intro|redump)` or
+  `/repos/libretro/libretro-database/contents/dat` with the query exactly
+  `ref=<40 lower-case hex>`;
+- for the BIOS list, on `raw.githubusercontent.com`: exactly
+  `/libretro/libretro-database/<40 lower-case hex>/dat/System.dat`, with no query;
+- on `api.screenscraper.fr`: exactly `/api2/jeuInfos.php` or `/api2/mediaJeu.php`, with the
+  query's keys in exactly the order the app builds them (the developer details, `output=json`
+  and the user details, then the game's checksums, console number, `romtype=rom`, name and size;
+  or the console number, game id and media name), each value of its own fixed shape, MD5 and CRC the only keys that may be left out, and
+  the query exactly its own canonical encoding;
 - for cover art, on `api.github.com`: a thumbnail tree,
   `/repos/libretro-thumbnails/<repo>/git/trees/<branch>` with the query exactly `recursive=1`,
   or, with no query, `/repos/libretro-thumbnails/<repo>/git/trees/<branch>:Named_Boxarts` (or
@@ -575,8 +585,12 @@ no https; the host allows http for that one exact URL and refuses any other non-
   address it carries is public. The socket connects only to checked addresses, and the address
   actually connected to is logged.
 - Requests carry only `Host`, `User-Agent: Romperoom` (no version), `Accept`,
-  `Accept-Encoding: identity` (byte caps stay exact), `Connection: close` and, for the API,
-  `X-GitHub-Api-Version: 2022-11-28`. No cookie, `Authorization`, `Referer` or token.
+  `Accept-Encoding: identity` (byte caps stay exact), `Connection: close` and, for GitHub's API,
+  `X-GitHub-Api-Version: 2022-11-28`. No cookie, `Authorization`, `Referer` or token. The only
+  credentials Romperoom ever sends are ScreenScraper's two pairs, Romperoom's developer id and
+  password and the player's user name and password, in that request's query as ScreenScraper's
+  API requires: the request log and every error message take the host and path only, and a
+  refused ScreenScraper URL is logged without its query.
 - No redirect is followed: any `3xx` ends the request with reason `redirect`.
 - Timeouts: 20 s to the response headers, 30 s without a byte, 300 s for a whole response. Each
   destroys the request with reason `timeout`.
@@ -601,7 +615,8 @@ no https; the host allows http for that one exact URL and refuses any other non-
   from `raw.githubusercontent.com` and use none of it.
 
 **Request log** (`main/dat-download/request-log.ts`). Every attempt, refused and cancelled ones
-included: time, purpose (`check`, `download`, `art-listing` or `art-download`), host, path, the
+included: time, purpose (`check`, `download`, `art-listing`, `art-download`, `scrape-lookup` or
+`scrape-download`), host, path (never a query), the
 address connected to, outcome, HTTP status, bytes received, duration and failure reason. Never
 headers, bodies or anything about the library. The newest 500 are kept in
 `<dataDir>/network-log.json`, written to a temporary file and renamed; an unreadable log is
@@ -654,8 +669,19 @@ for the download (the official-site path still works).
 - **The catalog** is `catalog.sqlite` in the app data folder (see
   [configuration.md](configuration.md#data-folder)). It is never kept on the NAS. It holds
   library paths, relative file paths, sizes, modification times, CRC32/MD5/SHA-1 hashes, parsed
-  titles, folder mappings and scan state. It is not encrypted. It holds no credentials, because
-  Romperoom has none: every request it makes is anonymous.
+  titles, folder mappings and scan state, and descriptions a ScreenScraper lookup saved. It is
+  not encrypted. It holds no credentials.
+- **The ScreenScraper account** the player saves is encrypted with Electron's `safeStorage`
+  (the macOS keychain, Windows DPAPI, or a Linux secret service) and written as ciphertext to
+  `screenscraper-account.json` in the data folder (mode 0600). Where `safeStorage` has no real
+  keychain (on Linux, any backend but a named keyring, such as `basic_text`) nothing is saved. The page sends it once and only ever
+  learns whether one is saved; it is decrypted in the main process only to build a lookup's
+  request. Whether one is saved is read from the file without decrypting it, so opening Health
+  or Settings never asks the keychain; an account the keychain can no longer read (a reset, or a
+  data folder from another computer) stops a lookup before any request, asking for it again. Romperoom's own ScreenScraper developer details are not in the repository or the
+  build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV` (see
+  [configuration.md](configuration.md#environment-variables)), and they come from the
+  maintainer's cloud secret store.
 - **Settings** (theme and light or dark) live in the renderer's localStorage, under the key
   `romperoom.settings.v1`, the card wizard's last choices under `romperoom.deploy.v1`, and its
   saved packages under `romperoom.deploy.packages.v1` (see
@@ -1005,7 +1031,9 @@ somehow became markup.
   catalog rows, not files. A rescan or the player can redo them.
 - Open the native folder dialog.
 - Set aside duplicate copies and unused artwork of a library it has added, and put them back.
-  Only catalogued files of that library move, only into its `.romperoom-quarantine` folder.
+  Only catalogued files of that library move, only into its `.romperoom-quarantine` folder. The
+  same holds across libraries: each extra copy moves into its own library's set-aside folder,
+  and only while the copy kept in the other library is proven.
 - Delete set-aside files forever: it can type `DELETE FOREVER` as well as a person can. The
   words stop accidents, not script. Only files a tidy run set aside, unchanged since (same
   SHA1, a regular file inside the quarantine folder by real path), can be deleted.
@@ -1022,6 +1050,12 @@ somehow became markup.
   offered: rename each picture after its game in its own folder, update the game lists that name
   it and re-point the chosen entries (each list's original moved to `.romperoom/lists-backup`
   first), and undo a run. Nothing is deleted, and nothing outside that library is touched.
+- Save a ScreenScraper account it types (replacing the player's) or forget the saved one.
+- Where this copy has Romperoom's developer details (no release build does today), run a
+  ScreenScraper lookup of the games still missing art: the host sends each one's file name, size,
+  checksums (SHA-1, MD5, CRC) and console number to `api.screenscraper.fr` under the saved
+  account, at most 1,000 games a run, spending that account's daily quota, and saves pictures and
+  descriptions only where a game has none.
 - Sync a card the host lists, if every deploy safe-target rule allows it: import the games its
   review offered into the library's console folders, copy the saves it offered both ways (each
   replaced save backed up first, a conflict's side as the page picks), give the card its id
@@ -1059,16 +1093,21 @@ somehow became markup.
 
 It can also make the host download mapped DATs from `raw.githubusercontent.com` at the current
 pin and import them (which can replace a same-named DAT and so revert its matches, as an import
-from the picker can today), run "Check for updates" (at most 3 API requests each), open one of
-four fixed web pages in the browser, and read the network log.
+from the picker can today), run "Check for updates" (one API request, or four when there is a
+newer listing), open one of four fixed web pages in the browser, and read the network log.
 
-What it can gather still cannot leave through Romperoom: the only requests the app makes go to
-the two allowlisted GitHub hosts, at fixed paths, with fixed headers and no data from the
-library. Those requests are not invisible, though. GitHub (and anyone who can see the
-connection's metadata) learns which consoles' DATs and pictures were fetched, from which address,
-and when, as it would for any download. Picture names are game titles, so GitHub can see which
-games a library lacks art for. If a future feature opens another network path, that feature must be
-reviewed against this list.
+The app's requests go only to the three allowlisted hosts, at fixed paths, with fixed headers.
+GitHub's requests carry no data from the library. Those requests are not invisible, though.
+GitHub (and anyone who can see the connection's metadata) learns which consoles' DATs and
+pictures were fetched, from which address, and when, as it would for any download. Picture names
+are game titles, so GitHub can see which games a library lacks art for.
+
+ScreenScraper's requests do carry library data. A page that can run a lookup (above) can send,
+for each game still missing art, its file name, size, checksums and console number to
+ScreenScraper, under the player's saved account or one it saved itself. It still cannot choose
+the host, the path, a key or any value's shape (the allowlist checks every one), cannot pick
+games outside the host's review, and learns nothing back but the counts the run reports. If a
+future feature opens another network path, that feature must be reviewed against this list.
 
 ## Deploying to a card
 

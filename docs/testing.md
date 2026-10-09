@@ -28,6 +28,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live deploy copies run](#live-deploy-copies-run)
 - [Live saved packages run](#live-saved-packages-run)
 - [Live batch 2 run](#live-batch-2-run)
+- [Live batch 3 run](#live-batch-3-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -135,24 +136,24 @@ cannot be deleted.
 `apps/desktop/e2e` drives the **built** app (`out/main/index.js`) with Playwright's Electron
 support, so run `npm run build` first. There is no browser to install.
 
-| Spec                   | What it covers                                                                                                                                                                                                                                   |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                              |
-| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                  |
-| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), a refusal with no path, hostile IPC, zoom, gamepad                  |
-| `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                           |
-| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                      |
-| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                               |
-| `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries (Across libraries) |
-| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages                                                                           |
-| `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                   |
-| `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                           |
-| `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Health, a scan that identifies by itself, a file that is not a DAT refused                                                                              |
-| `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Health card    |
-| `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                  |
-| `libraries.spec.ts`    | Settings › Libraries by keyboard: a second library added, scanned and removed, then the last one, with nothing in either folder changed                                                                                                          |
-| `packaged.spec.ts`     | Not in this run: `npm run e2e:packaged -w @romperoom/desktop` runs it on the packaged app ([release.md](release.md#what-packaging-guarantees))                                                                                                   |
-| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                                                                                             |
+| Spec                   | What it covers                                                                                                                                                                                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                                                                                                      |
+| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                          |
+| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, a refusal with no path, hostile IPC, zoom, gamepad                                                      |
+| `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                                                                                                   |
+| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                                                                                              |
+| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                                                                                                       |
+| `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries set aside across libraries and put back                                                    |
+| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages, the BIOS checksums and a BIOS file renamed on a card                                                                                             |
+| `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                                                                                           |
+| `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                                                                                                   |
+| `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Health, a scan that identifies by itself, a file that is not a DAT refused                                                                                                                                                      |
+| `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Health card, ScreenScraper not set up, and a reviewed lookup against a stand-in server |
+| `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                                                                                          |
+| `libraries.spec.ts`    | Settings › Libraries by keyboard: a second library added, scanned and removed, then the last one, with nothing in either folder changed                                                                                                                                                                                  |
+| `packaged.spec.ts`     | Not in this run: `npm run e2e:packaged -w @romperoom/desktop` runs it on the packaged app ([release.md](release.md#what-packaging-guarantees))                                                                                                                                                                           |
+| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                                                                                                                                                                     |
 
 How the harness (`e2e/support.ts`) works:
 
@@ -303,6 +304,16 @@ them are listed, with whether a packaged build honours them, in
   thumbnail listings from `art/trees/<repo>.json`, pictures from `art/raw/<repo>/<folder>/` and
   GitHub's rate reading from `api/rate-limit.json`, through the real allowlist, size and git SHA
   checks and request log (the stand-in GitHub of `e2e/cover-art.spec.ts`).
+  The same folder serves libretro's `dat/System.dat` (the BIOS checksums, when the listing
+  records it) and a stand-in ScreenScraper: answers from `screenscraper/games/<sha1>.json`,
+  pictures from `screenscraper/media/<game id>-<media>.png` (or `.jpg`) and an optional
+  `screenscraper/status.json` to answer every lookup with one status, all hand-written to
+  ScreenScraper's documentation.
+- `ROMPEROOM_TEST_FAKE_KEYCHAIN` keeps the ScreenScraper account with a stand-in for the system
+  keychain, so a test can save one without asking the real keychain.
+- `ROMPEROOM_SCREENSCRAPER_DEV` is not a test seam but the developer details a local run needs;
+  the end-to-end suite passes made-up ones (`scraperDev`) to the stand-in server only, and strips
+  any set in the environment.
 - `ROMPEROOM_TEST_OPEN_EXTERNAL` records each URL the host would open in the browser instead of
   opening it.
 
@@ -1610,6 +1621,103 @@ evaluated:
 - the network log: **observed** (3 sandboxes); none. The console: **observed**; no errors.
 - a screen reader, a real card, Windows and Linux: **not evaluated** (above).
 
+## Live batch 3 run
+
+CI runs the four batch 3 items on the fixture only; this run records them by hand in the built
+app, with layout, focus and axe on each new surface. Run it on a Mac before a release that changes
+`tidy/across.ts` or the journal's kept libraries, `image/png.ts` or `deploy/resize.ts`,
+`deploy/bios.ts`, or `main/scraper/`. A throwaway Playwright spec (outside the repository, or
+deleted before committing) drives the harness, every launch with `testVolume` at a scratch folder;
+every library is a scratch copy of the fixture library under the temp folder.
+
+1. **Across libraries, by keyboard:** a second library `more` holding a byte copy of Advance Wars,
+   added and scanned in Settings › Libraries. On **Across libraries** record the set's rows; open
+   **Keep the copy in a different library** with Enter, Tab into the radios, move with the arrow
+   keys and back, recording the rows each time. Measure the page's sideways scroll and anything
+   outside the window at 1280, 480 and 320 CSS px (320 at 200% zoom), light and dark, and run axe.
+2. **Set aside, by keyboard:** **Set aside the extra copies** with Enter: record focus and the
+   drawer's words, measure it, then confirm with Enter: record focus, where the copy went, and
+   whether the kept copy changed; record History's line.
+3. **The kept library unplugged:** quit, move the `roms` folder away, relaunch: open **Delete
+   forever** for `more` and record the preview (then Cancel); **Undo** the run from History and
+   record whether the copy came back byte for byte. Move `roms` back.
+4. **Art made smaller:** a 640 × 900 grained PNG as Zelda's box art; Onion to an export folder:
+   record the check step's notes and layout (as in step 1), the card's picture (size and bytes),
+   the source's, the narrow picture, and whether a second copy rewrote it.
+5. **ScreenScraper:** without developer details, record **Look up on ScreenScraper**'s reason.
+   Then with made-up details, the stand-in server (one answer for Tetris) and the test keychain,
+   in dark: measure Settings › ScreenScraper and run axe; save an account with Enter in the
+   password field and record focus, and the account file's mode and whether it holds the name or
+   password in plain text. Open the review: record its words, measure it, run axe; look up: record
+   the results, the request log (and whether it holds any account, detail or checksum), and the
+   game drawer's About section, measured.
+6. **BIOS by checksum:** a BIOS folder outside the library with `GBA BIOS (my copy).bin` (the bytes
+   a hand-written `System.dat` lists as `gba_bios.bin`) and another `gba_bios.bin` with other
+   bytes. Download for me: record the BIOS row and the result, and measure the review. Then
+   Onion with that BIOS folder: record the check step's BIOS notes and the card's `BIOS` folder.
+7. **The console:** any console error (the unplugged library's covers failing to load in step 3
+   are expected and declared).
+
+What it cannot observe: a screen reader's speech, a real handheld showing the art, a real
+ScreenScraper answer, Windows and Linux (their keychains included), and a library on a network
+drive.
+
+**Last run: 2026-10-09,** macOS, the built app of the batch 3 branch (`feat/batch3` at
+`7414758` with this change's generated covers and the card's sentence), through one throwaway
+Playwright spec using the harness (deleted after), four sandboxes under the temp folder, every
+launch with `testVolume` at a scratch folder. The keyboard steps focus their control from the
+spec, then press the real keys. 59 cells observed, 0 failed, 6 not evaluated. The plan's own
+pre-flight run had found three wordings (the drawer's "1 file … go … their", Delete forever's
+kept line, a BIOS file counted twice) and a copy that ignored the stored BIOS list; all four were
+fixed with tests before this run, and this run found nothing new:
+
+- the rows: **observed**; "Keep roms GBA/Advance Wars (USA).gba", "Keep roms Game Boy
+  Advance/Advance Wars (USA).gba", "Set aside more GBA/Advance Wars (USA).gba"; Enter on **Keep
+  the copy in a different library** expanded it, Tab went into the radio group (the roms radio),
+  after ArrowDown (the more radio) the roms copies read "Set aside" and the more copy "Keep",
+  after ArrowUp as before.
+- layout and axe, Across libraries with the chooser open: **observed** (6 layout cells: 1280,
+  480 and 320 CSS px at 200%, light and dark; 2 axe runs); no sideways scroll, nothing outside
+  the window, axe found nothing.
+- the drawer: **observed** (5 cells); focus on **Cancel**; "1 file (64 B) goes to the set-aside
+  folder of its own library. Romperoom checks each kept copy again just before anything moves."
+  and "more: GBA/Advance Wars (USA).gba"; at the three widths no sideways scroll.
+- set aside: **observed** (4 cells); focus on the "Done" heading; the copy in
+  `more/.romperoom-quarantine/2026-10-09/GBA/`, gone from `more/GBA`, the roms copy's SHA-1
+  unchanged; History read "… · more · kept in roms".
+- the kept library unplugged: **observed** (2 cells); Delete forever's preview for more read "0
+  files (0 B) set aside in more will be deleted forever." and "1 file will be kept: it changed
+  or went missing since it was set aside, or the copy kept for it can't be checked."; Undo from
+  History read "Put back 1 file." and the copy came back byte for byte with `roms` still away.
+- art made smaller: **observed** (12 cells); the note "2 pictures will be made at most 250
+  pixels wide for Onion (Miyoo Mini). The space shown counts them at full size, so the card keeps
+  a little more room." (the plan reads no picture, so the fixture's 1-pixel GBA picture is
+  counted too); the check step's layout 6 cells clean; the card's picture 250 × 352, 60,706
+  bytes, from 640 × 900, 625,633 bytes; the source unchanged (bytes and time); the 1-pixel
+  picture copied as it is (69 bytes, same SHA-1); a second copy left the card's picture
+  untouched; the copy took 0.44 s.
+- ScreenScraper: **observed** (18 cells); without developer details **Look up on
+  ScreenScraper** was unavailable with "This copy of Romperoom can't use ScreenScraper yet.";
+  then with made-up details, the stand-in server (one answer, for Tetris) and the test keychain,
+  in dark: Settings › ScreenScraper layout 3 cells clean, axe nothing; after Enter in the
+  password field, focus on "Your ScreenScraper account is saved in this computer's keychain.";
+  the account file mode 600, neither the name nor the password in it as text; the review read
+  "Game Boy Advance: 2 games", "Nintendo Entertainment System: 1 game", "Super Nintendo: 1
+  game", What to fill, "Look up 4 games", layout 3 cells clean, axe nothing; results "Saved 1
+  picture and 1 description for 1 game" and "ScreenScraper had nothing for 3 games."; the
+  request log five lines (four `scrape-lookup`, one `scrape-download`), host and path only, no
+  account, developer detail or 40-digit checksum; the drawer's "About this game" with the
+  description and "From ScreenScraper", layout 3 cells clean.
+- BIOS: **observed** (8 cells); the row "BIOS checksums: System.dat, 299 B", picked; the
+  review's layout 3 cells clean; "BIOS checksums: 2 files listed"; the check step's notes "1
+  BIOS file left out: another BIOS has the same name." and "1 BIOS file renamed to the names
+  emulators look for (for example GBA BIOS (my copy).bin → gba_bios.bin)."; the card's `BIOS`
+  held only `gba_bios.bin`, the listed bytes; the BIOS folder unchanged.
+- the console: **observed**; no errors but the declared ones (step 3's covers of the moved
+  library, which did happen).
+- a screen reader, a real handheld, a real ScreenScraper answer, Windows (and its keychain),
+  Linux (and its keychains), a network drive: **not evaluated** (above).
+
 ## Screenshots
 
 `docs/screenshots/` is generated, never edited by hand:
@@ -1631,6 +1739,7 @@ captures in Console Shelf, light and dark:
 - the card wizard's device and check steps (where to and done in light only);
 - Sync a card's review and results;
 - Standardise's review and results, and the re-link review and results;
+- Settings › ScreenScraper;
 - Tidy up's overview, duplicates, across libraries and artwork tabs (the set-aside preview and
   the Set aside tab in light only). The artwork shot scans its own small library (one game, a
   picture no game has and an extra copy of a kept picture), so its Show row has two causes and no
@@ -1643,6 +1752,11 @@ which records for each file the surface, theme, mode, viewport, command and app 
 commit gets `-dirty` when `apps/` or `packages/` had uncommitted changes, so commit code changes
 before capturing. Files the manifest no longer lists are deleted. The script fails if a listed
 file is missing or larger than 400 KB.
+
+The cover art in the shots is generated (`packages/engine/test/fake-cover.ts`, decision 55): the
+capture overwrites the fixture library's four pictures in its own copy, and its own libraries,
+the stand-in GitHub, re-link and Standardise draw theirs with the same generator. No real box art,
+font or logo is used; every word drawn is a fixture title or one of the generator's own few.
 
 Refresh the images in the same change as any UI change they show. Docs tests check three
 things: the manifest and the files agree, the expected set of shots exists, and every shot is

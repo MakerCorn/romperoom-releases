@@ -18,6 +18,8 @@ these problems can harm your collection.
 - [Cover art won't download](#cover-art-wont-download)
 - [A picture didn't appear](#a-picture-didnt-appear)
 - [The card's art wasn't imported](#the-cards-art-wasnt-imported)
+- [ScreenScraper can't be used yet](#screenscraper-cant-be-used-yet)
+- [A ScreenScraper lookup stopped or found nothing](#a-screenscraper-lookup-stopped-or-found-nothing)
 - [Some game folders look empty or gone](#some-game-folders-look-empty-or-gone)
 - [Files that couldn't be read](#files-that-couldnt-be-read)
 - [The scan is slow](#the-scan-is-slow)
@@ -31,6 +33,8 @@ these problems can harm your collection.
 - [The games don't fit on the card](#the-games-dont-fit-on-the-card)
 - [The card got a game from the other library](#the-card-got-a-game-from-the-other-library)
 - [A detail is left out on the Done screen](#a-detail-is-left-out-on-the-done-screen)
+- [A picture on the card wasn't made smaller](#a-picture-on-the-card-wasnt-made-smaller)
+- [A BIOS file wasn't recognised](#a-bios-file-wasnt-recognised)
 - [A saved package is missing or can't be saved](#a-saved-package-is-missing-or-cant-be-saved)
 - [Copying to the card is slow](#copying-to-the-card-is-slow)
 - [A card can't be synced](#a-card-cant-be-synced)
@@ -43,6 +47,7 @@ these problems can harm your collection.
 - [Your library changed since you looked](#your-library-changed-since-you-looked)
 - [A library says Not checked under Across libraries](#a-library-says-not-checked-under-across-libraries)
 - [Across libraries leaves out a copy, or shows one twice](#across-libraries-leaves-out-a-copy-or-shows-one-twice)
+- [A copy set aside from Across libraries wasn't deleted](#a-copy-set-aside-from-across-libraries-wasnt-deleted)
 - [A file couldn't be put back](#a-file-couldnt-be-put-back)
 - [Romperoom was interrupted while tidying](#romperoom-was-interrupted-while-tidying)
 - [Standardise left a folder or game as it was](#standardise-left-a-folder-or-game-as-it-was)
@@ -116,7 +121,8 @@ has looked at them since (after removing a database, say): press **Identify game
 ## A game database won't download
 
 Download for me and Check for updates (Settings › Game databases), and Get cover art on Health, are
-the only things that take Romperoom online, and only to GitHub. Each request is listed under
+the only things that take Romperoom online to GitHub (a ScreenScraper lookup goes only to
+ScreenScraper). Each request is listed under
 **Network activity**, with its outcome. A file that fails leaves nothing behind: no partial file and
 no change to your databases. The message says what happened:
 
@@ -133,7 +139,7 @@ no change to your databases. The message says what happened:
 
 **Rate limits.** Downloading a file never counts against GitHub's limit for unsigned-in
 requests (60 an hour per address). Check for updates does: it uses 1 request when nothing has
-changed and 3 when there is a newer version. Others on the same network (an office, a school)
+changed and 4 when there is a newer version. Others on the same network (an office, a school)
 share that limit.
 
 **Proxies and filtered networks.** Download for me connects to GitHub directly. It does not use
@@ -151,9 +157,11 @@ official site.
 
 ## Cover art won't download
 
-**Get cover art** (Health › Games without cover art) and its review's **Download** are the only
-things that take cover art online, and only to GitHub. Each request is listed under **Network
-activity**. A picture that fails is never kept half-written, and one failure never undoes the
+**Get cover art** (Health › Games without cover art) and its review's **Download** take cover
+art online only to GitHub; **Look up on ScreenScraper** is the other way, and goes only to
+ScreenScraper (see
+[A ScreenScraper lookup stopped or found nothing](#a-screenscraper-lookup-stopped-or-found-nothing)).
+Each request is listed under **Network activity**. A picture that fails is never kept half-written, and one failure never undoes the
 pictures already saved. The review or the results say what happened:
 
 | The message starts with                      | What to do                                    |
@@ -210,6 +218,39 @@ and trusts only the certificate authorities built into Romperoom (see
   was made by Romperoom (its manifest records each ROM's), then by the game's title, then by the
   ROM's file name. The review counts the pictures it couldn't match for each console.
 - **The game already has that kind.** Import never replaces a picture you have, from any source.
+
+## ScreenScraper can't be used yet
+
+**Look up on ScreenScraper** needs Romperoom's own registration with ScreenScraper, and this copy
+of Romperoom doesn't have one yet: "This copy of Romperoom can't use ScreenScraper yet." There is
+nothing to fix on your side; you can still save your account in **Settings** › **ScreenScraper**
+for later. "Save your ScreenScraper account in Settings › ScreenScraper first." asks for your own
+account (free at screenscraper.fr). On a computer without a system keychain (some Linux desktops)
+Romperoom won't save a password, so ScreenScraper can't be used there.
+
+## A ScreenScraper lookup stopped or found nothing
+
+- **The daily limit.** "You've used today's ScreenScraper lookups for your account. Try again
+  tomorrow." Pictures and descriptions saved before it stopped are kept; the next lookup asks only
+  about what is still missing.
+- **Your account.** "ScreenScraper didn't accept your account. Check it in Settings ›
+  ScreenScraper." Forget the account there and save it again. "Save your ScreenScraper account in
+  Settings › ScreenScraper first." at the start of a lookup means this computer's keychain can no
+  longer read the saved account (it was reset, or the data folder came from another computer):
+  nothing was sent; forget it and save it again.
+- **ScreenScraper is busy or closed.** "ScreenScraper is busy with your account's other lookups"
+  or "ScreenScraper isn't taking lookups right now". Try again later. Pictures and descriptions
+  saved before it stopped are kept.
+- **Romperoom's app details.** "ScreenScraper didn't accept Romperoom's app details." means
+  ScreenScraper refused Romperoom's own registration, and "ScreenScraper no longer accepts this
+  version of Romperoom. Update Romperoom." means this version is too old for it. Neither is
+  about your account; what was saved before it stopped is kept.
+- **A game skipped.** "Romperoom couldn't ask ScreenScraper about this game, so it was skipped."
+  The game's file name or size can't be sent as it is (for example a name with a backslash); the
+  lookup goes on with the next game.
+- **Nothing for a game.** ScreenScraper fills a game only when it matched the game file's
+  checksums. A game it found only by name gets nothing (the results count those), and so does a
+  game it doesn't know. Get cover art from libretro-thumbnails, or identify the game first.
 
 ## Some game folders look empty or gone
 
@@ -428,6 +469,33 @@ folder, not in your library or on a card.
 - **The packages are gone.** They stay on the computer they were saved on, and are forgotten
   when Romperoom's data folder is deleted ([Starting over](#starting-over)).
 
+## A picture on the card wasn't made smaller
+
+Romperoom makes box art smaller only for a device that shows it at a fixed width (Onion), and
+only PNG pictures: "N pictures copied at full size: Romperoom makes only PNG pictures smaller."
+A picture already no wider than the device shows it is copied as it is, and so is one whose
+smaller copy would take more bytes (some simple pictures compress better at full size). "N
+pictures could not be read to make them smaller and were copied as they are." means the picture
+is damaged or not really a PNG (or, rarely, the computer ran short of memory while making it);
+open it in an image viewer. A PNG over 2048 × 2048 pixels, or over 16 MiB, is larger than Romperoom
+makes smaller and is copied at full size, and the copy says so. Either way the card records the
+picture as handled, so the next copy leaves it alone until the picture changes. Your own pictures
+are never changed.
+
+## A BIOS file wasn't recognised
+
+The check step says how Romperoom treated the BIOS folder:
+
+- "BIOS files are copied by name. Download the BIOS checksums under Settings › Game databases to
+  check them." Without libretro's list Romperoom copies BIOS files under their own names.
+- "N BIOS files are not in libretro's list; copied by their own names." The file's contents
+  match nothing in the list (another region or revision, or a file that is not a BIOS).
+- "N BIOS files have a name libretro lists but other contents; copied as they are." A file with
+  the right name but other bytes: an emulator may refuse it.
+- "No BIOS file for Sony PlayStation was found; some of its games may need one." libretro's list
+  names BIOS files for that console and none was found directly in the BIOS folder (files in its
+  subfolders aren't read). Not every game needs one.
+
 ## Copying to the card is slow
 
 - Romperoom checks every file after copying it, so a copy of many small files is slower than a
@@ -487,6 +555,10 @@ cancel it), then press the button again.
 the library's path is missing, or is not the library that was tidied (a drive that mounted
 empty, or another drive at the same path). Nothing was changed. Reconnect the drive, check it
 opens in Finder, then try again.
+
+A run from **Across libraries** needs both libraries: the one its copies were set aside in, and
+the one that kept the other copy. Setting aside and **Finish** say the library that holds the kept
+copies is not reachable until it is connected; **Undo** works without it.
 
 ## A library says it can't reach its folder, but it scans
 
@@ -559,6 +631,19 @@ With a screen reader: nothing is read out when you open the tab or turn a page (
 the list says where you are). After **Look again** the result is read out once, with how many
 libraries were not checked. A look that fails reads nothing out (the message on the tab says
 what went wrong), and a result the same as the last one read out is not read again.
+
+## A copy set aside from Across libraries wasn't deleted
+
+**Delete forever** deletes a copy set aside from **Across libraries** only while the copy it was
+set aside for is still provably there: the library that kept it is connected and still in
+Settings › Libraries, and its copy has the same contents. Otherwise the copy stays set aside and
+the preview counts it as kept. Connect the library and try again, or put the copy back.
+
+After **Standardise** renamed folders or games in the library that kept the other copy, Delete
+forever finds the kept copy under its new name by its contents and checks it the same way. If you
+renamed or moved the kept copy yourself, scan that library first: until then Romperoom can't find
+it, and the set-aside copy stays. Nothing is deleted without a proven kept copy; put the copy back
+if you want it.
 
 ## A file couldn't be put back
 

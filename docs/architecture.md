@@ -54,8 +54,9 @@ flowchart TB
 - The renderer is served from `app://romperoom/`, never `file://`. The CSP blocks all network
   and file access: `connect-src 'none'`, no frames, no workers. WebRTC, which CSP does not
   govern, gets no UDP (the IP handling policy) and no TCP (the session's dead proxy). No
-  hostname is ever looked up inside Chromium (the process-wide host resolver rules; the game
-  database download resolves its two GitHub names through Node, see
+  hostname is ever looked up inside Chromium (the process-wide host resolver rules; the main
+  process resolves its three allowed hosts, two GitHub names and ScreenScraper's, through Node,
+  see
   [security.md](security.md#main-process-requests)), and every session, the ones
   made later included, gets the same proxy and permission denials.
 - `window.romperoom` exposes exactly the channels in `apps/desktop/src/shared/ipc.ts`, plus
@@ -90,7 +91,7 @@ The full list of security rules is in
 ## Catalog schema
 
 The catalog is one SQLite file in the app data folder. It is never kept on the NAS. There are
-nineteen migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
+twenty-two migrations: migration 1 creates the core tables, and migration 2 rebuilds `media` as a
 per-file table and adds the persisted scan state to `source_root`. Migration 3 adds the retry and
 confirmation columns (`unreadable_count`, `last_error`, `last_verified`, `last_complete_scan_id`)
 and `media.checksum`, and rebuilds `folder_map` and `unmapped_folder` so their rows are deleted with
@@ -135,8 +136,13 @@ catalog link `tree`, which moves every row under the folder), `library_reconnect
 journals, its units and outcome) and `standardise_backup` (each game list, cue sheet or playlist a
 run replaced, and where the original went; see Standardise the library below). Migration 19 adds
 `standardise_run.kind` (`standardise` or `relink`): a re-link is a standardise run with the same
-journals, Undo, Recovery and history, and no device profile (see Re-link artwork below). Opening a
-catalog written by a newer build is refused rather than downgraded. Systems are not a table:
+journals, Undo, Recovery and history, and no device profile (see Re-link artwork below).
+Migration 20 adds `op_keeper_root`: the other libraries whose copies a journal's steps were set
+aside for (see Copies across libraries below). Migration 21 adds `bios_list` and `bios_entry`:
+the stored libretro `System.dat`, its version and each listed file's name, size and checksums.
+Migration 22 rebuilds `art_added` so its source may be `screenscraper` and adds
+`game_description` (a game's description and its source). Opening a catalog written by a newer
+build is refused rather than downgraded. Systems are not a table:
 `system_id` refers to the `SYSTEMS` catalog in `packages/profiles` (`data/systems.json`, listed in
 [systems.md](systems.md)). The connection runs in WAL mode with `busy_timeout = 5000`
 (`BUSY_TIMEOUT_MS` in `catalog/db.ts`): a statement waits up to 5 seconds for another connection's
@@ -989,7 +995,34 @@ it still plans.
 - The facade's `findAcrossLibraries` pages the sets (the summary counts them all) and gives each
   set of the page its picture (`duplicateCover`). The host serves it on `tidy:findDuplicates` with
   `across: true`, names each library as Settings › Libraries does (`libraryNames`) and passes no
-  path.
+  path. Each set carries `keepRootId`: the library holding the copy Duplicates' keeper rules put
+  first.
+- **Setting copies aside.** A look is kept under an id (`acrossPlanId`, only the newest, bound to
+  the catalog generation), so `tidy:planDuplicateCleanup` with that id and the player's choices
+  (`keep`: a set's library, `skip`: sets left alone) plans every set of the look, not only a page
+  (`planAcross`). It makes one plan per library holding extra copies: each step moves a copy into
+  its own library's `.romperoom-quarantine`, and records the kept copy's path and hash; the copies
+  inside the kept library are never steps. The plans of one planning run one after another: each
+  is checked against the catalog as the one before it left it, and any other change makes it
+  stale. A plan names its kept libraries in `keeperRoots`; `validatePlan` and `loadJournal` refuse
+  one that is, holds or sits inside the plan's library or another of them
+  (`KEEPER_ROOTS_OVERLAP`). A run locks its library and every kept library at once (all or none,
+  never waiting), checks each kept library answers, is not empty and does not overlap by real
+  path (`KeeperLibraryError`, a `LibraryUnavailableError`, otherwise), and re-hashes each kept
+  copy just before its step moves. `op_keeper_root` records the kept libraries as the run found
+  them: Finish locks them and checks they are still the same folders; Delete forever keeps a step
+  while its kept library was removed, is unplugged or is another folder, or its copy changed (it
+  locks them to finish, not to roll back); Undo or Roll back needs only the library the copies
+  sit in. Reconnecting a library refreshes the record other libraries' journals keep of it, by
+  the same rule as for its own journals, and so does Standardise's re-record
+  (`rerecordLibraryIdentity`, by its two-link proof). When nothing is at a kept copy's recorded
+  path (Standardise renamed it), Finish and Delete forever look for a present copy with the same
+  `sha1_whole` in the kept library's catalog (`catalogCopies`, the same library's for Duplicates)
+  and run every check on it, never taking a file the same journal moves; `op_step.keeper_path`
+  is never rewritten. A run hashes each extra once (`contentHash`) and records that hash, and
+  Delete forever requires the recorded hash to be the kept copy's (`keeper_sha1`). A library cannot be removed while a run of another
+  library whose kept copies are in it waits in Recovery; removing a library deletes its own
+  journals' `op_keeper_root` rows with the rest of its history.
 
 ### Unused artwork
 
@@ -1095,8 +1128,10 @@ kind with `plan-kind`. Plans and purge previews are single use.
 ### The Tidy up screens
 
 `#/tidy` (`apps/desktop/src/renderer/tidy`) has seven tabs: Overview, Duplicates, Across
-libraries, Artwork, Standardise, History and Set aside. Across libraries is a report: it asks
-`tidy:findDuplicates` with `across: true` and starts no job. On it the Library choice above the
+libraries, Artwork, Standardise, History and Set aside. Across libraries asks
+`tidy:findDuplicates` with `across: true`; its **Set aside the extra copies** plans the look's
+sets with the player's choices and applies each plan as a tidy job, and History names the kept
+libraries (`keptIn`). On it the Library choice above the
 tabs is hidden in place (`visibility: hidden`) and the note "Every library is compared here."
 shares its grid cell, so the tab strip does not move. The words are plain: "set aside", never
 "quarantine", and the folder is named once, in the preview.
@@ -1365,18 +1400,28 @@ into a temporary folder under `<dataDir>/downloads/`, its size and git blob SHA-
 against the listing, and it goes through the same two-phase import as a picked file, with an
 explicit source label and a `dat_origin` row. The folder is then removed, whatever the
 outcome. "Check for updates" asks `api.github.com` for the branch head (one request) and, only
-when it moved, for the two folder listings (three in all).
+when it moved, for the two folder listings and the `dat` folder's listing (four in all).
 
 **The transport** (`main/dat-download/transport.ts`) is the only code that opens a socket.
 It uses `node:https` from the main process, so the renderer's guards (CSP, the dead proxy, the
 host resolver rules and the WebRTC policy; see [security.md](security.md#network-isolation))
-are unchanged. Every URL passes the allowlist (`allowlist.ts`: two exact hosts, fixed path
+are unchanged. Every URL passes the allowlist (`allowlist.ts`: three exact hosts, fixed path
 shapes, the commit in the path) and every resolved address the address guard (`address.ts`) before
-a connection is made. Redirects are refused, sizes and times are capped, and no credential or
-cookie is ever sent. Every attempt is appended to `<dataDir>/network-log.json` (the newest 500),
+a connection is made. Redirects are refused, sizes and times are capped, and no cookie is ever
+sent; the only credentials sent are ScreenScraper's (Romperoom's developer details and the
+player's account), in a lookup's query (see below), never to GitHub. Every attempt is appended to `<dataDir>/network-log.json` (the newest 500),
 which Network activity shows. Nothing calls the transport on boot, on a timer or after a scan:
-only "Download N files" and "Check for updates" do, and cover art's "Get cover art" and its
-review's "Download" ([Cover art](#cover-art)).
+only "Download N files" and "Check for updates" do, and cover art's "Get cover art", its
+review's "Download" and a ScreenScraper lookup ([Cover art](#cover-art)).
+
+**BIOS checksums.** The listing also records libretro's `dat/System.dat` (`system` in
+`libretro.json`: its name, size and git blob SHA-1). The plan offers it as its own row
+(`DatPlan.bios`, the file id `bios-list`), and `dats:download` takes it with a third argument,
+`{ bios: true }`. The file is checked like a DAT, read by `readSystemDat`
+(`packages/engine/src/bios/system-dat.ts`: one `game` block, sections from its comment lines,
+names of up to eight path parts, unsafe names skipped and counted) and stored whole by
+`engine.bios.importList` (migration 21), with the outcome `listed`. "Check for updates" makes four
+requests (the branch head, the two folders and `dat`).
 
 ## Cover art
 
@@ -1395,8 +1440,11 @@ flowchart LR
     CR["card reader"]
   end
   P -- "art:* IPC" --> H --> SV --> T
+  H --> SC["scraper/<br/>account · lookups"] --> T
+  SC --> WR
   T --> API["api.github.com<br/>tree listings"]
   T --> RAW["raw.githubusercontent.com<br/>pictures"]
+  T --> SS["api.screenscraper.fr<br/>lookups · pictures"]
   SV --> WR --> MED[(".romperoom/media")]
   SV --> CR --> CARD[("SD card<br/>read only")]
 ```
@@ -1430,6 +1478,27 @@ profile's media folders on the card and matches pictures to games by the ROM SHA
 Romperoom manifest records, else by identified title, else by file name. Only a picture that would
 fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it with the source
 `sd:<profile id>`. The card is only read.
+
+**Look up on ScreenScraper** (`main/scraper/`). The player's account is kept by
+`scraper/account.ts`: Electron's `safeStorage` encrypts it into
+`<dataDir>/screenscraper-account.json` (mode 0600), and the page learns only `saved`, `none` or
+`unprotected` (no keychain, so nothing is saved) through `art:scraperAccount`; it sends the
+account once through `art:setScraperAccount`. Romperoom's developer details are not in the
+build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV`, a packaged build
+reads nothing, and without them the review and Health say "This copy of Romperoom can't use
+ScreenScraper yet." (so every release build does today). The review (`artReview({ source: 'screenscraper' })`) asks nothing: it
+counts the games missing a chosen kind or a description (`listScrapeWanted`). A run
+(`scraper/service.ts`) asks `api.screenscraper.fr` one game at a time (`/api2/jeuInfos.php` with
+the file's SHA-1, MD5, CRC, name, size and the console's ScreenScraper number), at most 1,000
+games, one request a second until the first answer gives the account's pace, then one every
+`ceil(60000 / perMinute)` milliseconds (that pace, faster or slower than a second), stopping at
+the account's daily limit or any status that is not about one game. Only an answer that matched the file's checksums is used
+(`exact`); a picture comes from `/api2/mediaJeu.php`, is checked against the answer's size and
+SHA-1, and goes through the same art writer with the source `screenscraper`; a description is
+cleaned and kept in `game_description` (at most 4,000 characters), shown in the game's drawer. A
+run that asks only for descriptions takes no `art` lock. The transport's allowlist has the third
+host with exactly those two paths; the account, the developer details and the checksums travel
+only in the query, and the request log and every error keep the host and path alone.
 
 ## Card sync
 
@@ -1660,7 +1729,12 @@ flowchart LR
   its SHA-1, else of a hash of where it lives: `Game (3fa9c1).nes`), so adding or removing one
   twin renames none of the others; a game left alone with its name gets the plain name.
   A multi-file game (a cue sheet and its tracks) cannot be renamed, so a clash leaves it out
-  (`name-collision`). BIOS files are never renamed: a BIOS the card would rename is left out.
+  (`name-collision`). BIOS files keep their exact names: a BIOS the card would rename is left
+  out. With a stored BIOS list, `matchBios` (`deploy/bios.ts`) reads each BIOS file's SHA-1 (files
+  up to 64 MiB, only sizes the list has, cached by size and time) and places a recognised file
+  under every name the list gives it for the consoles chosen, matched files claiming their names
+  before files copied by their own; the check step lists renamed, unknown and other-contents files
+  and each chosen console of `BIOS_SECTIONS` with no BIOS found.
 - **Bytes on the card.** Each file takes whole clusters. The cluster comes from the target, or
   from the Windows default for the card's size and file system (FAT32 and exFAT tables, binary
   units); when neither is known the largest default is assumed, with a warning. Directories
@@ -1671,10 +1745,12 @@ flowchart LR
 - **File-size limit.** FAT32 holds at most 4 GiB - 1 bytes per file. A larger file leaves its
   game out (`too-large`), or keeps it with a warning when the package asks for that. A profile
   that needs FAT32 blocks a plan for an exFAT card.
-- **Media and game lists.** Media goes where the profile's template says, named after the ROM,
-  in the formats the profile reads (`.jpeg` is written as `.jpg`). Images are copied at full
-  size: resizing is not built. A medium carries its cached checksum (`media.checksum`, in the
-  writer's 40-digit form only) as `sourceSha1`, so the writer compares it with the card without
+- **Media and game lists.** Media goes where the profile's template says, named after the ROM, in
+  the formats the profile reads (`.jpeg` is written as `.jpg`). A profile's media may set `maxWidth`
+  (Onion's box art: 250): a PNG planned there carries `resize`, and the writer makes a smaller copy
+  at write time (below). The plan counts art at full size and says so; a JPEG for such a profile is
+  copied at full size, with a warning. A medium carries its cached checksum (`media.checksum`, in
+  the writer's 40-digit form only) as `sourceSha1`, so the writer compares it with the card without
   hashing the file and checks the copied bytes against it, and its `mediaId`, so a checksum the
   writer learns is kept (see [Card writer](#card-writer)). The scan never reads art. ES-DE and
   Batocera game lists are generated, one per system, naming only media in the plan. Other formats
@@ -1705,6 +1781,19 @@ and the kept games are wizard state for the visit, cleared by any change of choi
 destination.
 
 The write-time check is in [security.md](security.md#deploy-containment).
+
+### Art made smaller
+
+`packages/engine/src/image/png.ts` is Romperoom's own PNG reader and writer on `node:zlib`: it reads
+every colour type and bit depth with or without Adam7 interlacing (palette and transparency
+included), refuses an image over `MAX_PNG_PIXELS` or a damaged one (`PngError`), and writes 8-bit
+RGB or RGBA; colour-space chunks are not applied. `resizeToWidth` averages the source pixels each
+output pixel covers (area sampling, alpha weighted), keeping the aspect ratio. `deploy/resize.ts`'s
+`smallerPng` keeps the source as it is when it is no wider, cannot be read, or when the smaller copy
+would take more bytes. The writer makes it from the source it checked, writes it through the same
+part file, and records `resized: { maxWidth, v }` in the manifest with the source's size and time; a
+later copy compares those (`sameResized`, `RESIZE_VERSION` 1) instead of the bytes, and never adopts
+a card file as a made picture. A 512 × 720 picture takes about 15 ms in the main process.
 
 ## Card writer
 

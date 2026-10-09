@@ -386,8 +386,44 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   renaming files at that moment), and its set may drop out until **Look again**.
 - **A pair hard-linked inside one library is one file,** so a copy of it in another library is
   not listed.
-- **It only reports.** Setting copies aside across libraries is planned
-  ([decision 46](decisions.md#46-copies-across-libraries-are-reported-never-tidied)).
+- **A set-aside copy whose kept copy cannot be proven stays set aside.** Delete forever keeps it
+  while the kept library is unplugged, removed, or its copy changed; Put back always works.
+  Finish waits for the kept library; Roll back does not need it.
+- **Standardise in a kept library re-records other libraries' record of it.** A Standardise
+  run (or its Undo or Recovery) records its library again on its own journals and on the record
+  another library's Across run keeps of it (`op_keeper_root`), in the same audit row, only when
+  both links of the proof hold. A record of a different library is never changed.
+- **A kept copy renamed since the run is found by its contents.** When nothing is at the path
+  the run recorded, Finish and Delete forever look in the kept library's catalog (the same
+  library for Duplicates) for a present copy with the same whole-file hash, and use one only if
+  it passes every check the recorded copy would: a regular file inside the library, outside its
+  set-aside folder, reached without links, not the file being moved or deleted (nor another name
+  of it), never a file the same run moves, with the same contents now. Standardise moves the
+  catalog row as it renames, so its renames are covered (tested with the catalog as Standardise
+  leaves it, not through a Standardise run). A copy renamed by hand and not scanned since is not
+  in the catalog yet, so the set-aside copy stays until that library is scanned; Put back always
+  works. When another file now sits at the recorded path, that file is checked, not searched
+  past: it reads as changed.
+- **A file set aside must match its kept copy.** A run hashes each extra once and records that
+  hash; Delete forever deletes an extra only when that recorded hash is its kept copy's hash and
+  the file still holds it.
+- **Two copies in the kept library both stay** (Duplicates handles those).
+- **Only the newest look plans.** A plan asked with an older look's id is refused; look again.
+
+### Art made smaller, BIOS and ScreenScraper
+
+- **Art is made smaller one picture at a time in the main process** (about 15 ms for a 512 × 720
+  PNG); the window may answer a little slower meanwhile. A picture whose smaller copy would be
+  bigger is copied as it is; JPEG pictures are copied at full size. The plan counts art at full
+  size.
+- **BIOS:** only files directly in a BIOS folder are read, up to 64 MiB each; a "missing" line
+  means libretro's list names files for that console and none was found.
+- **ScreenScraper** cannot be used until the maintainer registers Romperoom. For a local run, put
+  the developer details from the maintainer's cloud secret store in
+  `ROMPEROOM_SCREENSCRAPER_DEV` (unpackaged runs only; never commit them). Its console numbers
+  (`packages/profiles/src/screenscraper.ts`), statuses and answer shapes are written from its
+  documentation and unconfirmed. It fills only gaps, so a later libretro-thumbnails run does not
+  replace a ScreenScraper picture.
 
 ### Copying to a card
 
@@ -486,7 +522,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   identity; they are only refused when the library folder is empty.
 - **Library health counts duplicates as duplicate cleanup does**: within one library, by whole-file
   hash, one console only. A copy in another library is listed under Across libraries, never counted
-  here or moved. Hard links and disc sets are only found on disk, so cleanup may offer fewer than
+  here. Hard links and disc sets are only found on disk, so cleanup may offer fewer than
   health counts.
 - **A tidy preview goes stale on any catalog write**, including a deploy record or a scan of a
   different library: the user previews again.

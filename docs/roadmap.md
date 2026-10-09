@@ -2,10 +2,12 @@
 
 Romperoom is built in four milestones. **Milestone 1, Foundation, is complete,** and so are the DAT
 part of Milestone 2: identifying games against DAT files you import or have Romperoom download when
-you ask, and cover art from libretro-thumbnails and SD cards, the first part of Milestone 3: Tidy
-up, which sets aside duplicates and leftover artwork, standardises folder and game names, re-links
-artwork and lists copies across libraries, with libraries added and removed in Settings, and the
-first part of Milestone 4: copying games to an SD card. Everything marked planned is not built yet,
+you ask, and cover art from libretro-thumbnails and SD cards (and from ScreenScraper once
+Romperoom is registered there), the first part of Milestone 3: Tidy up, which sets aside
+duplicates and leftover artwork, standardises folder and game names, re-links artwork and sets
+aside copies across libraries, with libraries added and removed in Settings, and the first part of
+Milestone 4: copying games to an SD card, with art made smaller for the device and BIOS files
+recognised by their contents. Everything marked planned is not built yet,
 and plans change as each milestone starts. Next come signing and automatic updates, then the rest of
 Organize. The detailed plans, with their tests, are in the design history
 (foundation,
@@ -17,7 +19,8 @@ Standardise,
 re-link,
 the Tidy up batch,
 libraries,
-copies across libraries).
+copies across libraries,
+batch 3).
 
 ## Contents
 
@@ -77,9 +80,15 @@ Tell you which game each file really is.
   Nothing goes online until you press Get cover art
   ([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)).
 
-**Deferred:** scrapers (ScreenScraper and other account-based services); see
-[Open questions](#open-questions). The
-design spec keeps the research.
+- **ScreenScraper:** Look up on ScreenScraper fills the gaps left, and saves descriptions, with
+  the player's own account kept in the system keychain, matching by checksum only
+  ([user guide](user-guide.md#look-up-on-screenscraper),
+  [ADR 54](decisions.md#54-screenscraper-uses-the-players-account-and-fills-gaps-by-checksum)).
+  Built and tested against a stand-in server; it cannot be used until the maintainer registers
+  Romperoom with ScreenScraper.
+
+**Deferred:** other scrapers and account-based services; see [Open questions](#open-questions).
+The design spec keeps the research.
 
 ## Milestone 3: Organize (Tidy up done)
 
@@ -111,9 +120,11 @@ a journal that knows its library.
   folder answers), adds a second one through the folder picker and removes one, forgetting it
   without touching its files ([user guide](user-guide.md#your-libraries),
   [decision 45](decisions.md#45-removing-a-library-forgets-it-whole-and-touches-nothing-on-disk)).
-- **Copies across libraries:** the files held in two or more libraries, listed as a report;
-  libraries that can't be compared say why ([user guide](user-guide.md#tidy-up-your-library),
-  [decision 46](decisions.md#46-copies-across-libraries-are-reported-never-tidied)).
+- **Copies across libraries:** the files held in two or more libraries, listed with the library
+  that keeps each set; the extra copies set aside in their own library, the kept copy checked
+  again before anything moves, undoable; libraries that can't be compared say why
+  ([user guide](user-guide.md#tidy-up-your-library),
+  [decision 51](decisions.md#51-copies-across-libraries-are-set-aside-in-their-own-library)).
 - **Re-link artwork:** a leftover picture renamed after the one game that clearly matches it,
   with its game list entries, and game list entries without a game listed or re-pointed
   ([user guide](user-guide.md#tidy-up-your-library),
@@ -131,7 +142,6 @@ drive or a NAS.
 
 **Still planned:**
 
-- **Setting aside copies across libraries.** Across libraries only lists them today.
 - **A renamed playlist's name match after Standardise is undone.** A playlist (`.m3u`) a run renamed
   without rewriting it, matched by identify under its new name before the run was undone or rolled
   back, keeps that match, and the review leaves its game as not matching until Identify games runs
@@ -161,7 +171,11 @@ Put a playable selection on a handheld's SD card.
   verified, resumable, incremental writer with a manifest, moving dropped files aside, never
   formatting ([architecture.md](architecture.md#card-writer)). The page never names a path
   ([decisions.md](decisions.md#23-the-page-never-names-a-path-to-write-to)).
-- **BIOS folders:** a BIOS folder chosen per library is copied to a device that has one.
+- **BIOS folders:** a BIOS folder chosen per library is copied to a device that has one, each
+  file recognised by libretro's list copied under the names the device looks for
+  ([decision 53](decisions.md#53-bios-files-are-recognised-by-libretros-list)).
+- **Art made smaller:** box art copied no wider than the device shows it (Onion), by Romperoom's
+  own PNG code ([decision 52](decisions.md#52-card-art-is-made-smaller-by-romperooms-own-png-code)).
 - **Network export folders and read-only Linux cards:** an export folder on a network drive (or
   one Romperoom cannot check) asks first, and a Linux card mounted read-only is refused up front
   ([ADR 47](decisions.md#47-an-export-folder-on-a-network-drive-asks-first)). The Linux side is
@@ -197,7 +211,7 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 **Still planned:**
 
 - **Device profiles** checked on real devices (all four are `community` today), and more of them.
-- **Art resized for the device,** and BIOS files found by their hash, not their name.
+- **JPEG art made smaller,** and screenshots and title screens (no profile asks yet).
 - **Art checksums for pictures never copied:** the scan does not read art, so a picture carries a
   checksum only once the writer or Tidy up's leftover-artwork check has read it.
 - **A multi-file game whose files differ between two libraries** is left off the card as a name
@@ -210,13 +224,11 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 ## Next
 
 1. **Signing and automatic updates** for the beta builds (see [release.md](release.md)).
-2. **[Milestone 3, Organize](#milestone-3-organize-tidy-up-done):** setting aside copies
-   across libraries.
+2. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** Romperoom
+   registered with ScreenScraper, its developer details in the release build, and its answers
+   confirmed live.
 3. **[Milestone 4, Deploy](#milestone-4-deploy-sd-cards-done):** profiles checked on real
    devices.
-4. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** scrapers
-   (ScreenScraper, its own spec), once the owner decisions in [Open questions](#open-questions)
-   are made.
 
 ## Must-fix before later milestones
 
@@ -255,8 +267,7 @@ The full list of current behaviour limits is in
 
 ## Open questions
 
-- Which scraping services to use, and their terms and rate limits.
-- The owner decisions a scraper needs (accounts, what a lookup sends). Where art lives and the
-  network stack were decided for cover art (ADR 41).
-- A source for BIOS hashes that can be verified.
+- How Romperoom's ScreenScraper developer details reach a release build, given they would ship
+  inside it.
+- ScreenScraper's console numbers and statuses, to confirm against the live service.
 - Signing identities, and who provisions them.

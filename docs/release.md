@@ -60,6 +60,19 @@ electron-builder 26 (`apps/desktop/electron-builder.yml`, the version pinned in
   `fix`, `perf` and breaking changes only, without commit hashes, pull request numbers or links,
   which would point into the private repository.
 
+### Required release-note lines
+
+The notes come from commit subjects, which cannot carry a caveat. Until it no longer applies,
+every release from 0.11.0 on must say, in its notes:
+
+> Look up on ScreenScraper is built, but this release can't use it yet: Romperoom first has to
+> be registered with ScreenScraper. Until then the button says "This copy of Romperoom can't use
+> ScreenScraper yet."
+
+Add it to the draft's notes before publishing (step 5 below), and keep it in the squash-merge
+body of the pull request that brings the feature, so the history carries it too. Remove it here
+in the change that ships Romperoom's registration.
+
 ## Building locally
 
 Run at the repository root, after `npm ci` and `node node_modules/electron/install.js`
@@ -93,8 +106,8 @@ npm run record:libretro
 git diff packages/profiles/data/libretro.json
 ```
 
-It asks `api.github.com` (three unauthenticated requests) for libretro-database's current
-commit and its `metadat/no-intro` and `metadat/redump` listings, and rewrites the shipped
+It asks `api.github.com` (four unauthenticated requests) for libretro-database's current
+commit and its `metadat/no-intro`, `metadat/redump` and `dat` listings, and rewrites the shipped
 listing, keeping the console mapping. Review the diff before committing it: a new commit, files
 added or removed, and any `mapping problems` the script prints (a mapped file no longer in the
 listing shows "not available at this version" until the mapping is fixed). A diff of
@@ -162,7 +175,9 @@ Then two checks for identify, run on the packaged app
      a test library, and confirm the wall loads cover art;
    - drag a `.html` file and a ROM onto the wizard and the wall: the window must stay on the app
      ([security.md](security.md#gaps));
-   - read the release notes: user-facing, nothing private;
+   - read the release notes: user-facing, nothing private, and carrying every
+     [required line](#required-release-note-lines) (edit the draft's notes to add one; an
+     edited draft keeps its notes);
    - [Before each release](#before-each-release) was run on this build, or is recorded as not
      run.
 6. **Publish publicly** ([below](#publishing-to-the-public-repository)): **Run workflow** with
@@ -451,8 +466,8 @@ Cut from the first beta, on purpose:
 
 Not built. When it is: electron-updater, reading the public releases repository anonymously (the
 app holds no token). The mac `zip` target already exists because Squirrel.Mac needs it. Today the
-app goes online only when the user presses Download for me, Check for updates or Get cover art,
-and then only to GitHub, through the main process's own allowlisted client
+app goes online only when the user presses Download for me, Check for updates or Get cover art
+(to GitHub), or looks up games on ScreenScraper, through the main process's own allowlisted client
 ([security.md](security.md#network-isolation)). An updater must add its host the same way or
 through the recipe in security.md (both allowlists, a dedicated session), fetch from the main
 process, verify signatures, and so needs signed builds first.

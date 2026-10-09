@@ -6,8 +6,9 @@ changes your games, and only after you have seen what it will do; cover art only
 to Romperoom's own folder, when you ask; Sync a card only adds the games and saves you approve,
 and backs up any save it replaces. This guide walks through every screen.
 
-The pictures come from a small made-up test library, so the sizes are tiny and most games have
-placeholder covers.
+The pictures come from a small made-up test library, so the sizes are tiny. Its cover art is
+generated for the screenshots (made-up pictures, no real box art or logo), and games without art
+show a placeholder.
 
 ## Contents
 
@@ -107,6 +108,9 @@ Neo's, file games under a short code; that code is shown too, as "DAT entry". It
 identified yet" until you import a database and identify (see
 [Identify your games](#identify-your-games)).
 
+**About this game** shows a game's description when a ScreenScraper lookup found one (see
+[Look up on ScreenScraper](#look-up-on-screenscraper)), with "From ScreenScraper" under it.
+
 | Light                                                           | Dark                                                                 |
 | --------------------------------------------------------------- | -------------------------------------------------------------------- |
 | ![A game's details](screenshots/drawer-console-shelf-light.png) | ![A game's details, dark](screenshots/drawer-console-shelf-dark.png) |
@@ -136,8 +140,8 @@ Press **Scan again** after you change your files.
 
 The **Games without cover art** card on **Health** counts the games missing a picture, and how
 many miss box art, screenshots and title screens. It fills gaps only: Romperoom never replaces a
-picture you already have, and goes online only when you press **Get cover art**, and then only
-to GitHub.
+picture you already have, and goes online only when you press **Get cover art** (to GitHub) or
+look up games on ScreenScraper (see [Look up on ScreenScraper](#look-up-on-screenscraper)).
 
 | Light                                                 | Dark                                                       |
 | ----------------------------------------------------- | ---------------------------------------------------------- |
@@ -147,9 +151,9 @@ to GitHub.
 per console, usually), then shows a review before anything is downloaded: each console with how many
 pictures it found, for how many games, how many of those pictures were matched by the game's file
 name, their size, and how many pictures are not available (for example "Game Boy Advance: 2 pictures
-for 2 games (2 matched by file name) · 138 B · 3 not available"). Each picture not available is one
-game and one kind this download can't fill: the collection has no picture by that game's name, or
-the game can't take one (see [Troubleshooting](troubleshooting.md#a-picture-didnt-appear)). Then
+for 2 games (2 matched by file name) · 135.3 KB · 3 not available"). Each picture not available is
+one game and one kind this download can't fill: the collection has no picture by that game's name,
+or the game can't take one (see [Troubleshooting](troubleshooting.md#a-picture-didnt-appear)). Then
 come the kinds (box art, screenshots, title screens); the total; the source and its terms; and how
 many of GitHub's hourly requests the review used and how many are left. Untick any console or kind
 you don't want. The terms read: "Pictures from libretro-thumbnails, a community collection used by
@@ -180,6 +184,30 @@ covers show in the library at once, without a scan.
 card and the device, as when you put games on a card). Romperoom only reads the card: it reviews
 the pictures that fill a gap, per console and kind, and imports the ones you keep. It never adds
 a picture for a game that already has that kind.
+
+### Look up on ScreenScraper
+
+**Look up on ScreenScraper** fills the gaps libretro-thumbnails left, and can save a short
+description of each game, from [ScreenScraper](https://www.screenscraper.fr/), a community
+database. It needs two things: your own ScreenScraper account (free), saved in **Settings** ›
+**ScreenScraper**, and Romperoom's own registration with ScreenScraper, which this copy of
+Romperoom does not have yet. Until both are there the button is unavailable and says why: "This
+copy of Romperoom can't use ScreenScraper yet.", "Save your ScreenScraper account in Settings ›
+ScreenScraper first.", or, on a computer with no system keychain, that Romperoom won't save a
+password there.
+
+The button first shows a review, without asking ScreenScraper anything: each console with how
+many of its games are missing something ("Game Boy Advance: 3 games"), **What to fill** (box
+art, screenshots, title screens, descriptions), and exactly what each lookup sends. For each
+game: the game file's checksums (SHA-1, and MD5 and CRC when Romperoom has them), its file name
+and size, and its console, with your account (user name and password) and Romperoom's app name,
+developer id and developer password. For each picture it then fetches, a second request sends
+the game's ScreenScraper number, its console and the kind of picture, with the same account and
+app details. **Look up N games** asks about one game at a time, at most 1,000 a run,
+and stops when your account's daily limit is reached. A game is filled only when ScreenScraper
+matched it by its checksums; one it found only by name gets nothing. The results say how many
+pictures and descriptions were saved, and for how many games ScreenScraper had nothing. Like
+Get cover art, it only fills gaps: get cover art from libretro-thumbnails first.
 
 **Remove downloaded art** deletes the pictures Romperoom added, and only those still exactly as
 it saved them; it asks first, in place, saying how many there are and their size. A picture you
@@ -229,6 +257,13 @@ every file, its size, the total, where it comes from and the licence, before you
 version is picked for you; one you already have a database for from elsewhere is not picked, and
 downloading it replaces that database. **Cancel** backs out without downloading anything.
 
+Above the consoles, **BIOS checksums** offers libretro's list of BIOS files (`System.dat`, about
+75 KB), so Romperoom can recognise a BIOS file by its contents whatever its name. It is picked
+the first time and when a newer version is listed, and can't be chosen again once up to date.
+Once stored, the section says which version and how many files it lists, and the results say
+"BIOS checksums: N files listed". Then a card copy renames each BIOS file it recognises to the
+name the device looks for (see [Put games on an SD card](#put-games-on-an-sd-card)).
+
 | Light                                                                     | Dark                                                                           |
 | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | ![Review downloads](screenshots/databases-review-console-shelf-light.png) | ![Review downloads, dark](screenshots/databases-review-console-shelf-dark.png) |
@@ -244,8 +279,9 @@ already up to date, or why one failed — with **Identify now** offered when som
 **Check for updates** looks for a newer version of libretro-database's listing and says so next
 to the button, or says why it couldn't check. **Network activity**, below both sections, lists
 every request Romperoom has made for this feature — when, where to, what happened and how many
-bytes — so you can see for yourself that it only ever goes to GitHub, and only when you pressed
-Download, Check for updates or Get cover art.
+bytes — so you can see for yourself that it only ever goes to GitHub, or to ScreenScraper for a
+lookup, and only when you pressed Download, Check for updates, Get cover art or Look up N
+games. A ScreenScraper line shows its host and path only, never your account or a checksum.
 
 ### Managing what you have imported
 
@@ -350,9 +386,12 @@ changes your files. Press **Try again** to read every one of them again now.
 
 ## Settings and themes
 
-**Settings** (top right) has three tabs: **Appearance**, **Libraries** (see
-[Your libraries](#your-libraries)) and **Game databases** (see
-[Getting game databases](#getting-game-databases)). Appearance changes how Romperoom looks:
+**Settings** (top right) has four tabs: **Appearance**, **Libraries** (see
+[Your libraries](#your-libraries)), **Game databases** (see
+[Getting game databases](#getting-game-databases)) and **ScreenScraper**, where you save your
+own ScreenScraper account for [Look up on ScreenScraper](#look-up-on-screenscraper): your user
+name and password go into your computer's keychain, and the tab then only says that an account
+is saved, with **Forget the account**. Appearance changes how Romperoom looks:
 
 - **Theme:** Console shelf (warm and cosy), CRT neon (glowing arcade colours) or Clean modern
   (quiet, so the cover art stands out).
@@ -363,6 +402,10 @@ Your choice is remembered.
 | Light                                                     | Dark                                                           |
 | --------------------------------------------------------- | -------------------------------------------------------------- |
 | ![Settings](screenshots/settings-console-shelf-light.png) | ![Settings, dark](screenshots/settings-console-shelf-dark.png) |
+
+| Light                                                                          | Dark                                                                                |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| ![Settings › ScreenScraper](screenshots/screenscraper-console-shelf-light.png) | ![Settings › ScreenScraper, dark](screenshots/screenscraper-console-shelf-dark.png) |
 
 | CRT neon, dark                                           | Clean modern, dark                                               |
 | -------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -435,7 +478,13 @@ ES-DE. Put the card in your computer first. The wizard has six steps, and until 
    multi-disc game wins over one missing a disc, and the review step names any disc the library
    doesn't have. **Skip identical copies** leaves out a
    second copy of the same file. You can also choose the kinds of artwork, and for devices with
-   a BIOS folder, a folder of BIOS files to copy. A size estimate updates as you choose.
+   a BIOS folder, a folder of BIOS files to copy. With BIOS checksums downloaded (see
+   [Download for me](#download-for-me)), a BIOS file is recognised by its contents and copied
+   under each name the device looks for, whatever it is called in your folder; the check step
+   names any console whose BIOS files were not found. For a device that shows box art at a fixed
+   width (Onion), Romperoom copies a smaller box art picture, never wider than the device shows
+   it; your own picture is not changed. Only PNG pictures are made smaller. A size estimate
+   updates as you choose.
    Romperoom remembers these choices for next time. To keep more than one set for a device, save
    it under a name: see [Saved packages](#saved-packages).
 3. **Where.** Pick the card. Each card shows its size and free space. A card Romperoom can't use
@@ -671,8 +720,15 @@ an older version of Romperoom haven't been checked yet: press **Scan again** to 
 the same bytes, such as a game on your NAS and the same game on a USB drive. Each set shows the
 game's picture, its console, how many libraries hold it and its size, then each copy with its
 library's name and where it is inside that library. The line above the list says how many sets
-there are and how much space the extra copies take. It is a report: nothing there moves or is set
-aside, and **Duplicates** only ever sets aside copies inside one library. With one library there is
+there are and how much space the extra copies take. Each copy is marked **Keep** or **Set aside**:
+Romperoom suggests keeping the copies in one library (the one with the copy it would keep on
+Duplicates) and setting aside the copies in the others. **Keep the copy in a different library**
+chooses another library for that set, or **Keep every copy** leaves the set alone.
+**Set aside the extra copies** opens the preview: each copy goes to the set-aside folder of its
+own library, never to another drive, and you can put it back from History or Set aside as with
+any tidy. Just before anything moves Romperoom checks each kept copy again (it must still be
+there, with the same contents), and both libraries must be connected and scanned. Copies inside
+the kept library are never touched here: **Duplicates** handles those. With one library there is
 nothing to compare: add another in **Settings** › **Libraries** (see
 [Your libraries](#your-libraries)). The **Library** choice at the top of Tidy up doesn't apply
 to this tab, which compares every library: "Every library is compared here." stands in its place.
@@ -746,7 +802,9 @@ Romperoom says so and changes nothing, so connect it first. See
 [troubleshooting](troubleshooting.md#romperoom-was-interrupted-while-tidying).
 
 **History** lists every tidy with what is still set aside, and **Undo** for each. A run whose
-rest you discarded says **Stopped: the rest was discarded**.
+rest you discarded says **Stopped: the rest was discarded**. A run from Across libraries also
+names the library that kept the copies ("· more · kept in roms"). **Finish** of such a run waits
+until the kept library is connected; **Undo** does not need it.
 
 **Set aside** lists the files waiting, grouped by when they were set aside. **Put back** returns
 one file, and **Put all back** a whole group. Romperoom never overwrites: if another file now
@@ -761,7 +819,10 @@ age is the time the run that set it aside started. With nothing that old, **Dele
 unavailable and says so. The preview names the age in full ("… set aside in roms more than 30 days
 ago will be deleted forever."), shows how much space, and you type `DELETE FOREVER` to confirm. A
 file that changed or went missing since it was set aside is kept, and the preview says how many.
-This cannot be undone.
+So is a copy set aside from Across libraries while the library that kept its other copy is
+unplugged or removed, or that copy changed ("the copy kept for it can't be checked"): put it back,
+or connect that library first. This
+cannot be undone.
 
 **Re-link to renamed games** sits above the leftover artwork. When you renamed a game outside
 Romperoom, its pictures keep the old name and look left over. If exactly one game of the same
