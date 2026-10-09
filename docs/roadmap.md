@@ -100,9 +100,9 @@ a journal that knows its library.
   time or together, and Delete forever behind a preview and typed words.
 - **Recovery:** a run that stopped (a crash, or Cancel) is offered to finish or undo, at the next
   start and from its own result; a Tidy up run can also discard the rest.
-- **Tidy up, smaller things:** leftover artwork shown one cause at a time, a picture beside each
-  set of duplicates, and Delete forever limited to what was set aside more than 30 or 90 days ago
-  ([user guide](user-guide.md#tidy-up-your-library)).
+- **Tidy up, smaller things:** leftover artwork shown one cause at a time, a picture beside each set
+  of duplicates and beside a copy of another game, and Delete forever limited to what was set aside
+  more than 30 or 90 days ago ([user guide](user-guide.md#tidy-up-your-library)).
 - **Standardise:** console folders renamed and merged to one device profile's names, and
   identified games renamed to their DAT names with their art, saves, cue sheets, playlists and
   game list entries ([user guide](user-guide.md#standardise-your-library),
@@ -162,6 +162,27 @@ Put a playable selection on a handheld's SD card.
   formatting ([architecture.md](architecture.md#card-writer)). The page never names a path
   ([decisions.md](decisions.md#23-the-page-never-names-a-path-to-write-to)).
 - **BIOS folders:** a BIOS folder chosen per library is copied to a device that has one.
+- **Network export folders and read-only Linux cards:** an export folder on a network drive (or
+  one Romperoom cannot check) asks first, and a Linux card mounted read-only is refused up front
+  ([ADR 47](decisions.md#47-an-export-folder-on-a-network-drive-asks-first)). The Linux side is
+  tested from hand-written recorded output only.
+- **Copies that differ:** when a game file is in two libraries with different bytes, one copy
+  goes (the one Tidy up would keep) and the Check step names its library, where the game was left
+  out as a name clash before; a multi-file game whose files differ is still left out
+  ([ADR 48](decisions.md#48-copies-that-differ-send-tidys-keeper-and-say-so)).
+- **Make it fit:** when the games do not fit, Romperoom suggests which to leave out, biggest
+  first; the player keeps any and applies the list ([user guide](user-guide.md#make-it-fit),
+  [ADR 50](decisions.md#50-make-it-fit-suggests-and-the-player-applies)).
+- **Art checksums learned while copying:** the writer keeps the checksum of each picture it reads
+  whole, so later copies compare it without reading it again.
+- **Refusal names:** a copy's refusals, warnings and other details name the card, libraries and
+  folders by name, never by their paths
+  ([troubleshooting](troubleshooting.md#a-detail-is-left-out-on-the-done-screen)).
+- **Saved packages:** named choices per device on the **What to copy** step (save, load,
+  replace, rename, delete), kept on this computer and never naming a card
+  ([user guide](user-guide.md#saved-packages),
+  [ADR 49](decisions.md#49-saved-packages-live-in-the-pages-storage)). They go with the app data
+  folder.
 - **Sync a card:** bring a handheld's new games and in-game saves into the library and newer
   saves back to the card, in one reviewed, undoable step that deletes nothing on either side
   ([user guide](user-guide.md#sync-a-card),
@@ -175,18 +196,14 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 
 **Still planned:**
 
-- **Saved packages:** named selections per device. Only the last choices are remembered now.
-- **A fuller "make it fit"** that picks games for you. Today it offers artwork, other versions
-  and the biggest consoles.
 - **Device profiles** checked on real devices (all four are `community` today), and more of them.
 - **Art resized for the device,** and BIOS files found by their hash, not their name.
-- **Read-only cards on Linux.** `lsblk` does not report mount options, so a card mounted
-  read-only is not refused up front, and the run fails at its writes instead.
-- **Export folders on a network share** are written without asking first.
-- **Cover art carries no SHA-1 from the catalog,** so the writer hashes the art file itself
-  whenever it must compare it with the card.
-- **A game whose files differ between two libraries** (same folder and name, different bytes)
-  is left off the card as a name clash. It should pick one copy instead.
+- **Art checksums for pictures never copied:** the scan does not read art, so a picture carries a
+  checksum only once the writer or Tidy up's leftover-artwork check has read it.
+- **A multi-file game whose files differ between two libraries** is left off the card as a name
+  clash. Picking a whole set from one library is not built.
+- **Two different copies of a game file in one library** (two of its folders) leave the game off
+  the card as a name clash; only copies in different libraries are chosen between.
 - **Code signing, notarization, automatic updates and Intel Macs** (see
   [release.md](release.md#not-in-this-release)).
 
@@ -195,8 +212,8 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 1. **Signing and automatic updates** for the beta builds (see [release.md](release.md)).
 2. **[Milestone 3, Organize](#milestone-3-organize-tidy-up-done):** setting aside copies
    across libraries.
-3. **[Milestone 4, Deploy](#milestone-4-deploy-sd-cards-done):** saved packages, profiles
-   checked on real devices and a fuller "make it fit".
+3. **[Milestone 4, Deploy](#milestone-4-deploy-sd-cards-done):** profiles checked on real
+   devices.
 4. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** scrapers
    (ScreenScraper, its own spec), once the owner decisions in [Open questions](#open-questions)
    are made.

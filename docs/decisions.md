@@ -52,6 +52,10 @@ design history.
 44. [Re-link renames a leftover picture after the one game that clearly matches it](#44-re-link-renames-a-leftover-picture-after-the-one-game-that-clearly-matches-it)
 45. [Removing a library forgets it whole, and touches nothing on disk](#45-removing-a-library-forgets-it-whole-and-touches-nothing-on-disk)
 46. [Copies across libraries are reported, never tidied](#46-copies-across-libraries-are-reported-never-tidied)
+47. [An export folder on a network drive asks first](#47-an-export-folder-on-a-network-drive-asks-first)
+48. [Copies that differ send Tidy's keeper, and say so](#48-copies-that-differ-send-tidys-keeper-and-say-so)
+49. [Saved packages live in the page's storage](#49-saved-packages-live-in-the-pages-storage)
+50. [Make it fit suggests, and the player applies](#50-make-it-fit-suggests-and-the-player-applies)
 
 ## 1. One repository, four workspaces
 
@@ -300,7 +304,12 @@ stands.
 - **Cost:** more state in the host (tokens, plans, a generation per library change), and a plan
   can go stale while the user reads the Check step, so the page has to measure again. The page
   shows names, never a full destination path; paths appear only in a report's collapsed
-  details, relative to the card.
+  details, relative to the card. Every sentence the deploy host sends in a report, a refused
+  start or the volume list names the card, libraries and folders by name (`pageText`), and a
+  sentence naming any other folder is replaced whole, so such a detail can be lost rather than
+  show a path. One gap: a path glued to a word (`word/opt/x`) is not recognised as a path; no
+  engine message produces one. An error the deploy channels throw (shown by the wizard as it
+  comes) does not pass through `pageText`; none names a path today.
 
 ## 24. A crash leaves only what the manifest names
 
@@ -763,3 +772,78 @@ stands.
   are not told apart, so every file reads as held twice. The look reads each candidate copy's
   device and inode on disk in the main process, as Duplicates does, so a share that stops
   answering after the folder probe can freeze the window until it answers.
+
+## 47. An export folder on a network drive asks first
+
+- **Decision:** an export folder on a network drive, or one whose drive cannot be told, is
+  written only after the user ticks **Copy to** (the folder) **anyway** for that folder choice.
+  The host checks once per choice when it plans and shows the page `network` or `unknown`; for a
+  plan that asked, the start request's `confirmNetwork: true` becomes the plan's own folder path,
+  and the writer checks again and refuses unless that path matches exactly. On Linux a card
+  mounted read-only (the `ro` mount option) is refused as read-only, like the lock switch.
+- **Why:** owner decisions (2026-10-08). A network folder is slower and a dropped connection
+  stops the copy part-way, so the player should choose it knowingly, as a network card is refused
+  outright; not knowing must ask, never write. The read-only mount was offered and failed at the
+  first write.
+- **Cost:** detection is per OS and incomplete: Linux network file systems outside the list
+  (`fuse.rclone`, `davfs`, `fuse.glusterfs`, for example) and a Windows mapped drive whose real
+  path stays a letter read as local; macOS autofs mounts ask though local. On Linux an old
+  read-only mount under a newer writable one on the same mount point refuses the card (it fails
+  safe). Linux is tested from hand-written recorded output only, and the Windows rule against
+  expected paths only. The question appears in the Where step only for what the plan saw; a
+  share mounted over the folder later is refused at Preview or Write with "choose the folder
+  again".
+
+## 48. Copies that differ send Tidy's keeper, and say so
+
+- **Decision:** when one game holds a file in two or more libraries with different bytes under
+  one card name, the card gets the copy Tidy up's `rankCopies` ranks first, with the package's
+  region order, and the Check step names that copy's library (**Copies that differ**). The
+  keeper's `identified` input is the file's own content match with a game database, not the
+  game's confidence. A game holding a playlist or sheet (`.m3u`, `.cue`, `.gdi`, `.ccd`, `.toc`)
+  or discs of one release, a copy with no SHA-1 or 0 bytes, or two different copies in one
+  library (two of its folders) still leave the game out as a name clash.
+- **Why:** owner decision (2026-10-08): pick one and say so, rather than leave the game out or
+  ask per game; the decision is about one game in two libraries, so a library is never picked
+  from against itself. Every copy linked to one game shares its confidence, so only the file's
+  own match can tell a good dump from another. Picking a disc or a track per file would mix two
+  libraries' copies in one set.
+- **Cost:** region and revision never decide (copies of one name share their tags): without a
+  game database the copy found first wins, and a rescan that finds a file anew can change which.
+  Two different copies in two folders of one library still leave the game out. Most art carries
+  no checksum and is still hashed. The note does not say why a copy won.
+
+## 49. Saved packages live in the page's storage
+
+- **Decision:** the card wizard's saved packages (named choices per device) are kept in the
+  renderer's localStorage under `romperoom.deploy.packages.v1`, a versioned list beside the
+  remembered last choices (`romperoom.deploy.v1`) and independent of them. A package holds the
+  device and every choice of the What step, never a destination. Loading is explicit, replaces
+  every choice and keeps the card or folder already chosen.
+- **Why:** owner decision (2026-10-08): named selections per device, on this computer, without
+  the card. The choices already live in the page, hold no path, and are validated again by the
+  engine's schema when planned; a catalog table would add a migration, channels and bridge
+  methods for data only the page reads. A second key means a damaged list never costs the last
+  choices, nor the reverse.
+- **Cost:** packages are lost with the app data folder and do not travel to another computer.
+  Every change reads the list again, but two windows could still race (the app opens one).
+  Packages of a device that is gone are kept but never listed: the card counts them and removes
+  them all together when the player asks, never one by one, and they still count toward the 400
+  read in all (else a new package past them would be lost on the next read).
+
+## 50. Make it fit suggests, and the player applies
+
+- **Decision:** when the games do not fit, the wizard asks the engine for a suggestion (the
+  largest games first, then a game with another version going, never a game the player kept) and
+  shows it for review; nothing is left out until the player presses **Leave these games out**.
+  The applied list travels as `selection.excludeGameIds` (the excluded games, not an allow-list
+  and not a held id), is left out after regions are picked, and is never stored: any change of
+  choices or destination forgets it.
+- **Why:** leaving out a player's games without their review is the one thing this feature must
+  never do, and a suggestion that changes while it is read could. The excluded list is as long as
+  the suggestion (an allow-list is as long as the library; a held id expires with the plan and
+  needs a channel), and left out after regions so a left-out USA game never brings in its
+  European version.
+- **Cost:** largest first can leave out a big game when only a little is over (one press of
+  **Keep this one** asks again); asking plans the package again up to three times; a list belongs
+  to one plan, so changing anything means asking again.

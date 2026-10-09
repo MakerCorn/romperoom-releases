@@ -24,6 +24,10 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live tidy up batch run](#live-tidy-up-batch-run)
 - [Live libraries run](#live-libraries-run)
 - [Live across libraries run](#live-across-libraries-run)
+- [Live deploy destination run](#live-deploy-destination-run)
+- [Live deploy copies run](#live-deploy-copies-run)
+- [Live saved packages run](#live-saved-packages-run)
+- [Live batch 2 run](#live-batch-2-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -135,7 +139,7 @@ support, so run `npm run build` first. There is no browser to install.
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                              |
 | `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                  |
-| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, hostile IPC, zoom, gamepad                                                                              |
+| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), a refusal with no path, hostile IPC, zoom, gamepad                  |
 | `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                           |
 | `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                      |
 | `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                               |
@@ -288,6 +292,8 @@ them are listed, with whether a packaged build honours them, in
 - `ROMPEROOM_TEST_UNGUARDED_WEBRTC` is the positive control for the network probes.
 - `ROMPEROOM_TEST_VOLUME` lists one folder as the only volume, for deploys without a card.
 - `ROMPEROOM_TEST_EXPORT_FOLDER` replaces the export-folder dialog.
+- `ROMPEROOM_TEST_FOLDER_NETWORK` makes every export folder read as on a network drive
+  (`network`) or not checked (`unknown`), so a test can drive the confirmation.
 - `ROMPEROOM_TEST_DEPLOY_DELAY_MS` slows each chunk written, so a test can cancel mid-copy.
 - `ROMPEROOM_TEST_VOLUME_BYTES` makes the test volume small, so a test can fill it.
 - `ROMPEROOM_TEST_TIDY_DELAY_MS` slows each file a tidy job moves, so a test can cancel or
@@ -322,11 +328,25 @@ so the wizard lists it as the only card (removable, file system "other") and the
 into it. The tests then read the folder: the profile's layout, SHA-1 against the library, the
 game list, the manifest, `.romperoom-removed` after a console is left out, and no
 `.romperoom-part` file left behind. `ROMPEROOM_TEST_VOLUME_BYTES` caps the folder's reported
-size, and `ROMPEROOM_TEST_DEPLOY_DELAY_MS` makes a copy slow enough to cancel. These seams are
+size, and `ROMPEROOM_TEST_DEPLOY_DELAY_MS` makes a copy slow enough to cancel. On an 87,780-byte
+card (about 4 KB short), one test asks **Suggest games to leave out**, keeps the suggested game,
+applies the next one and copies: the card holds two consoles' games, and Check lists the one left
+out. Another exports into a folder inside the library: the copy is refused, **Details** reads
+"Export is inside roms, which is never written to", and the page's HTML holds no path of the
+sandbox (with the host's `pageText` taken off the refusals, it fails). These seams are
 ignored in a packaged build. No test volume is a real removable disk, so the volume listing's
 safety rules are covered by unit tests and by the [real-card run](#real-card-run), not here.
-The fixture's `Advance Wars (USA)` is left out by the planner (its identical copy in a second
-GBA folder clashes on the card's file name), so the copy assertions use Tetris and Zelda.
+The fixture's `Advance Wars (USA)` is copied once (its identical copy in a second GBA folder is
+dropped). One test adds a second library in Settings holding `GBA/Advance Wars (USA).gba` with
+other bytes: the Check step's **Copies that differ** names the first library, and the card gets
+that copy's bytes. With
+`ROMPEROOM_TEST_FOLDER_NETWORK=network` and `ROMPEROOM_TEST_EXPORT_FOLDER`, one test exports to a
+folder the check calls a network drive: through the bridge, a preview and a real start without
+the tick are both refused by the writer and the folder stays empty, and the wizard asks, holds
+**Next** and copies once ticked. One test saves a package on the What step, relaunches the app on
+the same data folder (the page's localStorage lives there), loads it, loads a package written
+into localStorage that names a console the library lacks, renames and deletes, copies with the
+loaded package (no SNES game on the card), and reads the note for a damaged list.
 
 To run the same wizard against a FAT32 disk image by hand, attach an image as in the
 [real-card run](#real-card-run) and start the built app with
@@ -409,7 +429,11 @@ a release; [release.md](release.md#the-release-workflow) describes it.
   Ubuntu 24.04 x64 container ([ci-runners.md](ci-runners.md#a-linux-runner-in-docker)). The
   container runs as an ordinary user: as root, the fixture's unreadable folder is readable and
   the scan tests fail. Never checked on a real Linux desktop: the AppImage's sandbox where user
-  namespaces are restricted (Ubuntu 23.10+), SD card readers, and desktop integration.
+  namespaces are restricted (Ubuntu 23.10+), SD card readers, and desktop integration. The card
+  listing's read-only and network checks are tested from fixtures hand-written in util-linux's
+  JSON shape and `/proc/self/mounts` format (`packages/engine/test/fixtures/volumes/linux-*`),
+  not captured on a Linux machine: the fields they rely on are `target`, `fstype` and `options`
+  (findmnt) and lsblk's `mountpoints`, `ro`, `rm`, `hotplug` and `tran`.
 
 ## Running against a real library safely
 
@@ -1234,7 +1258,7 @@ evaluated):
 - live region: **observed**; nothing said on opening or paging; **Look again** pressed with
   Enter kept focus and said "72 sets of copies in more than one library · 92.6 KB in extra
   copies" once; pressed again with the same outcome, nothing new was said (the shared
-  announcer's known limit).
+  announcer's known limit then; batch 2 lifted it, see [Live batch 2 run](#live-batch-2-run)).
 - the Library choice: **observed**; on this tab the choice is `visibility: hidden` (Shift+Tab
   from the tab skips it) and "Every library is compared here." shows; on Duplicates the choice
   shows again.
@@ -1265,6 +1289,326 @@ evaluated):
 - nothing changed: **observed**; every look left every library byte-identical; after the undo,
   `roms` had every file back with the same content and modification time, and nothing
   left set aside; the network log was empty.
+
+## Live deploy destination run
+
+CI never runs the real network check against a real share: the unit suites read recorded mount
+tables (`deploy-mounts.test.ts`, `deploy-folder-network.test.ts`, whose one real case is this
+machine's temp folder) and the end-to-end suite replaces the check with
+`ROMPEROOM_TEST_FOLDER_NETWORK`. Run this on a Mac before a release that changes
+`deploy/folder-network.ts`, `deploy/mounts.ts` or the Where step:
+
+1. **The check on this Mac.** Over the built engine
+   (`node --input-type=module -e 'const e = await import("./packages/engine/dist/src/index.js"); …'`),
+   call `exportFolderNetwork` on the temp folder, a folder on the Mac's own disk, one on each
+   external disk, a folder that does not exist, and a folder on a mounted network share if one is
+   mounted (any share but your library's). Record each answer next to the line `/sbin/mount`
+   prints for its mount.
+2. **A local export folder.** The built app with `ROMPEROOM_TEST_EXPORT_FOLDER` at an empty
+   scratch folder on the Mac's disk: **Export to a folder** shows no question; copy, and the files
+   arrive.
+3. **A network export folder.** With a share mounted, the same with an empty scratch folder on
+   the share: the question names the folder, says "on a network drive", **Next** waits for the
+   tick, and the copy runs once ticked. Choose the folder again: unticked. Remove the scratch
+   folder afterwards.
+4. **Linux and Windows.** Not evaluated here: Linux from hand-written recorded output only,
+   Windows' network-path rule against expected paths only.
+
+What it cannot observe: Linux and Windows; a share that hangs (the 5-second limits on the check
+and on the folder's free-space read are pinned by unit tests with a hanging seam); a Linux card
+mounted read-only for real.
+
+**Last run: 2026-10-08,** macOS, the built engine and the built app at 241d17a, no network share
+mounted (the library's share was not mounted and was never touched):
+
+- the check on this Mac: **observed**; the temp folder, `/Users` and a folder on each of three
+  external disks (two APFS, one exFAT) answered `{"kind":"local"}`, each beside a `/sbin/mount`
+  line flagged `local`; a folder that does not exist answered
+  `{"kind":"unknown","reason":"the folder could not be opened (ENOENT)"}`; the home folder's
+  autofs mount answered `network` (`autofs at` its mount point; its `/sbin/mount` line reads
+  `(autofs, automounted, nobrowse)`, not flagged local: it asks, the stated cost). Each answered
+  within 6 ms.
+- a local export folder: **observed**; the built app with `ROMPEROOM_TEST_EXPORT_FOLDER` at an
+  empty scratch folder in the temp folder and no folder-network seam (the real check): the plan's
+  `destination.network` was `null`, no checkbox appeared, **Next** was available, and the copy
+  ended "All done" with the games, game lists, covers and `romperoom-manifest.json` in the
+  folder; nothing was logged as an error.
+- a network export folder: **not evaluated**; no share was mounted, so the real check's positive
+  control (`smbfs at` the share's mount point) was not seen. The question itself is covered by the
+  end-to-end suite through the seam only.
+- Linux and Windows: **not evaluated** (above).
+- `e2e:packaged`: **observed**; after `package:dir`, `4 passed`, including the plain launch that
+  sets `ROMPEROOM_TEST_FOLDER_NETWORK` to an answer an unpackaged build refuses.
+
+## Live deploy copies run
+
+CI never plans a real library holding copies that differ: the unit suites seed a catalog or scan
+temp folders (`deploy.test.ts`, `deploy-db.test.ts`, `deploy-identity.test.ts`) and the
+end-to-end suite builds its own sandbox. Run this on a Mac before a release that changes
+`pickCopies`, the deploy reader or the Check step's **Copies that differ**:
+
+1. **Two scratch libraries** outside the repository and outside your library's share, both
+   folders named `roms`: the first holds `GBA/Advance Wars (USA).gba` (any bytes) and
+   `Game Boy Advance/Advance Wars (USA).gba` (the same bytes), plus a one-disc CD game as a cue
+   sheet and one track; the second holds `GBA/Advance Wars (USA).gba` with other bytes and the
+   CD game with the same cue sheet and a track with other bytes. Fingerprint both (path, size,
+   modification time and SHA-1 of every file) before and after.
+2. **The built app** (`npm run build`) with a fresh `ROMPEROOM_DATA_DIR`,
+   `ROMPEROOM_TEST_PICK_FOLDER` at the first library and `ROMPEROOM_TEST_VOLUME` at an empty
+   scratch card folder (so the app lists no real drive; keep its path short, since the seam's
+   volume id is `test:<real path>` and ids over 100 characters are refused): set up, quit, start
+   again with the picker at the second library, add and scan it in **Settings** › **Libraries**.
+3. **SD card** › ES-DE › the default choices › the scratch card › **Check**: record
+   **Copies that differ** (expected: "Advance Wars (USA).gba: the copy in roms"), **Left out**
+   (expected: the CD game, "Another game would use the same file name"), the step heading's
+   focus and the live region (nothing new said). Copy, and compare the card's
+   `ROMs/gba/Advance Wars (USA).gba` with each library's copy by SHA-1.
+4. **With a game database** matching the second library's Advance Wars (a hand-written DAT,
+   imported in **Settings** › **Game databases**, then identify both): check again; expected
+   "the copy in roms (2)", and the card's copy replaced with it on the next copy.
+5. **Tidy up** › **Across libraries** for the same two libraries: record what it lists for the
+   differing pair.
+6. **One library, three libraries, the cap.** Add to the first library a game held twice with
+   different bytes (`GBA/` and `Game Boy Advance/`) and give the second a third copy of it; put a
+   game in all three of three libraries with three different byte sets (the third library's in
+   `GBA/`, the others in `Game Boy Advance/`); and add 21 more games held in two libraries with
+   different bytes. Scan both again, add and scan a third library, and check again: expected,
+   the first game under **Left out** ("Another game would use the same file name"), the
+   three-library game as "the copy in roms (3)" (the shorter folder name), the lead for many
+   ("23 game files are in your libraries more than once, …"), 20 items, "And 3 more.", focus on
+   the step heading and nothing new said. Copy, and compare the card's copies by SHA-1. Then
+   fingerprint all three libraries again, and read the network log (expected: empty).
+
+What it cannot observe: a real card (the scratch folder stands in), a library on a network
+share, Windows and Linux.
+
+**Last run: 2026-10-08,** macOS, the built app at aae5b2b, through a throwaway Playwright script
+(not committed), every launch with `ROMPEROOM_TEST_VOLUME` at a scratch card folder in the temp
+folder, the three libraries in the temp folder (the CD game was `PSX/Quest (USA).cue` and
+`PSX/Quest (USA).bin`; the library's share was never touched):
+
+- Check: **observed**; **Copies that differ** read "A game file is in your libraries more than
+  once, and the copies differ. One copy goes to the card:" and "Advance Wars (USA).gba: the copy
+  in roms"; **Left out** "Another game would use the same file name: 1 game (like Quest)"; focus
+  on "Check and copy"; the live region still "Scan finished: 2 games found"; one Tab from the
+  heading went to the "1 note" disclosure (the note's list holds no tab stop).
+- the copy: **observed**; the card's `ROMs/gba/Advance Wars (USA).gba` had the first library's
+  SHA-1 (the copy found first), and no `ROMs/psx` folder was written.
+- with a game database: **observed**; "Identification finished: 1 verified, 1 name match, 2
+  unidentified", then "the copy in roms (2)", and the next copy ("1 file copied") put the second
+  library's bytes on the card (nothing went to `.romperoom-removed`: the writer replaced its own
+  file).
+- **Across libraries**: **observed**; "No copies in more than one library" (it reports identical
+  copies only), with "2 files are skipped because they're part of a multi-file game or shared
+  between consoles".
+- one library, three libraries, the cap: **observed**; **Left out** "Another game would use the
+  same file name: 2 games (like Golden Sun, Quest)", with no Golden Sun on the card; "Metroid
+  Fusion (USA).gba: the copy in roms (3)", and the card held the third library's bytes; the lead
+  for 23, 20 items and "And 3 more."; focus on the step heading, the live region still the last
+  scan's line.
+- the libraries: **observed**; every fingerprint (path, size, modification time, SHA-1) was the
+  same after each step as before it: setup, add, scan, plan, check and copy; the DAT import,
+  identify and copy; the rescans, the third library and the last copy.
+- the network log: **observed**; empty, and no `network-log.json` in the data folder.
+- a real card, a library on a network share, Windows and Linux: **not evaluated** (above).
+- `e2e:packaged`: **observed**; after `package:dir`, `4 passed`.
+
+## Live saved packages run
+
+CI runs saved packages in the built app only on storage its own test writes (a package naming a
+missing console and a damaged list); this run covers hostile, blocked and full storage, the caps,
+packages of a device Romperoom no longer knows, reflow and the keyboard by hand. Run this
+on a Mac before a release that changes `deploy/packages.ts`, `deploy/SavedPackages.tsx` or the
+wizard's choices. A throwaway Playwright script (outside the repository, or deleted before
+committing) drives the harness (`rr.launch(dataDir, { pickFolder, testVolume })`), so it can
+also write localStorage with `page.evaluate`.
+
+1. **The built app** (`npm run build`) with a fresh `ROMPEROOM_DATA_DIR`,
+   `ROMPEROOM_TEST_PICK_FOLDER` at a scratch copy of the fixture library (or any small library
+   outside your share) and `ROMPEROOM_TEST_VOLUME` at an empty scratch card folder: set up, then
+   **SD card** › ES-DE › **What to copy**.
+2. **Save:** untick **Super Nintendo**, save as `Kids` with Enter; record the live region, the
+   mark and where focus is. Tick it again: record the mark.
+3. **Restart** on the same data folder: record whether `Kids` is listed and marked; **Load
+   Kids**: record the console ticks, the live region and focus. Choose the scratch card on
+   **Where**, go **Back**, load again, and record whether the card is still chosen.
+4. **A stale console:** add a package `Old card` for `es-de` naming `nes` and `n64` to
+   `romperoom.deploy.packages.v1`, reopen the step (**Back**, **Next**), load it: record the note
+   and the live region. Rename it (Enter) and delete it (**Delete package**): record focus after
+   each.
+5. **The caps:** fill the list to 20 for ES-DE: record **Save as a package**'s state and
+   description. Then write 400 packages of a device id Romperoom doesn't have, reopen the step and
+   save: record the refusal and the note; **Remove them** (**Keep it** first, then **Remove
+   packages**): record focus, the live region and the key; save again.
+6. **Damaged storage:** set the key to `{`, reopen the step: record the note; save a package and
+   record the key's value.
+7. **The copy:** with `Kids` loaded, copy to the scratch card; list the card's `ROMs/` folders.
+   Then read the network log (expected: empty).
+
+What it cannot observe: a real card, a real full storage (the unit tests throw
+`QuotaExceededError`), two windows, Windows and Linux.
+
+**Last run: 2026-10-08,** macOS, the built app at 33f7a6d, through a throwaway Playwright spec
+outside the repository using the harness, the fixture library in a temp sandbox, every launch
+with `testVolume` at a scratch card folder; run again on the final-review fixes (the hidden
+packages' note and **Remove them**), every cell the same. 42 cells observed, 0 failed, 5 not
+evaluated:
+
+- save: **observed**; Enter said "Saved Kids.", the item read "Kids" with **Loaded**, focus stayed
+  in **Package name** (emptied); ticking Super Nintendo again read **Loaded, then changed**; the
+  button saved "Trip" the same way. The stored package held the device and every choice and no
+  destination, and `romperoom.deploy.v1` was the same before and after the save.
+- refusals: **observed**; a blank name ("Type a name for the package.", the field
+  `aria-invalid`), `kIDS` beside `Kids` ("There's already a package called kIDS. …"), 41
+  characters ("Use a name of 40 characters or fewer."); 40 emoji (40 code points) saved; Enter
+  while composing (IME) saved nothing; a name holding markup was shown as text (no element, no
+  script ran) with its control and direction characters removed.
+- restart and load: **observed**; `Kids` and `Trip` listed with no mark; **Load Kids** unticked
+  Super Nintendo, said "Loaded Kids.", kept focus on **Load Kids** and set the last choices. The
+  scratch card chosen on **Where** was still chosen after **Back** and two loads.
+- replace: **observed**; the question "Replace Kids with the choices on this page?" took the
+  row's buttons' place (no dialog) and focus; **Keep it** returned focus to **Replace Kids** and
+  wrote nothing; **Replace package** said "Replaced Kids.", focus on **Replace Kids**, mark
+  **Loaded**.
+- a stale console: **observed**; loading `Old card` said "Loaded Old card. This package also lists
+  a console you can't copy now: Nintendo 64. It stays off the card." and showed that note; loading
+  `Kids` took the note away.
+- rename: **observed**; Escape cancelled with focus on **Rename Old card**; `kids` was refused as
+  taken; Enter renamed it ("Renamed Old card to NES only."), focus on **Rename NES only**, still
+  **Loaded**.
+- delete: **observed**; the question "Delete NES only? Only the saved choices are forgotten: …"
+  took focus; **Keep it** returned it to **Delete NES only**; **Delete package** said "Deleted NES
+  only.", focus on the **Saved packages** heading, the last choices untouched.
+- the mark and the device: **observed**; after picking Batocera (no packages listed) and ES-DE
+  again, no package was marked.
+- keyboard: **observed**; Tab from the heading went Load, Replace, Rename, Delete for each package,
+  then **Package name** and **Save as a package**; Enter and Space loaded; a visible 3 px focus
+  ring (`:focus-visible`).
+- the copy: **observed**; with `Kids` loaded the card's `ROMs/` held `gba` and `nes` only.
+  **Start over** left the packages as they were and forgot the last choices.
+- damaged storage: **observed**; `{`, version 2, `[]`, `null`, `packages` not a list and a value
+  over 1,000,000 characters each showed "Some saved packages couldn't be read, so they aren't
+  listed." and "No saved packages for ES-DE yet.", with no console error. A list of bad entries
+  (not objects, empty or 41-character names, no device, `GOOD` after `Good`, a `__proto__` key)
+  listed `Good` and `Proto` with the note; `Good`'s bad fields fell back alone (one version of
+  each game on, 64 GB, box art) and nothing was polluted. The next save kept the hidden
+  `no-such-device` package; after `{`, saving `Fresh` wrote a version-1 list of that one package.
+- the caps: **observed**; at 20 for ES-DE **Save as a package** had `aria-disabled="true"`,
+  described by "ES-DE has 20 saved packages, the most Romperoom keeps. Delete one to save
+  another."; Enter in the field, Enter and Space on the button and a forced click saved nothing;
+  deleting one offered it again. With 400 hidden packages of a gone device, ES-DE listed none,
+  **Save as a package** was offered and the save was refused with "There's no more room on this
+  computer for saved packages. …"; the note read "400 saved packages are for devices Romperoom no
+  longer knows, so they aren't listed." and described **Remove them**. Its question took focus;
+  **Keep it** returned focus to **Remove them** and kept all 400; **Remove packages** said
+  "Removed 400 saved packages.", focused the **Saved packages** heading and took the note away,
+  and the next save wrote a list of that one package. A 401st package was left out with the
+  note.
+- blocked and full storage (the page's `Storage` methods replaced to throw): **observed**;
+  "Romperoom can't open saved packages on this computer just now." with no empty line, and a save
+  refused with "… Try again." writing nothing; a `QuotaExceededError` on save showed "There's no
+  more room on this computer for saved packages. …".
+- a long name sideways: **observed**; with a 40-character unbroken name marked **Loaded, then
+  changed**, the page's `scrollWidth` equalled its width at 320, 480 and 1280 CSS px, with the
+  list, the rename field and the delete question open.
+- the network log: **observed**; no `network-log.json` in the data folder.
+- a real card, real full storage, two windows, Windows and Linux: **not evaluated** (above);
+  `e2e:packaged`: **not evaluated** (nothing in the packaging changed).
+
+## Live batch 2 run
+
+CI runs make it fit, the refusal names and the announcer on the fixture only; this run records
+them by hand in the built app, with the art checksums the copy leaves in the catalog. Run this on
+a Mac before a release that changes `deploy/fit.ts`, the writer's `learnedSourceSha1`,
+`page-text.ts`, the Where step's suggestion or the shared announcer. A throwaway Playwright spec
+(outside the repository, or deleted before committing) drives the harness
+(`rr.launch(dataDir, { pickFolder, testVolume, volumeBytes, exportFolder })`), every launch with
+`testVolume` at a scratch card folder, and reads the catalog with the `sqlite3` command after
+each app is closed.
+
+1. **The built app** (`npm run build`), a fresh data folder, `pickFolder` at a scratch copy of the
+   fixture library, `testVolume` at an empty scratch card folder and `volumeBytes` 87,780: set
+   up, then **SD card** › ES-DE › **What to copy**.
+2. **The announcer:** save a package `Kids`, then press **Load Kids** twice; record each node added
+   to `#rr-announcer` and whether the region was ever empty.
+3. **Make it fit:** **Next**, choose the card: record the panel's heading. Press **Suggest games to
+   leave out** with Enter: record the group's text, the first **Keep this one** button's name,
+   what the region said and where focus is. Measure the page's sideways scroll and anything
+   outside the window at 1280, 480 and 320 CSS px (320 at 200% and 300% zoom), light and dark,
+   and the announcer's node. Tab to the first **Keep this one** and press Enter: record focus, the
+   region and the new list. **Leave these games out** (Enter): record focus and whether the panel
+   is gone; **Next**: record the Check step's **Left out** line; copy, and list the card.
+4. **Art checksums:** for every `media` row, compare `checksum` with the file's SHA-1.
+5. **The cached checksum:** change the learned picture's last byte, keeping its size and time;
+   relaunch on a second empty card (no `volumeBytes`): record whether the Where step still holds a
+   left-out list, then copy and record what the report says of that picture. Then change the
+   picture for real (new bytes and time), scan the library from Settings, and copy to a third
+   card: record the row's checksum after the scan, the card's file and the checksum learned.
+6. **Refusal names:** a new sandbox with `exportFolder` at a folder inside the library; export
+   there and **Write**: record **Details** and whether the page's HTML holds any path of the
+   sandbox.
+7. **A copy's cover and Look again:** a new sandbox with `SNES/Mario (USA).zip` (the bytes of
+   `Zelda (USA).zip`) and its own picture, and a second library holding `Advance Wars (USA).gba`:
+   on **Tidy up** › **Duplicates** record each copy's picture; on **Across libraries** press
+   **Look again** twice and record the region's nodes.
+8. **A long suggestion:** an empty sandbox with 70 NES games (one with a long unbroken name, one
+   with Hebrew and Arabic), `volumeBytes` 60,000: open the suggestion, count its rows and read the
+   line below them, and measure the layout as in step 3.
+9. **A failed re-choose:** in the first sandbox's setup, open the suggestion, then wrap the
+   `deploy:plan` handler in the main process (`app.evaluate`) to refuse a fit asked with kept
+   games; press **Keep this one**: record where focus is once the error shows.
+10. **The network log and the console:** whether `network-log.json` exists in each data folder
+   (expected: no), and any console error.
+
+What it cannot observe: a screen reader's speech (the region's nodes are recorded), a real card,
+Windows and Linux paths.
+
+**Last run: 2026-10-09,** macOS, the built app of `feat/batch2` after the final review's fixes,
+through two throwaway Playwright specs using the harness, six sandboxes under the temp folder,
+every launch with `testVolume` at a scratch card folder. 34 cells observed, 0 failed, 3 not
+evaluated:
+
+- the announcer: **observed**; three nodes added, "Saved Kids.", "Loaded Kids." and "Loaded
+  Kids." (the second load said again), one node in the region afterwards, never empty.
+- the panel: **observed**; "It doesn't fit: 4.1 KB too much", no "The biggest games:" list,
+  **Suggest games to leave out** not expanded.
+- the suggestion: **observed**; "Leave out 1 game to make it fit", "That saves 8.2 KB. …", "Game
+  Boy Advance: 1 game, 8.2 KB", "Advance Wars (Game Boy Advance, USA), 8.2 KB" with **Keep this
+  one: Advance Wars (Game Boy Advance, USA)**; the region said "Leave out 1 game to make it fit"
+  once; focus stayed on **Suggest games to leave out**.
+- layout: **observed** (8 cells); at 1280, 480 and 320 CSS px (200% and 300%), light and dark, no
+  sideways scroll and nothing outside the window; the announcer's node `display: contents`, 0 by 0.
+- keep (keyboard): **observed**; one Tab from the button to **Keep this one**, a visible focus
+  ring; focus on "Leave out 1 game to make it fit", the region "Keeping Advance Wars (Game Boy
+  Advance, USA). Leave out 1 game to make it fit." once the new list was there (one node), the
+  list now "Zelda (Super Nintendo, USA), 8.2 KB" and "You kept 1 game Romperoom chose.".
+- apply (keyboard): **observed**; focus on "1 game left out to make it fit.", the panel gone;
+  Check read "Left out to make it fit: 1 game (like Zelda)".
+- the copy: **observed**; "All done", the card's `ROMs/` held `gba` and `nes`, no Zelda file.
+- art checksums: **observed**; the copied picture (`GBA/images/Advance Wars (USA).png`) kept its
+  SHA-1, equal to the file's; the three pictures not copied kept none.
+- after a relaunch: **observed**; no left-out list on the Where step.
+- the cached checksum: **observed**; with the picture's bytes changed but its size and time kept,
+  the copy said "Most of it is on the card" and "its source's bytes no longer match the catalog"
+  for that picture, which was not on the card (the writer compared the catalog's checksum, it did
+  not hash the source again).
+- a changed picture: **observed**; after the scan the row's checksum was empty; the next copy put
+  the new bytes on the card and learned their SHA-1.
+- refusal names: **observed**; **Details** read "Export is inside roms, which is never written
+  to"; the page's HTML held no path of the sandbox or the library, nor any home or temp folder
+  path; the folder stayed empty.
+- a copy's cover: **observed**; in the Mario set, the copy `SNES/Zelda (USA).zip` showed Zelda's
+  picture (`alt=""`, 32 by 32 CSS px), the kept copy none; the Advance Wars set (one game) none.
+- Look again: **observed**; pressed twice with the same answer, two nodes "1 set of copies in
+  more than one library · 64 B in extra copies".
+- a long suggestion: **observed**; "Leave out 69 games to make it fit", 50 rows with 50 different
+  **Keep this one** names, then "And 19 more games, 155.6 KB."; at 1280, 480 and 320 CSS px, light
+  and dark (6 cells), no sideways scroll and nothing outside the window.
+- a failed re-choose: **observed**; "Romperoom couldn't choose games", focus on **Suggest games
+  to leave out** (with the focus restore taken out of the build, focus fell to the page: the cell
+  can fail).
+- the network log: **observed** (3 sandboxes); none. The console: **observed**; no errors.
+- a screen reader, a real card, Windows and Linux: **not evaluated** (above).
 
 ## Screenshots
 

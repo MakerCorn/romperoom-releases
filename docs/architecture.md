@@ -73,6 +73,13 @@ flowchart TB
   `hashing` with the final total, and the bar counts ("Checking 240 of 1,203"). The walk is
   paced by the hashing it feeds, so a first scan stays indeterminate until its last folder is
   walked.
+- The app's one polite live region (`#rr-announcer`, in `AppShell`) says what `useAnnounce()`
+  is given and a scan's outcomes. Each sentence is a new node of the region (keyed on the scan
+  store's `said` counter), so a sentence equal to the last one is said again (two presses of
+  **Load Kids** are heard twice); the same sentence twice in one turn (React's StrictMode running
+  an effect twice) is said once. A sentence a screen says when it opens ("Still copying to
+  `<card>`", identify's "still running") is therefore said on every visit to that screen. The
+  node has `display: contents`, so it takes no box of its own at any zoom.
 - Cover art is fetched by catalogue id. The main process resolves the id to a file under a known
   library, then opens it with `O_NOFOLLOW` and checks it through the file descriptor, which must
   still be the file the name points at.
@@ -1631,6 +1638,20 @@ flowchart LR
   path (then the first by name).
   A zipped game goes only where the profile says the system reads archives
   (`acceptsArchives`, else the extension list); nothing is extracted.
+- **Copies that differ.** Copies of one file of a game (one path below the system folder,
+  folded) whose bytes differ between two or more libraries, all with a SHA-1 and the same bytes
+  within each library, are picked from before releases are ranked (`pickCopies`): the first of
+  Tidy up's `rankCopies` with the package's region order goes, and the summary names it
+  (`copiesPicked`, the first 20 in `picked`: the file's name and its library's name from
+  `libraryNames`, never a path). The keeper's `identified` input is the file's own content match
+  (`match_kind` other than `name`), since a game's confidence is shared by all its copies. Copies
+  of one name share their region, revision and tags, so in practice a content match decides, then
+  the shorter path, then the lower file id (the copy found first): without a game database the
+  copy found first goes, and a rescan that finds a file anew can change which. A game holding a
+  playlist or sheet (`.m3u`, `.cue`, `.gdi`, `.ccd`, `.toc`, whatever its tracks are named) or
+  discs of one release, a copy with no SHA-1 or 0 bytes, and two different copies in one library
+  stay a clash. A pick is reported only when its copy is in the plan, and only that copy counts
+  toward the size ([decision 48](decisions.md#48-copies-that-differ-send-tidys-keeper-and-say-so)).
 - **Names on the card.** Every segment is NFC, has control and bidi characters removed,
   FAT-illegal characters and backslashes replaced, no trailing dot or space, no leading dot, no
   Windows device name, and fits 255 UTF-16 units and 255 UTF-8 bytes with the extension kept.
@@ -1652,12 +1673,36 @@ flowchart LR
   that needs FAT32 blocks a plan for an exFAT card.
 - **Media and game lists.** Media goes where the profile's template says, named after the ROM,
   in the formats the profile reads (`.jpeg` is written as `.jpg`). Images are copied at full
-  size: resizing is not built. ES-DE and Batocera game lists are generated, one per system,
-  naming only media in the plan. Other formats are listed as not written yet.
+  size: resizing is not built. A medium carries its cached checksum (`media.checksum`, in the
+  writer's 40-digit form only) as `sourceSha1`, so the writer compares it with the card without
+  hashing the file and checks the copied bytes against it, and its `mediaId`, so a checksum the
+  writer learns is kept (see [Card writer](#card-writer)). The scan never reads art. ES-DE and
+  Batocera game lists are generated, one per system, naming only media in the plan. Other formats
+  are listed as not written yet.
 - **Deterministic.** The same catalog and arguments give the same plan, file for file, whatever
   order the catalog returns rows in. A 10,000-game plan takes well under two seconds.
 - **Kept plans.** `planDeploy` returns a summary and keeps the full plan in memory under a
   random id: at most four, each for 30 minutes.
+- **Make it fit.** `planDeploy(def, target, { fit: { pinned } })` adds a suggestion (`fit.ts`): the
+  placed games (`DeployPlan.placed`) less the pinned ones, largest first by their own files' card
+  bytes, then, among games the same size, one with another version still going (counted as games are
+  taken, so a title's last version ranks like any other game), then console, title and id; taken
+  until they cover the bytes over (headroom included). A listed game "has another version going"
+  only when a version of it stays on the card after the whole list. `checkedFit` plans again without
+  them, adding the next plan's suggestion while it is still too big (a game left out for a name
+  clash can come back), three plans at most; still too big is `short`. The wizard applies a reviewed
+  list as `selection.excludeGameIds`, which the planner leaves out after regions and identical
+  copies are decided (skip reason `left-out-to-fit`), so a left-out game's other region never
+  replaces it ([ADR 50](decisions.md#50-make-it-fit-suggests-and-the-player-applies)).
+
+The wizard (`apps/desktop/src/renderer/deploy`) builds the package definition (`defOf`) from
+choices it keeps in the page: the last choices (`choices.ts`, written on every change) and saved
+packages (`packages.ts`: named choices per device, a versioned list read field by field and
+entry by entry, every change read again before it is written; `SavedPackages.tsx` on the What
+step). Neither holds a destination, and loading a package goes through the same `setChoices` as a
+tick ([ADR 49](decisions.md#49-saved-packages-live-in-the-pages-storage)). The applied fit list
+and the kept games are wizard state for the visit, cleared by any change of choices or
+destination.
 
 The write-time check is in [security.md](security.md#deploy-containment).
 
@@ -1668,19 +1713,58 @@ The write-time check is in [security.md](security.md#deploy-containment).
 `deployPlan(planId, target, options, onProgress)` joins the two: one deploy at a time,
 cancellable with `cancelDeploy()`, and refused when the volume listing fails.
 
+**Art checksums learned while copying.** For an art file with no catalog checksum, the writer
+reports the SHA-1 it read (after the copy's read-back matched, or when it hashed the source to
+compare it with the card) through `learnedSourceSha1`, but only while the source still has the
+size and modification time the plan checked. The facade keeps it with `rememberMediaChecksum`:
+into an empty `media.checksum` of a present row whose size and time are still those. Such a write
+is a cache: `catalogGeneration` (`catalog/repo.ts`, used by Tidy up, Standardise and re-link to
+tell a stale look) leaves it out, so a copy never makes those looks stale.
+
+**Words for the page.** The deploy host passes every sentence it sends the page (a report's
+refusals, warnings, failure and conflict reasons, stop reason and fatal message; a refused start's
+detail; a volume's reasons) through `pageText` (`apps/desktop/src/main/page-text.ts`): the card,
+libraries, BIOS folders, the data folder and the home and temp folders by name; below one, every
+folder dropped (whatever spaces their names hold) and the file by its own name; a path alone in
+brackets or quotes by its last part; and any other line naming a folder replaced whole.
+
 **Volume listing.** Each OS's own listing command, run with `execFile` (no shell, fixed arguments, a
 timeout and an output cap): `diskutil list -plist` and `diskutil info -plist` on macOS (read by a
 small plist reader that refuses entity declarations), a fixed PowerShell script on Windows
 (`Get-Partition`, `Get-Volume`, `Get-Disk`, mapped network drives), `lsblk` and `findmnt` JSON on
 Linux. Free space and the cluster size come from `statfs`. A listing that fails is
-`{ ok: false, reason }`, never an empty list. The Windows and Linux readers are tested from
-recorded fixtures only.
+`{ ok: false, reason }`, never an empty list. On Linux `lsblk` knows only the block device's
+read-only flag, so the listing also reads the mount table (`findmnt -J -o TARGET,FSTYPE,OPTIONS`,
+else `/proc/self/mounts`; neither readable fails the listing) and a card whose mount options
+hold `ro` (a whole option: `errors=remount-ro` is not one), or whose mount point is missing from
+the table, is read-only. Any entry with exactly the card's mount point that holds `ro` counts,
+so an old read-only mount under a newer writable one on the same point refuses the card (the
+safe side; the folder check below takes the last entry instead). The Windows and Linux readers
+are tested from recorded fixtures only; the Linux mount-table fixtures are hand-written in
+util-linux's shape (no Linux machine).
+
+**Export folders on a network drive** (`deploy/folder-network.ts`, `deploy/mounts.ts`).
+`exportFolderNetwork(path)` answers `local`, `network` or `unknown`, never rejecting: the real
+path (asynchronous), then on macOS the holding mount in `/sbin/mount`'s table is a network drive
+when not flagged `local`; on Linux when its type is in `LINUX_NETWORK_FS` (the list the network
+query filters on, so other network types such as `fuse.rclone`, `davfs` or `fuse.glusterfs` read
+as local); on Windows when the chosen or real path is a UNC path (Node's `realpath` gives a
+mapped drive's share). It gives up after 5 s (`unknown`), one check per folder in flight, and
+runs `mount` or `findmnt` with the same 5 s limit, so a hung command is stopped too. The deploy
+host checks each folder choice once, when it is first planned, alongside the folder's free space
+(`statfs`, also limited to 5 s, after which the size is unknown), and the page sees only
+`network` or `unknown` (`DestinationView.network`). A start's tick becomes the plan's folder path
+only when the plan asked. The writer checks again at start and refuses a `network` or `unknown`
+folder (a check that rejects counts as `unknown`) unless `confirmNetwork` is that folder's path
+exactly, and refuses the folder if its device changed during the check (a share mounted over it)
+([decision 47](decisions.md#47-an-export-folder-on-a-network-drive-asks-first)).
 
 **Safe-target rules** (`checkSafeTarget`), each a refusal with a code: not mounted, unreachable,
 the system disk or a system volume, a protected path (a file system root, the home folder or
 a folder holding it, the temp folder, a folder of mounts like `/Volumes`, anything inside a
-system folder), read-only, a network volume (unless confirmed), a fixed disk (unless
-the user types its name), too small for the plan plus headroom, and any volume that holds or sits
+system folder), read-only (on Linux, mounted read-only too), a network volume (unless
+confirmed), a fixed disk (unless the user types its name), too small for the plan plus headroom,
+and any volume that holds or sits
 inside a library root, a BIOS folder or the app's data folder. Paths are compared after
 `realpath`, case- and Unicode-folded.
 

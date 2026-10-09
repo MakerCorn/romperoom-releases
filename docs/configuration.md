@@ -64,6 +64,7 @@ not list, or if this page lists one the code never mentions.
 | `ROMPEROOM_TEST_LARGER_THAN_SCREEN`      | `src/main/security.ts`            | Ignored        | `1` lets macOS size the window past the screen. Set by the e2e harness.                          |
 | `ROMPEROOM_TEST_VOLUME` | `src/main/security.ts` | Ignored | An absolute folder the engine lists as the only volume, so a deploy can run without a card. |
 | `ROMPEROOM_TEST_EXPORT_FOLDER` | `src/main/security.ts` | Ignored | The "Export to a folder" dialog returns this absolute folder instead of opening. |
+| `ROMPEROOM_TEST_FOLDER_NETWORK` | `src/main/security.ts` | Ignored | `network` or `unknown`: every export folder's network check gives that answer, so the e2e suite can drive the confirmation. |
 | `ROMPEROOM_TEST_PICK_FILE` | `src/main/security.ts` | Ignored | The game database (DAT) file dialog returns this absolute file instead of opening. |
 | `ROMPEROOM_TEST_DEPLOY_DELAY_MS` | `src/main/security.ts` | Ignored | Each chunk a deploy writes waits this long (1 to 5000 ms), so a test can cancel mid-copy. |
 | `ROMPEROOM_TEST_VOLUME_BYTES` | `src/main/security.ts` | Ignored | The test volume reports at most this many bytes (from 4096), to fill a small card. |
@@ -97,6 +98,9 @@ Details:
 - **`ROMPEROOM_TEST_EXPORT_FOLDER`** stands in for the export dialog. The page still receives
   only a token and the folder's name ([security.md](security.md#deploying-to-a-card)). A
   relative path stops startup with "ROMPEROOM_TEST_EXPORT_FOLDER must be an absolute path".
+- **`ROMPEROOM_TEST_FOLDER_NETWORK`** replaces the export folder's network check for the plan and
+  the writer alike. Any value other than `network` or `unknown` stops startup with
+  "ROMPEROOM_TEST_FOLDER_NETWORK must be network or unknown".
 - **`ROMPEROOM_TEST_PICK_FILE`** stands in for the game database (DAT) file dialog. The page
   never names the file either way. A relative path makes the import fail with
   "ROMPEROOM_TEST_PICK_FILE must be an absolute path".
@@ -235,12 +239,13 @@ Tests pass two more on the command line: `--force-device-scale-factor=1` (screen
 
 ## Saved settings
 
-The page saves two keys in localStorage:
+The page saves three keys in localStorage:
 
-| Key                     | Value                                                                                 | Default                                   |
-| ----------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `romperoom.settings.v1` | JSON `{ "theme": …, "mode": … }`                                                      | `console-shelf`, `system`                 |
-| `romperoom.deploy.v1`   | JSON: the card wizard's last device, consoles, region order and options; never a card | Every console of the device, box art only |
+| Key                            | Value                                                                                 | Default                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `romperoom.settings.v1`        | JSON `{ "theme": …, "mode": … }`                                                      | `console-shelf`, `system`                 |
+| `romperoom.deploy.v1`          | JSON: the card wizard's last device, consoles, region order and options; never a card | Every console of the device, box art only |
+| `romperoom.deploy.packages.v1` | JSON: the card wizard's saved packages, each a name, a device and its choices         | None saved                                |
 
 - `theme` is one of `console-shelf`, `crt-neon` or `clean-modern`.
 - `mode` is one of `light`, `dark` or `system` ("Match my computer").
@@ -249,6 +254,15 @@ The page saves two keys in localStorage:
   before the first paint (`src/renderer/lib/settings.ts`).
 - `romperoom.deploy.v1` (`src/renderer/deploy/choices.ts`) is read when the wizard opens; a
   missing or unreadable value, or a field out of range, falls back to the defaults.
+- `romperoom.deploy.packages.v1` (`src/renderer/deploy/packages.ts`) is
+  `{ "version": 1, "packages": [ … ] }`, each package its `name` beside the fields of
+  `romperoom.deploy.v1`; never a card. It is read when the wizard's What to copy step opens, and
+  again before each change. A value that is not a version-1 list, or is over 1,000,000
+  characters, lists nothing (the step says so) and is replaced by the next change; one bad
+  package is left out alone, and one bad field falls back alone. Each device keeps at most 20
+  packages, named in up to 40 characters, unique ignoring case; at most 400 are read in all,
+  counting the hidden packages of a device profile that no longer exists (the step counts those
+  and can remove them together). It is independent of `romperoom.deploy.v1`.
 - Three sessionStorage keys only remember, for the window's life, which Tidy up, standardise and
   re-link result was already shown or closed (`romperoom.tidy.seen`,
   `romperoom.standardise.dismissed`, `romperoom.relink.dismissed`).

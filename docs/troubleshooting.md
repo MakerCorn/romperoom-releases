@@ -27,7 +27,11 @@ these problems can harm your collection.
 - [A library can't be removed](#a-library-cant-be-removed)
 - [A card doesn't show up](#a-card-doesnt-show-up)
 - [A card is greyed out](#a-card-is-greyed-out)
+- [Romperoom asks before exporting to a folder](#romperoom-asks-before-exporting-to-a-folder)
 - [The games don't fit on the card](#the-games-dont-fit-on-the-card)
+- [The card got a game from the other library](#the-card-got-a-game-from-the-other-library)
+- [A detail is left out on the Done screen](#a-detail-is-left-out-on-the-done-screen)
+- [A saved package is missing or can't be saved](#a-saved-package-is-missing-or-cant-be-saved)
 - [Copying to the card is slow](#copying-to-the-card-is-slow)
 - [A card can't be synced](#a-card-cant-be-synced)
 - [A game from the card wasn't offered](#a-game-from-the-card-wasnt-offered)
@@ -255,7 +259,7 @@ scratch (for example, to choose another library):
 1. Quit Romperoom.
 2. Delete the data folder. On macOS that is `~/Library/Application Support/Romperoom`, on
    Windows `%APPDATA%\Romperoom` (see [configuration.md](configuration.md#data-folder)).
-3. Open Romperoom again. Your theme choice is reset too.
+3. Open Romperoom again. Your theme choice and the card wizard's saved packages are reset too.
 
 Files you set aside in Tidy up stay in the `.romperoom-quarantine` folder inside your library,
 but a fresh start no longer knows about them. Put back what you want first, or move them back
@@ -328,7 +332,10 @@ On **SD card**, the **Where** step lists the drives Romperoom could use.
 A greyed-out card says why under its name:
 
 - **Locked (read-only):** slide the lock switch on the side of the SD card (or its adapter) up,
-  then put it back in and press **Refresh**.
+  then put it back in and press **Refresh**. On Linux the same words mean the card's file system
+  is mounted read-only, even with the switch off (your computer may do that after it finds an
+  error on the card): take it out, put it back in, and press **Refresh**. If it stays locked,
+  check the card on another computer or in your device.
 - **Your computer's own system drive**, or **a part of your computer Romperoom never writes to:**
   Romperoom never writes there, on purpose. Choose the SD card.
 - **A network drive:** copy to a card plugged into this computer instead.
@@ -337,17 +344,89 @@ A greyed-out card says why under its name:
 - A disk inside your computer isn't greyed out, but you have to type its name to use it. That
   check is there so a wrong click can't fill the wrong disk.
 
+## Romperoom asks before exporting to a folder
+
+When the folder you chose for **Export to a folder** is on a network drive, the **Where** step
+asks before Romperoom copies there: tick **Copy to** (the folder's name) **anyway**, then
+**Next**. Copying over a network is slower, and if the connection drops the copy stops part-way;
+copy again to finish. It asks the same when it can't tell (the folder didn't answer within 5
+seconds, or your computer's list of drives couldn't be read).
+
+- Choosing a folder again, even the same one, asks again.
+- If you connected a network drive over the folder after choosing it, **Preview the changes** or
+  **Write** stops with "Romperoom didn't copy anything" and **Details** says the folder "is on a
+  network drive" (or, if the drive arrived while Romperoom was checking, that the folder "changed
+  while it was being checked"). Choose the folder again: the Where step then asks.
+- How it tells: on a Mac, a drive your Mac doesn't call local (a shared folder from another
+  computer or a NAS); on Windows, a network path (`\\server\share`), and usually a mapped network
+  drive too, which Windows normally leads to its network path (not yet checked on a Windows
+  computer); on Linux, an NFS, SMB/CIFS, SSHFS, 9p, AFS or Ceph mount. Other network
+  file systems on Linux (an `rclone` or `davfs` mount, for example) are not recognised.
+
 ## The games don't fit on the card
 
-The **Where** step shows the space the games, artwork and the card's own format take. If it
-doesn't fit, it says by how much and offers what to leave out: the artwork, the other versions
-of each game, or a big console. You can also go **Back** and untick consoles. Copying stays off
-until it fits. The card's format loses some space to every file, so a card full of small games
-fits fewer than their sizes suggest; Romperoom counts that.
+The **Where** step shows the space the games, artwork and the card's own format take. If it doesn't
+fit, it says by how much and offers what to leave out: the artwork, the other versions of each game,
+or a big console. **Suggest games to leave out** lists the games it would leave out, biggest first;
+keep any you want, then **Leave these games out** (see [Make it fit](user-guide.md#make-it-fit)).
+You can also go **Back** and untick consoles. Copying stays off until it fits. The card's format
+loses some space to every file, so a card full of small games fits fewer than their sizes suggest;
+Romperoom counts that.
 
 If a card fills up during a copy (something else wrote to it), the report says **The card
 filled up**. Free some space, or leave something out, and copy again: what was already copied
 stays.
+
+## The card got a game from the other library
+
+When a game file is in two of your libraries and the copies are different (two dumps of one
+game with the same name), only one can go to the card. The **Check** step lists them under
+**Copies that differ**, each with the library its copy comes from. Romperoom keeps the copy
+that matches your game database (Settings › Game databases), else the one in the shorter folder
+name (`GBA` before `Game Boy Advance`), else the one it found first, so without a game database
+a new scan can change which one goes. It never asks per game.
+
+- To send the copy that matches a game database, add one for that console and identify your
+  games (see [Identify your games](user-guide.md#identify-your-games)), then check again: the
+  copy that matches it goes.
+- To send the other copy without a game database, take the one you don't want out of its
+  library folder, scan that library again, and check again.
+- A game made of several files (a CD game with a cue sheet and tracks, or discs and a playlist)
+  whose files differ between libraries is still left out, under **Left out**: "Another game would
+  use the same file name". Keep one complete copy of it, then scan again.
+- Two different copies inside **one** library (in two of its folders, such as `GBA` and
+  `Game Boy Advance`) are not chosen between either: the game is left out the same way. Keep one
+  of them in that library, then scan again.
+
+## A detail is left out on the Done screen
+
+**Details** on the Done screen (and under a refusal on **Where** or **Check**) name your card,
+your libraries, BIOS folders and Romperoom's data folder by their names, never by their full
+path. A detail that would name any other folder on your computer is replaced by "A detail is left
+out here because it names a folder on this computer." The short reason above the details still
+says what went wrong.
+
+## A saved package is missing or can't be saved
+
+[Saved packages](user-guide.md#saved-packages) are kept on this computer, in Romperoom's data
+folder, not in your library or on a card.
+
+- **"Some saved packages couldn't be read, so they aren't listed."** The saved list was damaged
+  (or edited by hand). The packages Romperoom could read are listed; the next package you save,
+  replace, rename or delete writes a fresh list without the damaged ones.
+- **"Romperoom can't open saved packages on this computer just now."** Romperoom couldn't reach
+  its own storage. Quit and open Romperoom again. Nothing is written while the list can't be
+  read, so trying again never loses a package.
+- **"There's no more room on this computer for saved packages."** Delete a package you no longer
+  use, or remove the packages for devices Romperoom no longer knows, from the note on the same
+  card. Then save again.
+- **Save as a package is greyed out.** That device has 20 packages, the most Romperoom keeps:
+  delete one first.
+- **A device's packages aren't listed.** Packages belong to the device they were saved for: pick
+  that device on the first step. If a Romperoom update drops a device, its packages stay saved
+  but hidden until it comes back; a note on the card counts them and can remove them.
+- **The packages are gone.** They stay on the computer they were saved on, and are forgotten
+  when Romperoom's data folder is deleted ([Starting over](#starting-over)).
 
 ## Copying to the card is slow
 

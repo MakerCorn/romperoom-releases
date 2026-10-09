@@ -389,6 +389,32 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 - **It only reports.** Setting copies aside across libraries is planned
   ([decision 46](decisions.md#46-copies-across-libraries-are-reported-never-tidied)).
 
+### Copying to a card
+
+- **Which copy goes, when a game file differs between libraries, is decided by little.** Copies
+  of one name share their region, revision and tags, so a content match with a game database
+  decides, then the shorter folder name, then the copy found first. Without a game database a
+  rescan that finds a file anew can change which copy goes
+  ([decision 48](decisions.md#48-copies-that-differ-send-tidys-keeper-and-say-so)).
+- **Some copies that differ still leave the game out as a name clash:** two different copies in
+  one library (two of its folders), a game holding a playlist or a `.cue`, `.gdi`, `.ccd` or
+  `.toc` sheet, and a copy with no checksum or of 0 bytes. (Two different games of one name are
+  not picked from either: each keeps its own name with a suffix, as before.)
+- **Art checksums fill as art is copied.** The card writer keeps the checksum of a picture it
+  reads whole, and Tidy up's leftover-artwork check its own; the scan never reads art, so a
+  picture never copied or compared carries none and the writer reads it the first time.
+- **Make it fit starts with the biggest games,** so it can leave out a big game when only a
+  little is over; **Keep this one** asks for another choice. A list is for one card and one set
+  of choices, and is never saved.
+- **Saved packages stay in the page's localStorage**
+  ([decision 49](decisions.md#49-saved-packages-live-in-the-pages-storage)), so they are lost
+  with the data folder and do not travel to another computer. Packages of a device profile that
+  no longer exists are kept but never listed: the card counts them and removes them only all
+  together (**Remove them**), and they still count toward the 400 packages read in all
+  (`MAX_STORED`). Every change reads the list again before writing, but two windows could still
+  race (the app opens one). The **Loaded** mark is not stored: it lasts the wizard's visit and
+  clears on a device change, on deleting that package and on **Start over**.
+
 ### Card sync
 
 - **A card copied with a disk tool keeps the original's id,** so Romperoom takes the copy for
@@ -397,15 +423,22 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 
 ### The desktop app
 
-- **The shared announcer does not repeat itself.** A message equal to the last one read out (an
-  Across libraries **Look again** with the same outcome, say) is not read out again; the line on
-  screen still shows it.
+- **A sentence a screen says when it opens is said on every visit.** Since each announcement is
+  a new node of the live region, "Still copying to `<card>`" and identify's "still running" are
+  read out each time their screen opens, not only the first time.
 - **Pressing Cancel while the first of several libraries finishes** stops the next library from
   starting, but the announcement says "Scan finished", not "Scan cancelled".
 - **End jumps to the last game loaded so far, not the last game.** The wall loads games a page at
   a time as it scrolls, so on a large library End (and PageDown near the end) stops at the last
   loaded tile. Reaching it loads the next page, so pressing End again goes further.
 - **The interface is English only**, and the plural helper is English-specific.
+- **A card writer refusal can name full paths.** Many of the writer's refusals start with the
+  target's real path (for an export folder on a network drive: "`<path>` is on a network drive
+  (...); choose the folder again to confirm it"), and the library and BIOS overlap refusals also
+  name that folder's path ("... is inside `<library>`, which is never written to"). Others name
+  none ("the plan: ...", "the target cannot be opened (...)"). The Done screen lists them under
+  its technical details, so that one place shows the page a path. Showing folder names instead
+  (as `reportView` already does for the report's root) is an open follow-up for the owner.
 - **Drag and drop is tested synthetically, not by hand.** The page refuses `dragover` and `drop`
   (`lib/page-guards.ts`), and `will-navigate` blocks the navigation Chromium would otherwise start.
   `e2e/resilience.spec.ts` checks both with a synthetic `DragEvent` carrying a `File` and with a

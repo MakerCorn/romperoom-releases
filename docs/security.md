@@ -657,8 +657,10 @@ for the download (the official-site path still works).
   titles, folder mappings and scan state. It is not encrypted. It holds no credentials, because
   Romperoom has none: every request it makes is anonymous.
 - **Settings** (theme and light or dark) live in the renderer's localStorage, under the key
-  `romperoom.settings.v1`, and the card wizard's last choices under `romperoom.deploy.v1` (see
-  [configuration.md](configuration.md#saved-settings)).
+  `romperoom.settings.v1`, the card wizard's last choices under `romperoom.deploy.v1`, and its
+  saved packages under `romperoom.deploy.packages.v1` (see
+  [configuration.md](configuration.md#saved-settings)). Neither wizard key holds a path; a
+  package's choices are validated again by the engine's schema when they are planned.
 - **Electron's own user data** (Chromium caches and local storage) shares the data folder.
   Chromium's cookie store is not encrypted (the `EnableCookieEncryption` fuse is off): the app
   sets no cookies and keeps no secrets there.
@@ -894,7 +896,9 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
 - **One file runs programs, and only listing ones.** `deploy/volumes.ts` is the only source that
   imports `child_process`. It runs `diskutil` (by absolute path), PowerShell with a fixed script,
   `lsblk` and `findmnt`, through `execFile` with `shell: false`, fixed arguments, a timeout and
-  an output cap. No argument comes from the page. The test pins that list.
+  an output cap. `deploy/folder-network.ts` runs `/sbin/mount` with no arguments through the same
+  function; a folder's path is matched against the output, never passed to a command. No argument
+  comes from the page. The test pins both lists.
 - **A listing that fails is not an empty list.** It returns `ok: false` with the reason, and a
   deploy to a volume is then refused. Output that cannot be parsed is refused too; the plist
   reader refuses entity declarations and caps size, depth and nodes.
@@ -902,7 +906,10 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
   volumes, fixed disks without the typed volume name, protected paths, too little room, and any
   volume or export folder that holds or lies inside a library root, a BIOS folder or the app's
   data folder. All are compared after `realpath`. An export folder must already exist and be
-  empty or an earlier export.
+  empty or an earlier export, and one on a network drive, or whose drive cannot be told, is
+  written only when the caller confirmed exactly that folder's path (`confirmNetwork`). On Linux
+  a card is read-only when its mount options hold `ro`, or when its mount point is missing from
+  the mount table.
 - **Only its own files change.** The manifest says which files the writer owns; any other file
   is never replaced or removed, except moved aside on request (`overwriteUnmanaged`). Every
   card path goes through `resolveInside`, which refuses `..`, empty segments, backslashes,
@@ -960,7 +967,8 @@ pattern.
   random host ids, bound to the window that asked, at most 6 per window and kind, for 30 minutes,
   and forgotten when the window navigates. The engine id behind one never reaches the page.
 - **Stale plans are refused.** The engine binds each plan to the catalog generation: after any
-  catalog change (a scan, another tidy run, a checksum written) the id is refused with
+  catalog change (a scan, another tidy run, a checksum Tidy up writes; not an art checksum the card
+  writer fills in) the id is refused with
   `TidyPlanError` and the page asks to look again. Paging re-asks the engine and refuses when
   the totals changed, so one plan never mixes two answers.
 - **One job at a time.** Apply, undo, restore, delete forever and recovery share one slot, taken
@@ -1079,7 +1087,12 @@ user chose, nor write to a drive the safe-target rules refuse.
 - **Folders are tokens.** An export folder is chosen in the host's native dialog. The page gets
   a random token (`randomUUID`) and the folder's name. A token works only for the window it was
   given to, for 30 minutes, and a window holds at most 8 (choosing a ninth drops the oldest). A
-  reload forgets them. BIOS folders are chosen the same way and shown by name.
+  reload forgets them. BIOS folders are chosen the same way and shown by name. Whether a folder
+  is on a network drive is checked by the host once per token, when it is first planned (at most
+  5 seconds, asynchronous, one check per folder in flight), and the page sees only `network` or
+  `unknown`. A start request's `confirmNetwork: true` becomes the plan's own folder path, and only
+  when the plan asked; on a card's plan it is refused. The writer refuses the folder if its
+  device changed while it was checked (a share mounted over it).
 - **Plans are ids too.** `deploy:plan` returns an opaque random plan id bound to the window. The
   host keeps at most 2 per window (the engine at most 4 in all), each for 30 minutes. Any
   change to the catalog (a library added or removed, a folder mapped or ignored, a scan, a BIOS
@@ -1103,12 +1116,22 @@ user chose, nor write to a drive the safe-target rules refuse.
   keeps the app and the copy running. Yes cancels, waits up to 10 seconds for the deploy to
   stop, then closes as usual (`createQuitCoordinator`).
 - **Reports.** The report the page gets has the card's absolute paths removed (`root`,
-  `manifestPath`); file names in it are relative to the card.
+  `manifestPath`); file names in it are relative to the card. Every sentence the host sends
+  (the report's refusals, warnings, reasons, stop reason and fatal message, a refused start's
+  detail, a volume's reasons) goes through `pageText`: the places the host knows by name, and a
+  line still naming a folder replaced whole, so the engine's full messages never reach the page
+  in those sentences. A path glued to a word (`word/opt/x`) is not recognised; no engine message
+  produces one. Errors the deploy channels throw (shown on the wizard through `friendlyError`)
+  do not pass through `pageText`; none of them names a path today.
+- **Make it fit.** `deploy:plan`'s options take `fit: { pinned }` (at most 1,000 positive game
+  ids, checked in the host and by the engine's schema); a suggestion changes nothing until the
+  page plans with `selection.excludeGameIds`, which the engine's schema caps at 1,000,000.
 
 Test seams (`ROMPEROOM_TEST_VOLUME`, `ROMPEROOM_TEST_EXPORT_FOLDER`,
-`ROMPEROOM_TEST_DEPLOY_DELAY_MS`, `ROMPEROOM_TEST_VOLUME_BYTES`) are read only when the app is
-not packaged ([configuration.md](configuration.md)). `test/deploy-host.test.ts` pins each rule
-above; `e2e/deploy.spec.ts` probes the real channels from the page.
+`ROMPEROOM_TEST_FOLDER_NETWORK`, `ROMPEROOM_TEST_DEPLOY_DELAY_MS`, `ROMPEROOM_TEST_VOLUME_BYTES`)
+are read only when the app is not packaged ([configuration.md](configuration.md)).
+`test/deploy-host.test.ts` pins each rule above; `e2e/deploy.spec.ts` probes the real channels
+from the page.
 
 ## Gaps
 
@@ -1171,9 +1194,16 @@ example) are in [development.md](development.md#known-limitations).
   not locked out ([decisions.md](decisions.md#28-one-work-lock-per-library-in-the-process)).
 - **The read-back can come from the OS cache.** It proves the bytes the OS holds for the file,
   not that the card's flash stored them. Each file is `fsync`ed before the rename.
-- **Export folders on a network share are not refused.** The host does not list volumes for a
-  folder target, so an export folder on a NAS is written like a local one. Only the library,
-  BIOS and data-folder rules apply to it.
+- **Network detection for export folders is incomplete.** A Linux network file system outside
+  `LINUX_NETWORK_FS` (`fuse.rclone`, `davfs`, `fuse.glusterfs`, for example) and a Windows mapped
+  drive whose real path stays a drive letter read as local, and are written without asking.
+  Linux is tested from hand-written recorded output only, and the Windows rule against expected
+  paths only.
+- **A Linux card can be refused as read-only while writable.** Any mount-table entry for exactly
+  its mount point that holds `ro` counts, so an old read-only mount under a newer writable one
+  refuses the card. It fails safe: nothing is written to a read-only card.
+- **A writer refusal names the folder's full path on the Done screen.** See
+  [development.md](development.md#the-desktop-app).
 - **A folder on the card can be swapped for a symlink during a run.** The writer checks the
   path's real location before it writes (containment), but a local attacker who can change the
   card's folders at the same moment can turn a checked folder into a link and make one write
@@ -1259,17 +1289,18 @@ silicon) they have also passed by hand, on Windows on CI only.
 - [x] **Development seams ignored when packaged:** `ROMPEROOM_TEST_PICK_FOLDER`,
       `ROMPEROOM_TEST_SCAN_ONLY`, `ROMPEROOM_SMOKE_EXIT_MS`, `ROMPEROOM_TEST_UNGUARDED_WEBRTC`,
       `ROMPEROOM_TEST_LARGER_THAN_SCREEN`, the deploy seams (`ROMPEROOM_TEST_VOLUME`,
-      `ROMPEROOM_TEST_EXPORT_FOLDER`, `ROMPEROOM_TEST_DEPLOY_DELAY_MS`,
-      `ROMPEROOM_TEST_VOLUME_BYTES`), the game database seams (`ROMPEROOM_TEST_DAT_FIXTURES`,
-      `ROMPEROOM_TEST_OPEN_EXTERNAL`) and `ELECTRON_RENDERER_URL`. Evidence: each resolver takes
-      `isPackaged` and is unit-tested both ways (`test/security.test.ts`); `e2e:packaged` sets
-      them all on a plain packaged launch and checks the app creates its catalogue in
-      `ROMPEROOM_DATA_DIR` and is still running long after the smoke timer. It gives the test
-      volume, export folder, DAT fixture folder and open-link log relative paths, which an
-      unpackaged build refuses at startup. The packaged window
-      cannot be inspected (see gaps), so `ELECTRON_RENDERER_URL` is covered by the unit tests
-      only. Mutation: the smoke timer honoured when packaged (failed `e2e:packaged`: the
-      package does not ship the smoke chunk, so the app logs a startup failure).
+      `ROMPEROOM_TEST_EXPORT_FOLDER`, `ROMPEROOM_TEST_FOLDER_NETWORK`,
+      `ROMPEROOM_TEST_DEPLOY_DELAY_MS`, `ROMPEROOM_TEST_VOLUME_BYTES`), the game database seams
+      (`ROMPEROOM_TEST_DAT_FIXTURES`, `ROMPEROOM_TEST_OPEN_EXTERNAL`) and `ELECTRON_RENDERER_URL`.
+      Evidence: each resolver takes `isPackaged` and is unit-tested both ways
+      (`test/security.test.ts`); `e2e:packaged` sets them all on a plain packaged launch and checks
+      the app creates its catalogue in `ROMPEROOM_DATA_DIR` and is still running long after the
+      smoke timer. It gives the test volume, export folder, DAT fixture folder and open-link log
+      relative paths, and the folder-network seam an unknown answer, which an unpackaged build
+      refuses at startup. The packaged window cannot be inspected (see gaps), so
+      `ELECTRON_RENDERER_URL` is covered by the unit tests only. Mutation: the smoke timer honoured
+      when packaged (failed `e2e:packaged`: the package does not ship the smoke chunk, so the app
+      logs a startup failure).
 - [x] **No DevTools, no reload:** `--self-check` reads the window options and menu roles this
       build installs. Mutation: the `windowDevTools` check.
 - [x] **Licences:** `THIRD_PARTY_NOTICES.txt` covers every shipped package; an unknown, missing

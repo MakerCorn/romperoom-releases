@@ -436,22 +436,31 @@ ES-DE. Put the card in your computer first. The wizard has six steps, and until 
    doesn't have. **Skip identical copies** leaves out a
    second copy of the same file. You can also choose the kinds of artwork, and for devices with
    a BIOS folder, a folder of BIOS files to copy. A size estimate updates as you choose.
-   Romperoom remembers these choices for next time.
+   Romperoom remembers these choices for next time. To keep more than one set for a device, save
+   it under a name: see [Saved packages](#saved-packages).
 3. **Where.** Pick the card. Each card shows its size and free space. A card Romperoom can't use
    is greyed out with the reason, for example the disk your computer runs from, or a card that is
    locked. For a disk inside your computer, you type its name to show you mean it. You can also
    **Export to a folder** and move it to the card yourself, or **Just check a card size** before
-   you buy one. The meter shows the games, the artwork, the space lost to the card's format and
-   what is left. If it doesn't fit, Romperoom offers what to leave out: the artwork, the other
-   versions of each game, or a large console.
+   you buy one. If the folder is on a network drive, or Romperoom can't tell whether it is, it
+   asks first: tick **Copy to** (the folder's name) **anyway** to go on. That tick is for this
+   choice of folder only; choosing a folder again asks again. The meter shows the games, the
+   artwork, the space lost to the card's format and what is left. If it doesn't fit, Romperoom
+   offers what to leave out: the artwork, the other versions of each game, or a large console;
+   **Suggest games to leave out** lists the games themselves (see [Make it fit](#make-it-fit)).
 
    ![Choosing the card, with its space][deploy-where-lt]
 
 4. **Check.** A summary of the games, consoles and space, what was left out and why, and
-   anything that stops the copy. **Preview the changes** works out what would happen without
-   writing anything. **Write … to …** asks once more, with what Romperoom promises: it only
-   writes to this card, it keeps files it didn't put there, and anything it removes goes to the
-   `.romperoom-removed` folder on the card.
+   anything that stops the copy. When a game file is in two of your libraries with different
+   contents (the same name, other bytes), one copy goes to the card and **Copies that differ**
+   names the library it comes from: the copy that matches your game database, else the one in
+   the shorter folder name, else the one Romperoom found first (to send the other copy, see
+   [The card got a game from the other library](troubleshooting.md#the-card-got-a-game-from-the-other-library)).
+   **Preview the changes** works out what would happen without writing anything. **Write … to
+   …** asks once more, with what Romperoom promises: it only writes to this card, it keeps files
+   it didn't put there, and anything it removes goes to the `.romperoom-removed` folder on the
+   card.
 
    | Light                                    | Dark                                   |
    | ---------------------------------------- | -------------------------------------- |
@@ -461,8 +470,11 @@ ES-DE. Put the card in your computer first. The wizard has six steps, and until 
    **Cancel the copy** stops after the file being written; what was already copied stays, and
    the next copy picks up from there. If you try to quit during a copy, Romperoom asks first.
 6. **Done.** What was copied, what was already there, and anything that couldn't be copied (open
-   **Details** for the reasons). Eject the card before you take it out. **Copy more** goes back
-   to the consoles with the same device; **Start over** forgets the choices.
+   **Details** for the reasons). Details name your card, libraries and folders by their names,
+   never their full paths; a detail that would name any other folder on your computer reads "A
+   detail is left out here because it names a folder on this computer." Eject the card before
+   you take it out. **Copy more** goes back to the consoles with the same device; **Start over**
+   forgets the choices.
 
    ![The report after a copy][deploy-done-lt]
 
@@ -489,6 +501,62 @@ once you are sure. Files you put on the card yourself are never replaced or move
 - **Identified games.** Once a game is identified, its name on the card comes from the game
   database, not the file name; two revisions of one identified game still count as one game for
   **One version of each game**.
+
+### Make it fit
+
+When the games don't fit the card you chose, **Suggest games to leave out** on the **Where** step
+lists the games Romperoom would leave out to make room: "Leave out 3 games to make it fit", what
+that saves, how many per console, and each game with its console, region and size. It starts
+with the biggest games; of games the same size, one whose other version (another region) is
+still going comes first. Nothing is left out yet:
+
+- **Keep this one** keeps a game on the card, and Romperoom chooses others in its place. While it
+  chooses, the list you were reading stays on screen, but its buttons wait ("Choosing games to
+  leave out") until the new list is there; a screen reader then hears what you did and the new
+  heading, such as "Keeping Zelda (NES, USA). Leave out 2 games to make it fit." **Start the list
+  again** forgets the games you kept.
+- **Leave these games out** applies the list. A note says how many are left out, the meter shows
+  the new size, and the **Check** step lists them under **Left out**. **Put them back** forgets
+  the list.
+- If even leaving out every game you didn't keep can't make room, Romperoom says so: keep fewer
+  games, or choose a bigger card.
+
+The list is for this card and these choices only: changing any choice (or loading a saved
+package), choosing another card, **Copy more** and **Start over** forget it, and it is never
+saved. Because it starts with the biggest games, it may leave out a big game when only a little
+is over; **Keep this one** asks for another choice.
+
+### Saved packages
+
+A saved package is a set of choices for one device under a name you give it, such as `Kids` or
+`Road trip`: the consoles, the regions, **One version of each game**, **Skip identical copies**,
+the artwork, the BIOS files, what to do with games too big for the card, and the card size you
+check. It never holds a card or a folder: you choose where to copy each time. Packages are under
+**Saved packages**, at the top of **What to copy**.
+
+- **Save.** Type a name in **Package name** and press **Save as a package** (or Enter). A name
+  has up to 40 characters, and each of a device's packages needs its own name (capitals don't
+  count). A device keeps up to 20; at 20, delete one to save another.
+- **Load.** **Load** sets every choice on the page to the package's; the card or folder you
+  chose stays chosen. The package then reads **Loaded**, or **Loaded, then changed** once you
+  change something. **Load** again puts its choices back. The mark is only for this visit to the
+  wizard: it is gone when you open the wizard again or pick another device.
+- **Replace, Rename, Delete.** **Replace** saves the choices on the page into that package.
+  **Rename** gives it a new name (Enter saves, Escape cancels). **Delete** forgets it; your games
+  and cards are not touched. Replace and Delete ask first, in place of the package's buttons.
+- **A console you don't have now.** If a package lists a console that isn't in your library (or
+  that the device no longer plays), loading it says so, and a note says so while the package is
+  loaded. That console stays off the card. It stays in the package: add its games back and it is
+  copied again.
+- **Every console.** A package saved after **Select all** also takes consoles you add to your
+  library later; one with some consoles ticked keeps to those.
+- **A device Romperoom no longer knows.** If an update drops a device, its packages are kept but
+  not listed, and a note says how many. **Remove them** forgets them all, after asking.
+
+Packages are kept on this computer only, with Romperoom's other saved settings, so deleting
+Romperoom's data folder ([Starting over](troubleshooting.md#starting-over)) forgets them.
+Romperoom's memory of your last choices is separate: loading a package sets them, and **Start
+over** forgets them but keeps your packages.
 
 [libretro-database]: https://github.com/libretro/libretro-database
 [deploy-device-lt]: screenshots/deploy-device-console-shelf-light.png
@@ -582,16 +650,16 @@ The **Overview** tab shows how much each cleanup could free, and what is set asi
 | ![Tidy up's overview][tidy-overview-lt]   | ![Tidy up's overview, dark][tidy-overview-dk]   |
 | ![Duplicates to tidy][tidy-duplicates-lt] | ![Duplicates to tidy, dark][tidy-duplicates-dk] |
 
-**Duplicates** lists each set of identical copies: files with exactly the same bytes, so two
-zips of one game with different saves or patches inside are not copies. Each set shows its game's
-box art (else a screenshot) beside its name, the picture the Library shows for that game; a set
-whose game has none shows a plain square. One copy is kept, and the reason is shown, such as
-"Keeping the USA copy". Romperoom never sets aside the last copy of a game. Copies that are one
-file under two names (hard links), tracks of a disc set and the same file in two consoles' folders
-are left alone. Duplicates and the Overview say how many files are skipped that way ("N files are
-skipped because they're part of a multi-file game or shared between consoles"), and how many
-archives from an older version of Romperoom haven't been checked yet: press **Scan again** to
-include them.
+**Duplicates** lists each set of identical copies: files with exactly the same bytes, so two zips of
+one game with different saves or patches inside are not copies. Each set shows its game's box art
+(else a screenshot) beside its name, the picture the Library shows for that game; a set whose game
+has none shows a plain square. A copy that belongs to another game (Romperoom matched it by its
+name) shows that game's cover beside it. One copy is kept, and the reason is shown, such as "Keeping
+the USA copy". Romperoom never sets aside the last copy of a game. Copies that are one file under
+two names (hard links), tracks of a disc set and the same file in two consoles' folders are left
+alone. Duplicates and the Overview say how many files are skipped that way ("N files are skipped
+because they're part of a multi-file game or shared between consoles"), and how many archives from
+an older version of Romperoom haven't been checked yet: press **Scan again** to include them.
 
 - **Keep a different copy** lets you pick which one stays. The set's picture doesn't change: it
   is still the one of the copy Romperoom suggested keeping.
