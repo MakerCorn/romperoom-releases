@@ -3,11 +3,15 @@
 Romperoom is built in four milestones. **Milestone 1, Foundation, is complete,** and so are the DAT
 part of Milestone 2: identifying games against DAT files you import or have Romperoom download when
 you ask, and cover art from libretro-thumbnails and SD cards (and from ScreenScraper once
-Romperoom is registered there), the first part of Milestone 3: Tidy up, which sets aside
+Romperoom is registered there), the first part of Milestone 3: tidying, which sets aside
 duplicates and leftover artwork, standardises folder and game names, re-links artwork and sets
-aside copies across libraries, with libraries added and removed in Settings, and the first part of
+aside copies across libraries, with libraries added and removed on Home, and the first part of
 Milestone 4: copying games to an SD card, with art made smaller for the device and BIOS files
-recognised by their contents. Everything marked planned is not built yet,
+recognised by their contents. The app is organised around Home (search, what needs attention,
+the newest games, the libraries and the consoles, each with a list or a grid of games) and Fix up
+(everything that looks after the library), which replaced the Library, Health and Tidy up screens
+([decision 57](decisions.md#57-home-and-fix-up-replace-library-health-and-tidy-up)). Everything
+marked planned is not built yet,
 and plans change as each milestone starts. Next come signing and automatic updates, then the rest of
 Organize. The detailed plans, with their tests, are in the design history
 (foundation,
@@ -20,7 +24,8 @@ re-link,
 the Tidy up batch,
 libraries,
 copies across libraries,
-batch 3).
+batch 3,
+the UI reorganisation).
 
 ## Contents
 
@@ -41,9 +46,10 @@ batch 3).
 - Folder-to-console mapping for every system in the [catalog](systems.md), with a way to sort the
   folders it cannot place.
 - Cover art found in common layouts, and served to the page through a locked-down protocol.
-- The desktop app: a first-run wizard, a cover-art wall, a game drawer and a Health screen. It
-  has three themes, light and dark, and works with keyboard and gamepad.
-- An engine for journaled, undoable file operations (quarantine and moves). Tidy up
+- The desktop app: a first-run wizard, a cover-art wall, a game drawer and a Health screen
+  (reorganised since into Home, the games pages and Fix up). It has three themes, light and dark,
+  and works with keyboard and gamepad.
+- An engine for journaled, undoable file operations (quarantine and moves). Fix up's tidying
   (Milestone 3) runs on it; the card writer keeps its own manifest (see Milestone 4).
 - Four device profiles as data (Batocera, ES-DE, muOS and Onion).
 - Packaging and a release pipeline: unsigned beta installers for macOS (Apple silicon) and
@@ -56,13 +62,13 @@ batch 3).
 Tell you which game each file really is.
 
 - **DAT import:** game databases (Logiqx XML and clrmamepro DAT files, plain or zipped) that you
-  import in Settings › Game databases. None is bundled.
-- **Getting game databases:** Settings › Game databases opens the official No-Intro or Redump
-  page in your browser and then the file picker in Downloads, or downloads the DATs for the
-  consoles in your library from libretro-database on GitHub (CC BY-SA 4.0), pinned to one
-  commit, after you have reviewed the list. Check for updates moves the pin; Network activity
-  lists every request. Nothing goes online until you press a button
-  ([ADR 40](decisions.md#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)).
+  import in Fix up › Game databases. None is bundled.
+- **Getting game databases:** Fix up › Game databases opens the official No-Intro or Redump page in
+  your browser and then the file picker in Downloads, or downloads the DATs for the consoles in your
+  library from libretro-database on GitHub (CC BY-SA 4.0), pinned to one commit, after you have
+  reviewed the list. Check for updates moves the pin; Network activity lists every request. Nothing
+  goes online until you press a button ([ADR
+  40](decisions.md#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)).
 - **Matching within one system:** exact hashes first (SHA-1, MD5, then CRC32 with the size),
   then headerless hashes for the systems with copier headers, then every entry of a zip against
   one game, then names. A name-only match is labelled as such and kept for you to review.
@@ -70,9 +76,10 @@ Tell you which game each file really is.
 - **Stable games:** a game keeps its identity across rescans and DAT changes; replacing or
   removing a DAT reverts only its own matches.
 - **Cards named by DAT titles:** an identified game shows the DAT's title (its description
-  when it has one, as FinalBurn Neo's set-id names need, else its name), on the wall and on a
+  when it has one, as FinalBurn Neo's set-id names need, else its name), in the app and on a
   card. Revisions are separate games in the library; a card gets the newest of them.
-- **Cover art from libretro-thumbnails and SD cards (done):** Health › Games without cover art
+- **Cover art from libretro-thumbnails and SD cards (done):** Fix up › Artwork › Games without
+  cover art
   lists the pictures libretro-thumbnails on GitHub has for the games missing box art,
   screenshots or title screens, matched by DAT name or exact file name, and downloads them into
   the library's `.romperoom/media` folder after a review, never replacing a picture; or imports
@@ -85,7 +92,8 @@ Tell you which game each file really is.
   ([user guide](user-guide.md#look-up-on-screenscraper),
   [ADR 54](decisions.md#54-screenscraper-uses-the-players-account-and-fills-gaps-by-checksum)).
   Built and tested against a stand-in server; it cannot be used until the maintainer registers
-  Romperoom with ScreenScraper.
+  Romperoom with ScreenScraper, so release builds say it can't be used yet. The owner decided
+  (2026-10-09) to register only if players ask for it.
 
 **Deferred:** other scrapers and account-based services; see [Open questions](#open-questions).
 The design spec keeps the research.
@@ -94,7 +102,8 @@ The design spec keeps the research.
 
 Tidy the library, always as a plan you review first, and always undoable.
 
-**Done:** the Tidy up screen ([user guide](user-guide.md#tidy-up-your-library)) over the tidy
+**Done:** Fix up's tidy tasks, the Tidy up screen through 0.11.1
+([user guide](user-guide.md#duplicates-leftover-artwork-and-history)), over the tidy
 engine ([architecture.md](architecture.md#tidying-the-library)), behind one lock per library and
 a journal that knows its library.
 
@@ -108,26 +117,26 @@ a journal that knows its library.
 - **History and Set aside:** every run listed with Undo all, set-aside files put back one at a
   time or together, and Delete forever behind a preview and typed words.
 - **Recovery:** a run that stopped (a crash, or Cancel) is offered to finish or undo, at the next
-  start and from its own result; a Tidy up run can also discard the rest.
-- **Tidy up, smaller things:** leftover artwork shown one cause at a time, a picture beside each set
+  start and from its own result; a tidy run can also discard the rest.
+- **Tidying, smaller things:** leftover artwork shown one cause at a time, a picture beside each set
   of duplicates and beside a copy of another game, and Delete forever limited to what was set aside
-  more than 30 or 90 days ago ([user guide](user-guide.md#tidy-up-your-library)).
+  more than 30 or 90 days ago ([user guide](user-guide.md#duplicates-leftover-artwork-and-history)).
 - **Standardise:** console folders renamed and merged to one device profile's names, and
   identified games renamed to their DAT names with their art, saves, cue sheets, playlists and
   game list entries ([user guide](user-guide.md#standardise-your-library),
   [architecture.md](architecture.md#standardise-the-library)), all or nothing per game, undoable.
-- **Libraries:** Settings › Libraries lists every library (its games, its last scan, whether its
-  folder answers), adds a second one through the folder picker and removes one, forgetting it
-  without touching its files ([user guide](user-guide.md#your-libraries),
+- **Libraries:** Home's Libraries (in Settings through 0.11.1) lists every library (its games, its
+  last scan, whether its folder answers), adds a second one through the folder picker and removes
+  one, forgetting it without touching its files ([user guide](user-guide.md#your-libraries),
   [decision 45](decisions.md#45-removing-a-library-forgets-it-whole-and-touches-nothing-on-disk)).
 - **Copies across libraries:** the files held in two or more libraries, listed with the library
   that keeps each set; the extra copies set aside in their own library, the kept copy checked
   again before anything moves, undoable; libraries that can't be compared say why
-  ([user guide](user-guide.md#tidy-up-your-library),
+  ([user guide](user-guide.md#duplicates-leftover-artwork-and-history),
   [decision 51](decisions.md#51-copies-across-libraries-are-set-aside-in-their-own-library)).
 - **Re-link artwork:** a leftover picture renamed after the one game that clearly matches it,
   with its game list entries, and game list entries without a game listed or re-pointed
-  ([user guide](user-guide.md#tidy-up-your-library),
+  ([user guide](user-guide.md#duplicates-leftover-artwork-and-history),
   [architecture.md](architecture.md#re-link-artwork)), undoable.
 
 Proven end to end on the fixture library on macOS, and with the fixture's Windows shape
@@ -135,7 +144,8 @@ simulated; Standardise and Re-link artwork were also run live on scratch librari
 macOS ([testing.md](testing.md#live-standardise-run),
 [the re-link run](testing.md#live-re-link-run)), and so were the leftover artwork filter, the
 duplicate pictures, Delete forever by age and Discard the rest
-([the tidy up batch run](testing.md#live-tidy-up-batch-run)), and so was Settings › Libraries
+([the tidy up batch run](testing.md#live-tidy-up-batch-run)), and so was the Libraries panel, then
+in Settings
 ([the libraries run](testing.md#live-libraries-run)), and so were copies across libraries
 ([the across libraries run](testing.md#live-across-libraries-run)). Not run against a real Windows
 drive or a NAS.
@@ -181,7 +191,7 @@ Put a playable selection on a handheld's SD card.
   ([ADR 47](decisions.md#47-an-export-folder-on-a-network-drive-asks-first)). The Linux side is
   tested from hand-written recorded output only.
 - **Copies that differ:** when a game file is in two libraries with different bytes, one copy
-  goes (the one Tidy up would keep) and the Check step names its library, where the game was left
+  goes (the one Duplicates would keep) and the Check step names its library, where the game was left
   out as a name clash before; a multi-file game whose files differ is still left out
   ([ADR 48](decisions.md#48-copies-that-differ-send-tidys-keeper-and-say-so)).
 - **Make it fit:** when the games do not fit, Romperoom suggests which to leave out, biggest
@@ -213,7 +223,7 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 - **Device profiles** checked on real devices (all four are `community` today), and more of them.
 - **JPEG art made smaller,** and screenshots and title screens (no profile asks yet).
 - **Art checksums for pictures never copied:** the scan does not read art, so a picture carries a
-  checksum only once the writer or Tidy up's leftover-artwork check has read it.
+  checksum only once the writer or the leftover-artwork check has read it.
 - **A multi-file game whose files differ between two libraries** is left off the card as a name
   clash. Picking a whole set from one library is not built.
 - **Two different copies of a game file in one library** (two of its folders) leave the game off
@@ -224,11 +234,15 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 ## Next
 
 1. **Signing and automatic updates** for the beta builds (see [release.md](release.md)).
-2. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** Romperoom
-   registered with ScreenScraper, its developer details in the release build, and its answers
-   confirmed live.
+2. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** only if players
+   ask for it (owner decision, 2026-10-09), Romperoom registered with ScreenScraper, its developer
+   details in the release build, and its answers confirmed live. Until then ScreenScraper stays
+   built but unused.
 3. **[Milestone 4, Deploy](#milestone-4-deploy-sd-cards-done):** profiles checked on real
    devices.
+4. **Cover art the scanner doesn't read yet:** linking that tolerates suffixes
+   (`Game-thumb.png`); reading `gamelist.xml`, muOS and LaunchBox art; an art folder per library;
+   following symbolic links to art folders (spec 2026-10-10 "Not in this release").
 
 ## Must-fix before later milestones
 
@@ -253,7 +267,6 @@ Small, known issues, accepted for Milestone 1:
 - A few hash pool tests are timing-sensitive under heavy load.
 - Pressing Cancel just as the first of several libraries finishes announces "Scan finished",
   not "Scan cancelled".
-- End jumps to the last game loaded so far, not the last game.
 - The interface is English only.
 - The title parser has edge cases: dotted names without an extension, and mismatched brackets.
 - A rename between NFC and NFD spellings looks like a removal plus a new file (except for a

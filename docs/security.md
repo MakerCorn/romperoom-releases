@@ -12,7 +12,7 @@ The short version:
   cover art (two GitHub hosts), or Look up N games (ScreenScraper's API host).
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
-- Only Tidy up moves games and artwork in a library: into its set-aside folder after a preview, or,
+- Only Fix up moves games and artwork in a library: into its set-aside folder after a preview, or,
   for Standardise and re-link, to new names after a review, keeping each edited game list's
   original. Deleting set-aside files forever needs typed words, and is the only deletion of the
   player's files. Cover art adds pictures only under `.romperoom/media`, never replacing a file.
@@ -250,13 +250,14 @@ test checks that this table lists exactly the channels in `IPC`.
 | `engine:listSystems`        | page → host | Systems that have games, with counts                                                                                                                                                                    | no                                                                                                                                               |
 | `engine:listKnownSystems`   | page → host | Every known system, for assigning a folder                                                                                                                                                              | no                                                                                                                                               |
 | `engine:listGames`          | page → host | A page of games (at most 500), filtered, searched and sorted                                                                                                                                            | no                                                                                                                                               |
+| `engine:gameLetters`        | page → host | How many games a filter has, and where each letter starts in title order (the games page's letter strip)                                                                                                | no                                                                                                                                               |
 | `engine:listUnreadable`     | page → host | Files the scans could not read, with reasons                                                                                                                                                            | no                                                                                                                                               |
 | `engine:assignFolder`       | page → host | Maps a top-level folder to a system                                                                                                                                                                     | catalog only                                                                                                                                     |
 | `engine:unassignFolder`     | page → host | Undoes `assignFolder`                                                                                                                                                                                   | catalog only                                                                                                                                     |
 | `engine:ignoreFolder`       | page → host | Marks a top-level folder as not a console                                                                                                                                                               | catalog only                                                                                                                                     |
 | `engine:unignoreFolder`     | page → host | Includes an ignored folder again                                                                                                                                                                        | catalog only                                                                                                                                     |
 | `engine:listIgnored`        | page → host | A library's ignored folders                                                                                                                                                                             | no                                                                                                                                               |
-| `engine:health`             | page → host | The Health page's summary                                                                                                                                                                               | no                                                                                                                                               |
+| `engine:health`             | page → host | The library's check-up, for Home and Fix up                                                                                                                                                             | no                                                                                                                                               |
 | `engine:sizes`              | page → host | Space used per console                                                                                                                                                                                  | no                                                                                                                                               |
 | `app:pickFolder`            | page → host | Opens the native folder dialog                                                                                                                                                                          | no                                                                                                                                               |
 | `app:scanStatus`            | page → host | The scan the host is running for this window, if any                                                                                                                                                    | no                                                                                                                                               |
@@ -337,6 +338,10 @@ test checks that this table lists exactly the channels in `IPC`.
 | `standardise:relinkReview`  | page → host | Reads a re-link review of a library: leftover pictures one game clearly matches, and game list entries whose game file is gone; a library id only                                                       | catalog only (checksums)                                                                                                                         |
 | `standardise:relinkRun`     | page → host | Renames the chosen pictures after their game and updates the game lists that name them, and re-points the chosen entries; the re-link review's plan id and its item ids only                            | library (pictures, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`) and catalog                                                          |
 | `standardise:progress`      | host → page | Standardise progress, then the result, to the window that started it                                                                                                                                    | no                                                                                                                                               |
+
+`engine:gameLetters`, like `engine:listGames`, takes no path: only a console id (checked by the
+engine's `systemIdArg`) and a search string of bounded length, under the same filter
+(`gameFilter`).
 
 Every handler (`src/main/handlers.ts`) applies the same rules:
 
@@ -425,10 +430,10 @@ re-link review only reads the library, so it is no job and runs beside them; a r
 window's re-link reviews, one still being read is not kept, and one a refused run would put back is
 not put back); a review or run binds to the window that started it, its progress and result go only
 to that window, only it can stop it, and closing that window or quitting stops it between units
-(what was renamed stays; Tidy up's Recovery finishes or undoes it). A run and its undo hold the
-library lock Tidy up uses, so a run started while another job holds the library is refused with
-nothing written, and while one runs every other job says the library is busy with "Tidy up or
-Standardise". The engine refuses a choice the review did not offer, a review older than the
+(what was renamed stays; Recovery, Fix up's **Finish or undo…**, finishes or undoes it). A run and
+its undo hold the library lock Tidy up uses, so a run started while another job holds the library is
+refused with nothing written, and while one runs every other job says the library is busy with "Tidy
+up or Standardise". The engine refuses a choice the review did not offer, a review older than the
 catalog's last change, and a new run while an earlier run of the library waits in Recovery; removing
 that library is refused too. The results carry names and library-relative paths, never the library's
 own path; why Undo left a file is one of a closed set of reasons, and the file system's own message
@@ -452,9 +457,9 @@ Adding a channel: add the `Engine` method and its `IPC` entry together, since
 ## Network isolation
 
 Romperoom makes no network request unless the user presses Download for me or Check for updates
-under Game databases, or Get cover art under Health (and then Download in its review), or Look up N
-games in a ScreenScraper review, and the page cannot make one at all. The CSP stops `fetch`, XHR and
-sockets. Three more layers cover what CSP does not govern.
+under Fix up › Game databases, or Get cover art in Fix up › Artwork (and then Download in its
+review), or Look up N games in a ScreenScraper review, and the page cannot make one at all. The CSP
+stops `fetch`, XHR and sockets. Three more layers cover what CSP does not govern.
 
 WebRTC is outside CSP: `connect-src 'none'` does not stop a peer connection. Also, any
 same-origin frame an injected script makes (about:blank, `srcdoc`, nested) has its own
@@ -671,24 +676,24 @@ for the download (the official-site path still works).
   library paths, relative file paths, sizes, modification times, CRC32/MD5/SHA-1 hashes, parsed
   titles, folder mappings and scan state, and descriptions a ScreenScraper lookup saved. It is
   not encrypted. It holds no credentials.
-- **The ScreenScraper account** the player saves is encrypted with Electron's `safeStorage`
-  (the macOS keychain, Windows DPAPI, or a Linux secret service) and written as ciphertext to
+- **The ScreenScraper account** the player saves is encrypted with Electron's `safeStorage` (the
+  macOS keychain, Windows DPAPI, or a Linux secret service) and written as ciphertext to
   `screenscraper-account.json` in the data folder (mode 0600). Where `safeStorage` has no real
-  keychain (on Linux, any backend but a named keyring, such as `basic_text`) nothing is saved. The page sends it once and only ever
-  learns whether one is saved; it is decrypted in the main process only to build a lookup's
-  request. Whether one is saved is read from the file without decrypting it, so opening Health
-  or Settings never asks the keychain; an account the keychain can no longer read (a reset, or a
-  data folder from another computer) stops a lookup before any request, asking for it again.
-  Reading the account for a lookup, saving it and forgetting it run one after another in the
-  order asked (a queue), so when the keychain asks for the account to be encrypted again during a
-  lookup's read, that write can never bring back an account the player forgot, or overwrite one
-  saved, while it ran: the file always ends as the last Save or Forget left it. A lookup already
-  running keeps the account it read when it started and goes on using it for its requests; a
-  Forget or Save affects the next lookup. Whether one is saved is not queued (it never decrypts),
-  so it never waits behind a keychain prompt. Romperoom's own ScreenScraper developer details are
-  not in the repository or the build: an unpackaged run may read them from
-  `ROMPEROOM_SCREENSCRAPER_DEV` (see [configuration.md](configuration.md#environment-variables)),
-  and they come from the maintainer's cloud secret store.
+  keychain (on Linux, any backend but a named keyring, such as `basic_text`) nothing is saved. The
+  page sends it once and only ever learns whether one is saved; it is decrypted in the main process
+  only to build a lookup's request. Whether one is saved is read from the file without decrypting
+  it, so opening Fix up or Settings never asks the keychain; an account the keychain can no longer
+  read (a reset, or a data folder from another computer) stops a lookup before any request, asking
+  for it again. Reading the account for a lookup, saving it and forgetting it run one after another
+  in the order asked (a queue), so when the keychain asks for the account to be encrypted again
+  during a lookup's read, that write can never bring back an account the player forgot, or overwrite
+  one saved, while it ran: the file always ends as the last Save or Forget left it. A lookup already
+  running keeps the account it read when it started and goes on using it for its requests; a Forget
+  or Save affects the next lookup. Whether one is saved is not queued (it never decrypts), so it
+  never waits behind a keychain prompt. Romperoom's own ScreenScraper developer details are not in
+  the repository or the build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV`
+  (see [configuration.md](configuration.md#environment-variables)), and they come from the
+  maintainer's cloud secret store.
 - **Settings** (theme and light or dark) live in the renderer's localStorage, under the key
   `romperoom.settings.v1`, the card wizard's last choices under `romperoom.deploy.v1`, and its
   saved packages under `romperoom.deploy.packages.v1` (see
@@ -727,7 +732,7 @@ for the download (the official-site path still works).
   cap ("Too big to check inside the zip"). Symlinks are reported, not followed. AppleDouble
   `._*` files, `.DS_Store` and similar junk are ignored.
 - **A folder that looks empty or gone is not forgotten.** That can be an unmounted share or a
-  half-connected drive. The scan keeps the folder's games and asks the player first (Health:
+  half-connected drive. The scan keeps the folder's games and asks the player first (Fix up:
   "Some game folders look empty or gone"). A whole library that looks empty is never marked
   missing. The guards are in [architecture.md](architecture.md#scanning-and-its-safety-guards).
 - **Operations never overwrite.** Every rename goes
@@ -985,9 +990,9 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
 
 ## Tidying up
 
-The Tidy up screens (`src/renderer/tidy/`) reach the engine's tidy facade only through the tidy
-host (`src/main/tidy-host.ts`). The renderer is untrusted, so the host follows the deploy host's
-pattern.
+Fix up's tidy tasks (`src/renderer/tidy/`, shown by `src/renderer/fixup/`) reach the engine's tidy
+facade only through the tidy host (`src/main/tidy-host.ts`). The renderer is untrusted, so the host
+follows the deploy host's pattern.
 
 - **No paths in.** The page sends a library id, a file, media or set-aside item id from a list
   the host gave it, or a random id the host handed to that same window. Every field is checked
@@ -1119,8 +1124,8 @@ future feature opens another network path, that feature must be reviewed against
 ## Deploying to a card
 
 Writing to a card is one of the few things Romperoom does outside its own data folder (the others
-write into a library: Tidy up with Standardise and re-link, cover art and card sync), so the page is
-treated as hostile here too. The rule: **the page never names a path to write to.**
+write into a library: Fix up's tidying with Standardise and re-link, cover art and card sync), so
+the page is treated as hostile here too. The rule: **the page never names a path to write to.**
 
 **Threat model.** Assume the page is compromised (a bug in rendering a game title, a malicious
 gamelist). It can call every `deploy:` channel with any arguments, in any order, as often as it
@@ -1280,7 +1285,7 @@ example) are in [development.md](development.md#known-limitations).
   unlike Download for me nothing checks the file's integrity before it is imported. The DAT
   reader fails closed, so the realistic harm is wrong identification, not code execution.
 - **Drag and drop is tested synthetically, not by hand.** Before each release, drag a `.html`
-  file and a ROM from Finder (or Explorer) onto the wizard and the wall. The window should stay
+  file and a ROM from Finder (or Explorer) onto the wizard and a games page. The window should stay
   on the app, show the not-allowed cursor and log nothing.
 - **Standardise and re-link check, then rename.** Each journal step checks the folders it renames
   into are reached through no link, when it is checked and again right before its rename; a folder

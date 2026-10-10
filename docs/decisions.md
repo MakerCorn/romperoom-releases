@@ -61,6 +61,10 @@ design history.
 53. [BIOS files are recognised by libretro's list](#53-bios-files-are-recognised-by-libretros-list)
 54. [ScreenScraper uses the player's account and fills gaps by checksum](#54-screenscraper-uses-the-players-account-and-fills-gaps-by-checksum)
 55. [The screenshots show generated covers](#55-the-screenshots-show-generated-covers)
+56. [One rule for a game's cover](#56-one-rule-for-a-games-cover)
+57. [Home and Fix up replace Library, Health and Tidy up](#57-home-and-fix-up-replace-library-health-and-tidy-up)
+58. [The games page reads by offset](#58-the-games-page-reads-by-offset)
+59. [Tab names stay two words; Settings keeps what is about the app](#59-tab-names-stay-two-words-settings-keeps-what-is-about-the-app)
 
 ## 1. One repository, four workspaces
 
@@ -497,7 +501,8 @@ ScreenScraper lookups; every other part stands.
 - **Why:** frontends read those copies in place; keeping Romperoom's store copy instead removed
   the picture from the frontend. What reads an unrecognised folder is unknown.
 - **Cost:** duplicate art in frontend folders stays on disk. The Tidy up screen does not show
-  the not-recognised list yet.
+  the not-recognised list yet (since the reorganisation, ADR 57, that screen is Fix up's Artwork,
+  which does not show it either).
 
 ## 37. A library that moved is reconnected by the user, or by a scan that proves it
 
@@ -740,18 +745,19 @@ ScreenScraper lookups; every other part stands.
 
 ## 45. Removing a library forgets it whole, and touches nothing on disk
 
-- **Decision:** Settings › Libraries removes a library by deleting every catalog row of it: its
+- **Decision:** Settings › Libraries (since the reorganisation, ADR 57, Home's Libraries) removes a
+  library by deleting every catalog row of it: its
   files, pictures, folder lists, identify, cover art, card sync and Standardise records, and (by
   its path) its journals, steps, operations, Delete forever records and reconnect audit rows.
   Nothing on disk is touched. It is refused while any scan runs, while a job holds the library's
   lock, and while Recovery lists anything of it. The last library may be removed: the app goes
   back to setup. Adding refuses a folder already added (it used to return the existing library)
   and one inside or around a library, by real path and by device and inode.
-- **Why:** a journal kept for a library Romperoom no longer knows would list its runs in History
-  and Set aside, count its set-aside bytes in Health, and let Undo or Finish move files in a
-  folder the user asked Romperoom to forget. Refusing while something waits in Recovery keeps the
-  journal a stopped run needs. Setup is already the app with no library, and refusing to remove
-  the last one would block "I chose the wrong folder".
+- **Why:** a journal kept for a library Romperoom no longer knows would list its runs in History and
+  Set aside, count its set-aside bytes in Health (now Fix up), and let Undo or Finish move files in
+  a folder the user asked Romperoom to forget. Refusing while something waits in Recovery keeps the
+  journal a stopped run needs. Setup is already the app with no library, and refusing to remove the
+  last one would block "I chose the wrong folder".
 - **Cost:** a removed library's history is gone: what it set aside stays in its
   `.romperoom-quarantine` folder with nothing offering it back, and adding the folder again starts
   afresh (a scan, identify, card syncs without their agreed saves). The page still passes the
@@ -935,3 +941,55 @@ Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
   every machine, with no dependency.
 - **Cost:** the pictures are simple; a change to the generator changes every screenshot with art
   (its pixel hashes are pinned, so the change is deliberate).
+
+## 56. One rule for a game's cover
+
+- **Decision:** a game's cover is its first present linked picture by kind: box art, then a
+  screenshot, then a title screen, then any other picture (marquee, wheel, unsorted), lowest id
+  first within a kind; never a video or manual. One SQL fragment (`art/cover.ts`) builds both the
+  games list's query (`listGames`) and Tidy's duplicate-set picture, and a test runs both over
+  one catalog. ES-DE's `miximages` and `3dboxes` keep kind `unknown`: a last-resort cover, never
+  box art (owner ruling: Get cover art and the card copy must not take them for a box).
+- **Why:** players with art on disk saw placeholders because only box art and screenshots could be
+  covers, and two copies of one rule can drift apart unseen.
+- **Cost:** a marquee or wheel can now be a game's cover until better art exists; a mix image
+  shows only when a game has no box art, screenshot or title screen.
+
+## 57. Home and Fix up replace Library, Health and Tidy up
+
+- **Decision:** the menu is Home, Fix up, SD card and Settings. Home is a dashboard (search, what
+  needs attention, recent games, libraries, a bounded console grid) and each console has its own
+  page; Fix up holds Health's and Tidy up's screens as Needs attention and five tasks. Routes take
+  a part (`#/home/<console>`, `#/fixup/<task>`, `#/deploy/<choice>`); the 0.11 hashes redirect.
+  One deriver (`home/attention.ts`) lists what needs attention on both screens. Fix up's header
+  holds the scan (**Scan all libraries** with more than one) and **Library to tidy**, which says
+  which library Duplicates, Standardise, leftover artwork, Re-link and Set aside work on; each of
+  those panels is keyed by that library, so nothing made for one acts on another.
+- **Why:** with dozens of consoles a row of console tabs and seven Tidy tabs became unusable,
+  and jobs were found by where they lived, not what they do.
+- **Cost:** every screenshot and much of the guide changed at once; the data-safety screens moved
+  without changing, which leaves some of their wording ("set aside") as it was. The messages that
+  named Tidy up (the busy word, an interrupted sync's undo, Discard the rest) now name Fix up.
+
+## 58. The games page reads by offset
+
+- **Decision:** a games page asks the engine for the total and each letter's offset in title
+  order (`gameLetters`, read-only, the same filter as `listGames`) and reads pages of 200 by
+  offset where the window is, never the pages in between.
+- **Why:** a letter jump or End in a 50,000-game console would otherwise read every page before
+  it, each a full grouping query.
+- **Detail:** the page chosen by the aggregates alone (an inner query), the per-game pictures and
+  sizes worked out only for its 200 rows; a scroll reads the pages where it settles, not every page
+  it passed, while a jump (a letter, End) reads at once.
+- **Cost:** one more IPC channel; a letter is the first character only (no multi-letter jump
+  inside a list that is not all read), and titles starting past Z (accented) have no letter.
+
+## 59. Tab names stay two words; Settings keeps what is about the app
+
+- **Decision:** Fix up's "History and undo" is labelled **History** (the naming rule allows two
+  words); Libraries moved to Home and Game databases to Fix up as each got its new home, and
+  Settings keeps Appearance, ScreenScraper and Network activity.
+- **Why:** short nouns are what the owner chose for every menu and tab; settings are about the app,
+  not the library.
+- **Cost:** "History" also holds Set aside and Recovery, which its name alone doesn't say (the
+  panel's own headings do).

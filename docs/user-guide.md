@@ -1,10 +1,11 @@
 # Using Romperoom
 
-Romperoom shows your ROM collection as a shelf of games, copies the games you pick to an SD
-card, syncs a handheld's card back, and tidies up duplicates and leftover artwork. Only Tidy up
-changes your games, and only after you have seen what it will do; cover art only adds pictures
-to Romperoom's own folder, when you ask; Sync a card only adds the games and saves you approve,
-and backs up any save it replaces. This guide walks through every screen.
+Romperoom shows your ROM collection on a Home page of consoles, each a list or a wall of covers,
+copies the games you pick to an SD card, syncs a handheld's card back, and tidies up duplicates and
+leftover artwork. Only Fix up changes your games, and only after you have seen what it will do;
+cover art only adds pictures to Romperoom's own folder, when you ask; Sync a card only adds the
+games and saves you approve, and backs up any save it replaces. This guide walks through every
+screen.
 
 The pictures come from a small made-up test library, so the sizes are tiny. Its cover art is
 generated for the screenshots (made-up pictures, no real box art or logo), and games without art
@@ -15,10 +16,13 @@ show a placeholder.
 - [Before you start](#before-you-start)
 - [Set up your library](#set-up-your-library)
 - [Folders that need a console](#folders-that-need-a-console)
-- [Browse your games](#browse-your-games)
+- [Home](#home)
+- [A console's games](#a-consoles-games)
 - [Game details](#game-details)
-- [Library health](#library-health)
+- [Your libraries](#your-libraries)
+- [Fix up](#fix-up)
 - [Cover art](#cover-art)
+- [Why a game shows no picture](#why-a-game-shows-no-picture)
 - [Getting game databases](#getting-game-databases)
 - [Identify your games](#identify-your-games)
 - [What the labels mean](#what-the-labels-mean)
@@ -26,10 +30,9 @@ show a placeholder.
 - [When folders look empty or gone](#when-folders-look-empty-or-gone)
 - [Files that couldn't be read](#files-that-couldnt-be-read)
 - [Settings and themes](#settings-and-themes)
-- [Your libraries](#your-libraries)
 - [Put games on an SD card](#put-games-on-an-sd-card)
 - [Sync a card](#sync-a-card)
-- [Tidy up your library](#tidy-up-your-library)
+- [Duplicates, leftover artwork and History](#duplicates-leftover-artwork-and-history)
 - [Standardise your library](#standardise-your-library)
 - [Keyboard](#keyboard)
 - [Gamepad](#gamepad)
@@ -53,7 +56,7 @@ Romperoom then counts your games in two steps. First it finds them: every game i
 library within minutes, even on a NAS. Then it reads every file once to fingerprint it (a
 hash), which is how it spots exact copies; on a NAS that can take hours for a large collection.
 While it checks, press **Go to my library** to start browsing: checking carries on in the
-background, and Health says how many files are still waiting. You can press **Cancel scan** at
+background, and **Fix up** says how many files are still waiting. You can press **Cancel scan** at
 any time. A later scan skips the files it has already read, so it picks up close to where it
 stopped.
 
@@ -69,8 +72,8 @@ folder had no games, choose a different folder.
 If a folder's name doesn't match a console, Romperoom asks you which console it is. Pick one
 from the list and press **Assign**. Nothing is assigned until you press it, so you can't change
 a folder by mistake while moving through the list. If a folder isn't games at all, choose
-**Not a console — ignore this folder** and press **Ignore folder**. Ignored folders are listed on
-Health, where **Include again** brings one back.
+**Not a console — ignore this folder** and press **Ignore folder**. Ignored folders are listed in
+**Fix up** › **Names**, where **Include again** brings one back.
 
 Each assignment can be undone under **Recently assigned**. Press **Scan again** afterwards to
 add the games in the folders you gave a console.
@@ -79,25 +82,59 @@ add the games in the folders you gave a console.
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | ![A folder that needs a console](screenshots/unmapped-console-shelf-light.png) | ![A folder that needs a console, dark](screenshots/unmapped-console-shelf-dark.png) |
 
-## Browse your games
+## Home
 
-**Library** shows every game as a cover on a wall.
+**Home** is where Romperoom opens. From the top:
 
-- The row of consoles along the top filters the wall. **All games** shows everything.
-- **Search games** filters by title as you type. **Clear search** empties it.
-- **Sort by** orders the wall by **Title** or by **Size**.
-- Games without cover art get a placeholder with their initials.
+- **Search games** looks through every game as you type; select a match to open its details.
+  When more match than fit, **See every match in All games** carries the search on.
+- **Needs attention** lists, in a few short lines, what is waiting: duplicates, games not
+  identified, folders without a console, files that couldn't be read, games gone from their
+  folders, a library not scanned yet or a scan that didn't finish, a library that isn't connected,
+  work that stopped part way. Each line opens where it is done: most in **Fix up**; a library that
+  isn't connected, in Home's libraries just below. With nothing to do, the list isn't shown.
+- **Recently added**: the newest games, one row.
+- **Your libraries**: your libraries, with **Add a library…**, **Scan now** and **Remove** (see
+  [Your libraries](#your-libraries)).
+- **Your consoles**: **All games** and a card per console, with its games and size. **Filter
+  consoles** narrows the cards and **Sort consoles by** orders them by name, games or size. With
+  many consoles Home shows the first 24; **Show all N consoles** shows the rest, and so does
+  typing the name of a console past the first 24 while a card has focus.
 
-The same game in two regions, such as USA and Europe, shows as two covers.
+| Light                                             | Dark                                                   |
+| ------------------------------------------------- | ------------------------------------------------------ |
+| ![Home](screenshots/home-console-shelf-light.png) | ![Home, dark](screenshots/home-console-shelf-dark.png) |
 
-| Light                                                       | Dark                                                             |
-| ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| ![The library](screenshots/library-console-shelf-light.png) | ![The library, dark](screenshots/library-console-shelf-dark.png) |
+## A console's games
+
+Choose a console (or **All games**) to open its games. **Back to Home** returns to its card. A
+console no longer in your libraries (or an old bookmark to one) says "This console isn't in your
+libraries (any more)." with the way back.
+
+- **Search games** filters by title as you type, and **Sort by** orders the games by **Title** or
+  by **Size**.
+- **View**: **List** shows a dense list (the title, then on All games the console, the region and
+  the size), two to three times as many games a screen as the covers; **Grid** shows the covers.
+  Games without cover art get a placeholder with their initials. Romperoom starts in List when
+  most of a console's games have no cover art, else in Grid, and keeps that view while the page is
+  open (a scan or new cover art doesn't switch it under you); it remembers the one you choose.
+- **Jump to letter**: `#` and A to Z go to the first game starting so (titles only: it is hidden
+  when sorting by size). A letter no game starts with is dimmed text, not a button, and says so to a
+  screen reader. Typing a letter or a digit in the list or grid does the same. Titles that start
+  after Z (an accented letter such as É, or another alphabet) have no letter: reach them with End
+  or by scrolling.
+- The same game in two regions, such as USA and Europe, is two games.
+
+| List                                                             | Grid                                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ![The list](screenshots/games-list-console-shelf-light.png)      | ![The grid](screenshots/games-grid-console-shelf-light.png)      |
+| ![The list, dark](screenshots/games-list-console-shelf-dark.png) | ![The grid, dark](screenshots/games-grid-console-shelf-dark.png) |
 
 ## Game details
 
-Select a cover to open its details: the console, the region, whether the game is identified,
-how many files it has, its size on disk, its size unzipped, and its cover art. When the game has
+Select a game to open its details: the console, the region, whether the game is identified,
+how many files it has, its size on disk, its size unzipped, and its cover art's size (only when
+its picture shows; with only a video or a manual it says so). When the game has
 a screenshot or a title screen, **Screens** shows them side by side. Close the panel with its
 close button or Escape.
 
@@ -115,33 +152,86 @@ identified yet" until you import a database and identify (see
 | --------------------------------------------------------------- | -------------------------------------------------------------------- |
 | ![A game's details](screenshots/drawer-console-shelf-light.png) | ![A game's details, dark](screenshots/drawer-console-shelf-dark.png) |
 
-## Library health
+## Your libraries
 
-**Health** sums up your library:
+**Home** › **Your libraries** lists every folder Romperoom keeps track of: its name, where it is,
+how many games it holds and when it was last scanned. Two folders with the same name are told
+apart by a number (`roms`, `roms (2)`). Fix up, card sync and the card wizard use the same
+names. A library whose drive isn't connected stays in the list, marked "Can't reach its folder.
+Is the drive connected?" (or "Its folder is empty. Is the drive connected?" when the drive left an
+empty folder behind).
 
-- **Space used**, by console, and the largest games.
-- **Duplicates:** byte-identical copies of the same game in one library and one console.
-  **Tidy up…** sets the extra copies aside (see [Tidy up your library](#tidy-up-your-library)).
-  It checks each copy first and leaves the files of a multi-file game alone, so it may offer
-  fewer than Health counts.
-- **Unidentified games**, from the last time you identified (see
-  [Identify your games](#identify-your-games) below).
-- **Folders without a console**, with a link to choose a console for each one in setup.
-- **Files that couldn't be read** (below).
-- **Games without cover art**, with ways to fill the gaps (see [Cover art](#cover-art)).
+- **Add a library…** opens the folder picker. Choose the folder that holds your console folders.
+  Romperoom doesn't scan it until you press **Scan now** on its row. It refuses a folder that is
+  already one of your libraries, or one inside or around another library (its games would be
+  counted twice).
+- **Scan now** counts that library's games, as **Scan again** in Fix up does.
+- **Remove** asks first. It only makes Romperoom forget the library: its games, its Fix up
+  history and what it set aside, its Standardise and re-link runs and its card syncs. Nothing in
+  its folder is moved, changed or deleted. Files set aside in Fix up stay in its
+  `.romperoom-quarantine` folder, but Romperoom no longer offers to put them back. Removing your
+  only library takes you back to setup.
 
-Press **Scan again** after you change your files.
+Romperoom won't remove a library while a scan runs, while it is busy with that library (a tidy,
+Standardise, re-link, cover art, identifying games, a game database import, or a card), or while
+something it was doing there stopped part way: finish or undo that in **Fix up** › **History** first
+(see [troubleshooting](troubleshooting.md#a-library-cant-be-removed)).
 
-| Light                                                         | Dark                                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------------------ |
-| ![Library health](screenshots/health-console-shelf-light.png) | ![Library health, dark](screenshots/health-console-shelf-dark.png) |
+| Light                                                            | Dark                                                                  |
+| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ![Your libraries](screenshots/libraries-console-shelf-light.png) | ![Your libraries, dark](screenshots/libraries-console-shelf-dark.png) |
+
+Good to know:
+
+- Adding a removed folder again starts afresh: it needs a scan, and its history and card syncs
+  are not brought back.
+- A game you keep in two libraries counts in each library's games.
+- "Can't reach its folder" is decided by reading the folder for up to 3 seconds; a slow network
+  drive can read as not reachable and be fine a moment later. The list reads every folder again
+  each time you open Home.
+- A library whose folder was moved and replaced by a symbolic link reads "Can't reach its
+  folder", yet **Scan now** still works and counts its games (see
+  [troubleshooting](troubleshooting.md#a-library-says-it-cant-reach-its-folder-but-it-scans)).
+- If a network drive holding one of your libraries stops answering, **Add a library…** makes
+  Romperoom stop responding until the drive answers or the system gives up on it (see
+  [troubleshooting](troubleshooting.md#a-folder-cant-be-added-as-a-library)).
+- Removing a library while **Identify games** works through all your libraries can show an error
+  for the removed one; the others are identified as usual.
+- Two connections to the same network share added as two libraries look like two libraries.
+
+## Fix up
+
+**Fix up** gathers everything that looks after your library. It opens on **Needs attention**: the
+same short list as Home; the cleanups' overview (what each could free, what is set aside, the
+device Standardise uses); the space used by console and the largest games; and any folders that
+look empty or gone (see [When folders look empty or gone](#when-folders-look-empty-or-gone)).
+**Scan again** (with more than one library, **Scan all libraries**) and the last scan's outcome sit
+above the tabs, whatever tab is open; press it after you change your files. It waits, saying why,
+while a tidy runs. With more than one library, **Library to tidy** in Fix up's header says which
+library Duplicates, Standardise (in Names), leftover artwork and Re-link, and Set aside work on; it
+is not shown on Needs attention and Game databases, which cover every library. The tabs:
+
+- **Names**: identify your games and check name matches, the unidentified games, the folders
+  without a console (and the ones you ignored), the files that couldn't be read, and
+  [Standardise](#standardise-your-library).
+- **Duplicates**: copies of the same game, **In one library** or **Across libraries** (see
+  [Duplicates, leftover artwork and History](#duplicates-leftover-artwork-and-history)).
+- **Artwork**: [Cover art](#cover-art), [why a game shows no picture](#why-a-game-shows-no-picture)
+  and leftover artwork.
+- **Game databases**: see [Getting game databases](#getting-game-databases).
+- **History**: what Fix up did, with Undo, what is set aside, and work that stopped part way.
+
+| Light                                                | Dark                                                      |
+| ---------------------------------------------------- | --------------------------------------------------------- |
+| ![Fix up](screenshots/fixup-console-shelf-light.png) | ![Fix up, dark](screenshots/fixup-console-shelf-dark.png) |
 
 ## Cover art
 
-The **Games without cover art** card on **Health** counts the games missing a picture, and how
-many miss box art, screenshots and title screens. It fills gaps only: Romperoom never replaces a
-picture you already have, and goes online only when you press **Get cover art** (to GitHub) or
-look up games on ScreenScraper (see [Look up on ScreenScraper](#look-up-on-screenscraper)).
+The **Games without cover art** card in **Fix up** › **Artwork** counts the games missing a picture,
+and how many miss box art, screenshots and title screens. It fills gaps only: Romperoom never
+replaces a picture you already have, and goes online only when you press **Get cover art** (to
+GitHub) or look up games on ScreenScraper (see [Look up on
+ScreenScraper](#look-up-on-screenscraper)).
 
 | Light                                                 | Dark                                                       |
 | ----------------------------------------------------- | ---------------------------------------------------------- |
@@ -210,7 +300,7 @@ pictures and descriptions were saved, and for how many games ScreenScraper had n
 Get cover art, it only fills gaps: get cover art from libretro-thumbnails first. A game Romperoom
 can't save a picture for (its file name is too long for a picture's name, for example) is counted
 and looked up only for a description, so ticking only picture kinds spends no lookup on it.
-A lookup can take an hour or more; scanning, copying to a card, Tidy up and identifying still work
+A lookup can take an hour or more; scanning, copying to a card, tidying and identifying still work
 meanwhile, because a library is held only while a picture is being saved into it. That has a
 cost: while one of those holds a library, each picture for its games is skipped and counted ("The
 library is busy with a scan. Try again when it finishes."). A skipped picture is not downloaded,
@@ -228,10 +318,36 @@ Each is written first to a temporary folder beside it, `.romperoom/tmp`, and mov
 once complete. Romperoom never changes your games, and writes nowhere else in your library for
 this.
 
+## Why a game shows no picture
+
+A game can show a placeholder though its art is on your drive. **Fix up** › **Artwork** says how
+many pictures Romperoom found in your libraries, how many it linked to a game, and why the rest
+weren't: no game of that exact name in that library, case ignored (a picture is linked when its
+name is the game's file name,
+like `Tetris (World).png` for `Tetris (World).zip`), or the picture is in a folder Romperoom
+couldn't match to a console. A game's cover is its box art, else a screenshot, else a title
+screen, else any other picture of it (a marquee, a wheel, an ES-DE mix image or 3D box). Mix
+images and 3D boxes are used only as a last-resort cover: they are not box art, so Get cover art
+still offers box art for those games. A picture added since the last scan shows after the next
+scan.
+
+Romperoom reads pictures from these folders in each library:
+
+- `.romperoom/media/<console>/box`, `screenshot` or `title` (where Get cover art saves), or any
+  other folder there
+- `downloaded_media/<console>/covers`, `screenshots`, `titlescreens`, `marquees` (ES-DE);
+  `miximages`, `3dboxes` or any other folder there, used as a last-resort cover
+- `<console>/images`, `image`, `covers`, `boxart`, `screenshots`, `snaps`, `marquees`, `media`,
+  `imgs`, `downloaded_images`, `snap`, `wheel`
+
+Not read yet: a picture named with a suffix (`Tetris-thumb.png`), art listed only in a
+`gamelist.xml`, muOS or LaunchBox folders, an art folder of its own per library, and folders that
+are shortcuts to another place (see the [roadmap](roadmap.md)).
+
 ## Getting game databases
 
-Romperoom ships with no game databases (DAT files) of its own. Open **Settings** (top right) and
-switch to the **Game databases** tab: it offers two ways to get them, above the list of what you
+Romperoom ships with no game databases (DAT files) of its own. Open **Fix up** and its **Game
+databases** tab: it offers two ways to get them, above the list of what you
 have already imported.
 
 ### Get a database from the official site
@@ -291,7 +407,8 @@ to the button, or says why it couldn't check. **Network activity**, below both s
 every request Romperoom has made for this feature — when, where to, what happened and how many
 bytes — so you can see for yourself that it only ever goes to GitHub, or to ScreenScraper for a
 lookup, and only when you pressed Download, Check for updates, Get cover art or Look up N
-games. A ScreenScraper line shows its host and path only, never your account or a checksum.
+games. A ScreenScraper line shows its host and path only, never your account or a checksum. It is
+also in **Settings** › **Network activity**.
 
 ### Managing what you have imported
 
@@ -305,7 +422,8 @@ databases.
 
 ## Identify your games
 
-Once you have imported a game database, Health shows an **Identify your games** card. Press
+Once you have imported a game database, **Fix up** › **Names** shows an **Identify your games**
+card. Press
 **Identify games** to compare every file against the databases you imported for its console. It
 shows the phase it is in (reading your games, matching them, grouping discs and versions, then
 linking cover art) and how far it has gotten; **Stop** stops it there. Your files are never
@@ -386,8 +504,8 @@ gone** or **Some cover art folders look empty or gone**, with the folders named.
 
 ## Files that couldn't be read
 
-A damaged zip, a password-protected archive or a drive that stopped answering shows up on
-Health with the reason. Damaged files usually need to be downloaded again: Romperoom never
+A damaged zip, a password-protected archive or a drive that stopped answering shows up in **Fix up**
+› **Names** with the reason. Damaged files usually need to be downloaded again: Romperoom never
 changes your files. Press **Try again** to read every one of them again now.
 
 | Light                                                                          | Dark                                                                                |
@@ -396,12 +514,11 @@ changes your files. Press **Try again** to read every one of them again now.
 
 ## Settings and themes
 
-**Settings** (top right) has four tabs: **Appearance**, **Libraries** (see
-[Your libraries](#your-libraries)), **Game databases** (see
-[Getting game databases](#getting-game-databases)) and **ScreenScraper**, where you save your
-own ScreenScraper account for [Look up on ScreenScraper](#look-up-on-screenscraper): your user
+**Settings** (top right) has three tabs: **Appearance**, **ScreenScraper**, where you save your
+own ScreenScraper account for [Look up on ScreenScraper](#look-up-on-screenscraper) (your user
 name and password go into your computer's keychain, and the tab then only says that an account
-is saved, with **Forget the account**. Appearance changes how Romperoom looks:
+is saved, with **Forget the account**), and **Network activity**: every request Romperoom has
+made, newest first. Appearance changes how Romperoom looks:
 
 - **Theme:** Console shelf (warm and cosy), CRT neon (glowing arcade colours) or Clean modern
   (quiet, so the cover art stands out).
@@ -416,64 +533,25 @@ Your choice is remembered.
 | Light                                                                          | Dark                                                                                |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | ![Settings › ScreenScraper](screenshots/screenscraper-console-shelf-light.png) | ![Settings › ScreenScraper, dark](screenshots/screenscraper-console-shelf-dark.png) |
+| ![Settings › Network activity](screenshots/network-console-shelf-light.png)    | ![Settings › Network activity, dark](screenshots/network-console-shelf-dark.png)    |
 
-| CRT neon, dark                                           | Clean modern, dark                                               |
-| -------------------------------------------------------- | ---------------------------------------------------------------- |
-| ![CRT neon theme](screenshots/library-crt-neon-dark.png) | ![Clean modern theme](screenshots/library-clean-modern-dark.png) |
-
-## Your libraries
-
-**Settings** › **Libraries** lists every folder Romperoom keeps track of: its name, where it is,
-how many games it holds and when it was last scanned. Two folders with the same name are told
-apart by a number (`roms`, `roms (2)`). Tidy up, card sync and the card wizard use the same
-names. A library whose drive isn't connected stays in the list, marked "Can't reach its folder.
-Is the drive connected?" (or "Its folder is empty. Is the drive connected?" when the drive left an
-empty folder behind).
-
-- **Add a library…** opens the folder picker. Choose the folder that holds your console folders.
-  Romperoom doesn't scan it until you press **Scan now** on its row. It refuses a folder that is
-  already one of your libraries, or one inside or around another library (its games would be
-  counted twice).
-- **Scan now** counts that library's games, as a scan from Health does.
-- **Remove** asks first. It only makes Romperoom forget the library: its games, its Tidy up
-  history and what it set aside, its Standardise and re-link runs and its card syncs. Nothing in
-  its folder is moved, changed or deleted. Files set aside in Tidy up stay in its
-  `.romperoom-quarantine` folder, but Romperoom no longer offers to put them back. Removing your
-  only library takes you back to setup.
-
-Romperoom won't remove a library while a scan runs, while it is busy with that library (Tidy up,
-Standardise, re-link, cover art, identifying games, a game database import, or a card), or while
-something it was doing there stopped part way: finish or undo that from Tidy up's Overview first
-(see [troubleshooting](troubleshooting.md#a-library-cant-be-removed)).
-
-| Light                                                            | Dark                                                                  |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------- |
-| ![Your libraries](screenshots/libraries-console-shelf-light.png) | ![Your libraries, dark](screenshots/libraries-console-shelf-dark.png) |
-
-Good to know:
-
-- Adding a removed folder again starts afresh: it needs a scan, and its history and card syncs
-  are not brought back.
-- A game you keep in two libraries counts in each library's games.
-- "Can't reach its folder" is decided by reading the folder for up to 3 seconds; a slow network
-  drive can read as not reachable and be fine a moment later. The list reads every folder again
-  each time you open the tab.
-- A library whose folder was moved and replaced by a symbolic link reads "Can't reach its
-  folder", yet **Scan now** still works and counts its games (see
-  [troubleshooting](troubleshooting.md#a-library-says-it-cant-reach-its-folder-but-it-scans)).
-- If a network drive holding one of your libraries stops answering, **Add a library…** makes
-  Romperoom stop responding until the drive answers or the system gives up on it (see
-  [troubleshooting](troubleshooting.md#a-folder-cant-be-added-as-a-library)).
-- Removing a library while **Identify games** works through all your libraries can show an error
-  for the removed one; the others are identified as usual.
-- Two connections to the same network share added as two libraries look like two libraries.
+| CRT neon, dark                                              | Clean modern, dark                                                  |
+| ----------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Home, CRT neon theme](screenshots/home-crt-neon-dark.png) | ![Home, Clean modern theme](screenshots/home-clean-modern-dark.png) |
 
 ## Put games on an SD card
 
 **SD card** in the header copies games to an SD card for a handheld, or for a frontend such as
-ES-DE. Put the card in your computer first. The wizard has six steps, and until you press
-**Start copying** nothing is written. Cover art from a card is under Health: see
-[Cover art](#cover-art).
+ES-DE. It opens on three choices: **Copy games to a card**, **Sync a card** (see
+[Sync a card](#sync-a-card)) and **Saved packages** (the wizard at What to copy, for the device you
+used last). A copy that is still running, or its report, opens straight away instead. The copy
+wizard has six steps, shown along the top throughout, and until you press **Start copying**
+nothing is written. Put the card in your computer first. Cover art from a card is in **Fix up** ›
+**Artwork**: see [Cover art](#cover-art).
+
+| Light                                                                    | Dark                                                                          |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| ![SD card's choices](screenshots/deploy-landing-console-shelf-light.png) | ![SD card's choices, dark](screenshots/deploy-landing-console-shelf-dark.png) |
 
 1. **Device.** Pick the device or frontend the card is for. Each one says how many consoles it
    plays. All four are marked **Community**: they were set up from the projects' own
@@ -695,30 +773,31 @@ than you expect. Nothing is ever deleted either way: pick the copy to keep, or *
 [sync-results-lt]: screenshots/sync-results-console-shelf-light.png
 [sync-results-dk]: screenshots/sync-results-console-shelf-dark.png
 
-## Tidy up your library
+## Duplicates, leftover artwork and History
 
-**Tidy up** finds copies of the same game and pictures no game uses. Nothing moves until you have
+**Fix up**'s **Duplicates**, **Artwork** and **History** tabs find copies of the same game and
+pictures no game uses, and put back what was set aside. Nothing moves until you have
 seen a preview and pressed its button. Nothing is deleted unless you choose Delete forever: files
 are **set aside** in a folder named `.romperoom-quarantine` inside your library, and you can put
 them back at any time.
 
-The **Overview** tab shows how much each cleanup could free, and what is set aside now.
+**Needs attention** shows how much each cleanup could free, and what is set aside now.
 
-| Light                                     | Dark                                            |
-| ----------------------------------------- | ----------------------------------------------- |
-| ![Tidy up's overview][tidy-overview-lt]   | ![Tidy up's overview, dark][tidy-overview-dk]   |
-| ![Duplicates to tidy][tidy-duplicates-lt] | ![Duplicates to tidy, dark][tidy-duplicates-dk] |
+| Light                                      | Dark                                             |
+| ------------------------------------------ | ------------------------------------------------ |
+| ![Duplicates to tidy][fixup-duplicates-lt] | ![Duplicates to tidy, dark][fixup-duplicates-dk] |
 
 **Duplicates** lists each set of identical copies: files with exactly the same bytes, so two zips of
-one game with different saves or patches inside are not copies. Each set shows its game's box art
-(else a screenshot) beside its name, the picture the Library shows for that game; a set whose game
-has none shows a plain square. A copy that belongs to another game (Romperoom matched it by its
-name) shows that game's cover beside it. One copy is kept, and the reason is shown, such as "Keeping
-the USA copy". Romperoom never sets aside the last copy of a game. Copies that are one file under
-two names (hard links), tracks of a disc set and the same file in two consoles' folders are left
-alone. Duplicates and the Overview say how many files are skipped that way ("N files are skipped
-because they're part of a multi-file game or shared between consoles"), and how many archives from
-an older version of Romperoom haven't been checked yet: press **Scan again** to include them.
+one game with different saves or patches inside are not copies. Each set shows its game's cover (box
+art, else a screenshot, a title screen or any other picture) beside its name, the picture a games
+page shows for that game; a set whose game has none shows a plain square. A copy that belongs to
+another game (Romperoom matched it by its name) shows that game's cover beside it. One copy is kept,
+and the reason is shown, such as "Keeping the USA copy". Romperoom never sets aside the last copy of
+a game. Copies that are one file under two names (hard links), tracks of a disc set and the same
+file in two consoles' folders are left alone. Duplicates and **Needs attention** say how many files
+are skipped that way ("N files are skipped because they're part of a multi-file game or shared
+between consoles"), and how many archives from an older version of Romperoom haven't been checked
+yet: press **Scan** (on Duplicates it names the library, such as **Scan roms**) to include them.
 
 - **Keep a different copy** lets you pick which one stays. The set's picture doesn't change: it
   is still the one of the copy Romperoom suggested keeping.
@@ -726,56 +805,54 @@ an older version of Romperoom haven't been checked yet: press **Scan again** to 
   down), and **Prefer unzipped copies**.
 - **Set aside all extras** opens the preview.
 
-**Across libraries** lists the files you hold in two or more of your libraries: files with exactly
-the same bytes, such as a game on your NAS and the same game on a USB drive. Each set shows the
-game's picture, its console, how many libraries hold it and its size, then each copy with its
-library's name and where it is inside that library. The line above the list says how many sets
-there are and how much space the extra copies take. Each copy is marked **Keep** or **Set aside**:
-Romperoom suggests keeping the copies in one library (the one with the copy it would keep on
-Duplicates) and setting aside the copies in the others. **Keep the copy in a different library**
-chooses another library for that set, or **Keep every copy** leaves the set alone.
-**Set aside the extra copies** opens the preview: each copy goes to the set-aside folder of its
-own library, never to another drive, and you can put it back from History or Set aside as with
-any tidy. It is unavailable, saying why, while a scan runs or while **Look again** is fetching
-the list. The libraries are tidied one after another; if one stops part way (or you press
-**Cancel**), the result names the library it stopped at, counts the files of the libraries it
-never reached ("3 files in the other libraries were not started. Look again to set them
-aside."), and names the kept library to connect when that is the reason. Just before anything
-moves Romperoom checks each kept copy again (it must still be there, with the same contents),
-and both libraries must be connected and scanned. Copies inside the kept library are never
-touched here: **Duplicates** handles those. With one library there is
-nothing to compare: add another in **Settings** › **Libraries** (see
-[Your libraries](#your-libraries)). The **Library** choice at the top of Tidy up doesn't apply
-to this tab, which compares every library: "Every library is compared here." stands in its place.
+The **Across libraries** choice on the Duplicates tab lists the files you hold in two or more of
+your libraries: files with exactly the same bytes, such as a game on your NAS and the same game on a
+USB drive. Each set shows the game's picture, its console, how many libraries hold it and its size,
+then each copy with its library's name and where it is inside that library. The line above the list
+says how many sets there are and how much space the extra copies take. Each copy is marked **Keep**
+or **Set aside**: Romperoom suggests keeping the copies in one library (the one with the copy it
+would keep on Duplicates) and setting aside the copies in the others. **Keep the copy in a different
+library** chooses another library for that set, or **Keep every copy** leaves the set alone. **Set
+aside the extra copies** opens the preview: each copy goes to the set-aside folder of its own
+library, never to another drive, and you can put it back from **History** as with any tidy. It is
+unavailable, saying why, while a scan runs or while **Look again** is fetching the list. The
+libraries are tidied one after another; if one stops part way (or you press **Cancel**), the result
+names the library it stopped at, counts the files of the libraries it never reached ("3 files in the
+other libraries were not started. Look again to set them aside."), and names the kept library to
+connect when that is the reason. Just before anything moves Romperoom checks each kept copy again
+(it must still be there, with the same contents), and both libraries must be connected and scanned.
+Copies inside the kept library are never touched here: **Duplicates** handles those. With one
+library there is nothing to compare: add another in **Home** › **Your libraries** (see [Your
+libraries](#your-libraries)). **Library to tidy** at the top of Fix up doesn't apply to this
+choice, which compares every library: "Every library is compared here." stands in its place.
 
 A library Romperoom can't compare is listed under **Not checked**, with the reason: it is being
 scanned, it hasn't been scanned completely, its last scan didn't see every file, its folder isn't
 available (is the drive connected?), or part of its folder is also another library. The other
 libraries are still compared. **Scan again** scans the libraries a scan would fix, and **Look
 again** looks once more, for example after you connect a drive. As on Duplicates, tracks of a disc
-set and the same file in two consoles' folders are left out and counted, and a file hard-linked
-into two libraries is one file, so it is not listed. Files that couldn't be read aren't compared
-(Health lists them), and a copy moved or renamed since the last scan is counted as moved or gone
-until you scan again. The list is as each library's last scan saw it: a file replaced since with
-a different one of the same name is still listed. Scan both libraries again before you remove a
+set and the same file in two consoles' folders are left out and counted, and a file hard-linked into
+two libraries is one file, so it is not listed. Files that couldn't be read aren't compared (**Fix
+up** › **Names** lists them), and a copy moved or renamed since the last scan is counted as moved or
+gone until you scan again. The list is as each library's last scan saw it: a file replaced since
+with a different one of the same name is still listed. Scan both libraries again before you remove a
 copy by hand. After **Look again**, a screen reader hears the result once (not again if it is the
 same as the last thing read out). See
 [troubleshooting](troubleshooting.md#a-library-says-not-checked-under-across-libraries) for each
-reason, and for the copies the list
-[leaves out or shows twice](troubleshooting.md#across-libraries-leaves-out-a-copy-or-shows-one-twice).
+reason, and for the copies the list [leaves out or shows
+twice](troubleshooting.md#across-libraries-leaves-out-a-copy-or-shows-one-twice).
 
 | Light                                              | Dark                                                     |
 | -------------------------------------------------- | -------------------------------------------------------- |
-| ![Copies in more than one library][tidy-across-lt] | ![Copies in more than one library, dark][tidy-across-dk] |
+| ![Copies in more than one library][fixup-across-lt] | ![Copies in more than one library, dark][fixup-across-dk] |
 
-**Artwork** lists pictures no game in your library uses: art for games you don't have
-or that were removed, and extra copies of the same picture. A picture your frontend reads where
-it is (ES-DE's `downloaded_media`, or a console folder's `images` or `Imgs`) is never an extra
-copy, and art in a folder Romperoom doesn't recognise is left alone.
-All of them start ticked: untick any you want to keep (or **Select none**), then press
-**Set aside**, which names the count and size. Romperoom can only tell which
-pictures are left over after a full scan, so after a scan that didn't finish it says so rather
-than showing nothing.
+The **Artwork** tab, under the cover art cards, lists pictures no game in your library uses: art for
+games you don't have or that were removed, and extra copies of the same picture. A picture your
+frontend reads where it is (ES-DE's `downloaded_media`, or a console folder's `images` or `Imgs`) is
+never an extra copy, and art in a folder Romperoom doesn't recognise is left alone. All of them
+start ticked: untick any you want to keep (or **Select none**), then press **Set aside**, which
+names the count and size. Romperoom can only tell which pictures are left over after a full scan, so
+after a scan that didn't finish it says so rather than showing nothing.
 
 When the leftover pictures have more than one cause, **Show** above the list picks one: **All**,
 **No game in your library**, **Game removed** or **Extra copies**, each with how many pictures
@@ -787,13 +864,13 @@ files you removed are listed under **No game in your library**; **Game removed**
 
 | Light                                         | Dark                                                |
 | --------------------------------------------- | --------------------------------------------------- |
-| ![Leftover artwork by cause][tidy-artwork-lt] | ![Leftover artwork by cause, dark][tidy-artwork-dk] |
+| ![Leftover artwork by cause][fixup-artwork-lt] | ![Leftover artwork by cause, dark][fixup-artwork-dk] |
 
-The preview says how many files, how much space and where they will go, and lists the first of
-them. **Cancel** has the focus, so pressing Enter by accident changes nothing. The other button
-names the count, such as **Set aside 3 files**.
+The preview says how many files, how much space and where they will go (naming the library they are
+set aside in), and lists the first of them. **Cancel** has the focus, so pressing Enter by accident
+changes nothing. The other button names the count, such as **Set aside 3 files**.
 
-![The set-aside preview][tidy-confirm-lt]
+![The set-aside preview][fixup-confirm-lt]
 
 While it runs you see the progress, and **Cancel** stops between files. When it ends it says
 what moved and how much was freed, with **Undo all** to put everything back. A file that
@@ -806,30 +883,31 @@ where they are, so the run no longer waits. Each run says when it started, so tw
 same kind are told apart. Discard the rest changes nothing and says so when a
 file of the run isn't where the run left it (for example after Romperoom quit in the middle of
 moving it): finish it or undo it instead. If Romperoom quit in the middle, the same choice opens
-by itself the next time it starts. **Later** leaves it, and Tidy up's overview offers it again.
+by itself the next time it starts. **Later** leaves it, and **Needs attention** offers it again.
 
-While a run waits like this, Tidy up's overview says "Something Romperoom was tidying stopped
-before it finished. Finish it or undo what was done. If it was setting files aside, you can also
-discard the rest." It means a tidy, a standardise run, a re-link or a card sync stopped part way,
-and nothing more happens to it until you choose. Only a run that was setting files aside offers
-**Discard the rest**. While the drive your library is on isn't connected, none of the three works:
-Romperoom says so and changes nothing, so connect it first. See
+While a run waits like this, **Needs attention** and **History** say "Something Romperoom was
+tidying stopped before it finished. Finish it or undo what was done. If it was setting files aside,
+you can also discard the rest." It means a tidy, a standardise run, a re-link or a card sync stopped
+part way, and nothing more happens to it until you choose. Only a run that was setting files aside
+offers **Discard the rest**. While the drive your library is on isn't connected, none of the three
+works: Romperoom says so and changes nothing, so connect it first. See
 [troubleshooting](troubleshooting.md#romperoom-was-interrupted-while-tidying).
 
-**History** lists every tidy with what is still set aside, and **Undo** for each. A run whose
-rest you discarded says **Stopped: the rest was discarded**. A run from Across libraries also
+The **History** tab lists every tidy with what is still set aside, and **Undo** for each. A run
+whose rest you discarded says **Stopped: the rest was discarded**. A run from Across libraries also
 names the library that kept the copies ("· more · kept in roms"). **Finish** of such a run waits
-until the kept library is connected when a file it has left to move is kept there; **Undo** does
-not need it. When Finish can't reach the kept library, the **Finish tidying up** drawer asks
-"Is roms still the library that keeps the other copies?": answer **Yes, reconnect** if the drive
-was remounted or the folder moved back, as for the run's own library, or **Not now**, then connect
-it and press **Finish** again.
+until the kept library is connected when a file it has left to move is kept there; **Undo** does not
+need it. When Finish can't reach the kept library, the **Finish tidying up** drawer asks "Is roms
+still the library that keeps the other copies?": answer **Yes, reconnect** if the drive was
+remounted or the folder moved back, as for the run's own library, or **Not now**, then connect it
+and press **Finish** again.
 
-**Set aside** lists the files waiting, grouped by when they were set aside. **Put back** returns
-one file, and **Put all back** a whole group. Romperoom never overwrites: if another file now
-sits where one came from, that one stays set aside and the result says so.
+Under it, **Set aside in** (the library's name) lists the files waiting, grouped by when they were
+set aside. **Put back** returns one file, and **Put all back** a whole group. Romperoom never
+overwrites: if another file now sits where one came from, that one stays set aside and the result
+says so.
 
-![Files set aside][tidy-setaside-lt]
+![History, with the files set aside][fixup-history-lt]
 
 **Delete forever…** is the only way Romperoom deletes a file it did not add itself. Beside it,
 choose what to delete: **Everything**, **Older than 30 days** or **Older than 90 days**, meaning set
@@ -881,24 +959,22 @@ pressed it is kept. A run that stopped part way offers **Finish or undo…**, to
 put back what already changed. If your library changed since the list was made, or Romperoom is
 busy with another job, the run is refused before anything changes, and **Look again** makes a
 fresh list. While a stopped or interrupted re-link waits to be finished or undone, Standardise
-won't run on that library (and the other way round). After you reload the window, Tidy up
+won't run on that library (and the other way round). After you reload the window, Fix up
 shows only the latest result, of a re-link or a standardise run; the other is under **History**.
 A game on several discs that Romperoom recognises disc by disc is never offered; see
 [troubleshooting](troubleshooting.md#a-picture-wasnt-offered-for-re-linking) for what else isn't.
 
-If Tidy up says Romperoom is busy, the library folder isn't available, or your library changed
-since you looked, see [troubleshooting](troubleshooting.md#tidy-up-says-romperoom-is-busy).
+If Fix up says Romperoom is busy, the library folder isn't available, or your library changed
+since you looked, see [troubleshooting](troubleshooting.md#fix-up-says-romperoom-is-busy).
 
-[tidy-overview-lt]: screenshots/tidy-overview-console-shelf-light.png
-[tidy-overview-dk]: screenshots/tidy-overview-console-shelf-dark.png
-[tidy-duplicates-lt]: screenshots/tidy-duplicates-console-shelf-light.png
-[tidy-duplicates-dk]: screenshots/tidy-duplicates-console-shelf-dark.png
-[tidy-across-lt]: screenshots/tidy-across-console-shelf-light.png
-[tidy-across-dk]: screenshots/tidy-across-console-shelf-dark.png
-[tidy-confirm-lt]: screenshots/tidy-confirm-console-shelf-light.png
-[tidy-setaside-lt]: screenshots/tidy-setaside-console-shelf-light.png
-[tidy-artwork-lt]: screenshots/tidy-artwork-console-shelf-light.png
-[tidy-artwork-dk]: screenshots/tidy-artwork-console-shelf-dark.png
+[fixup-duplicates-lt]: screenshots/fixup-duplicates-console-shelf-light.png
+[fixup-duplicates-dk]: screenshots/fixup-duplicates-console-shelf-dark.png
+[fixup-across-lt]: screenshots/fixup-across-console-shelf-light.png
+[fixup-across-dk]: screenshots/fixup-across-console-shelf-dark.png
+[fixup-confirm-lt]: screenshots/fixup-confirm-console-shelf-light.png
+[fixup-history-lt]: screenshots/fixup-history-console-shelf-light.png
+[fixup-artwork-lt]: screenshots/fixup-artwork-console-shelf-light.png
+[fixup-artwork-dk]: screenshots/fixup-artwork-console-shelf-dark.png
 [relink-rev-lt]: screenshots/relink-review-console-shelf-light.png
 [relink-rev-dk]: screenshots/relink-review-console-shelf-dark.png
 [relink-res-lt]: screenshots/relink-results-console-shelf-light.png
@@ -906,11 +982,11 @@ since you looked, see [troubleshooting](troubleshooting.md#tidy-up-says-romperoo
 
 ## Standardise your library
 
-**Standardise** (a tab of Tidy up) names your console folders the way one device does,
+**Standardise** (in **Fix up** › **Names**) names your console folders the way one device does,
 and your identified games by their official names from your game databases. A library built up
 over the years often has `GBA`, `gba` and `Game Boy Advance` side by side, and games named
 `tetris.gb`: this makes them one scheme. You review every change first, nothing is deleted, and
-the whole run can be undone. Tidy up's **Overview** shows the device you chose last.
+the whole run can be undone. **Needs attention** shows the device you chose last.
 
 1. Choose the device whose folder names you want: ES-DE, muOS, Onion (Miyoo Mini) or Batocera.
    Romperoom remembers it for this library, and you can pick another later. **Review the
@@ -953,10 +1029,10 @@ folder that merges into another (it stays in that folder). A frontend's own data
 changed, so a renamed game may need a rescan there. Saves on a card keep their old names.
 
 **Recent standardise runs**, here and under **History**, offer **Undo** while a run can still be
-undone. Undo puts back only what is unchanged since; anything else stays where it is and is
-listed. A run stopped part way, cut short by a crash or a disconnected drive, or one that
-couldn't put a failed item back, waits in Tidy up's Recovery: the results and the Overview offer
-**Finish or undo…**. While it waits, Romperoom won't start another run of that library ("An
+undone. Undo puts back only what is unchanged since; anything else stays where it is and is listed.
+A run stopped part way, cut short by a crash or a disconnected drive, or one that couldn't put a
+failed item back, waits to be finished or undone: the results, **Needs attention** and **History**
+offer **Finish or undo…**. While it waits, Romperoom won't start another run of that library ("An
 earlier run of this library was interrupted") or remove the library ("This library has an
 interrupted standardise run"): finish it or undo it first, then try again.
 
@@ -973,38 +1049,41 @@ If your library changed since the review, or the review is too old, Romperoom sa
 Everything works from the keyboard. Tab moves between controls, and a visible ring shows
 where you are.
 
-| Where               | Key                                  | Does                                          |
-| ------------------- | ------------------------------------ | --------------------------------------------- |
-| Anywhere            | Tab, Shift+Tab                       | Next or previous control                      |
-| Top of any screen   | Tab, then Enter on "Skip to content" | Skips past the header to the screen's content |
-| Game wall           | Arrow keys                           | Move between covers                           |
-| Game wall           | Home, End                            | First game, last loaded game                  |
-| Game wall           | Page Up, Page Down                   | Up or down a screenful                        |
-| Game wall           | Enter or Space                       | Open the game's details                       |
-| Console row         | Left, Right, Home, End               | Move between consoles                         |
-| Console row         | Enter or Space                       | Show that console's games                     |
-| Tidy up tabs        | Left, Right, Home, End               | Move between tabs                             |
-| Tidy up tabs        | Enter or Space                       | Show that tab                                 |
-| Details or Settings | Escape                               | Close the panel                               |
+| Where                    | Key                                  | Does                                          |
+| ------------------------ | ------------------------------------ | --------------------------------------------- |
+| Anywhere                 | Tab, Shift+Tab                       | Next or previous control                      |
+| Top of any screen        | Tab, then Enter on "Skip to content" | Skips past the header to the screen's content |
+| Your consoles (Home)     | Arrow keys, Home, End                | Move between console cards                    |
+| Your consoles (Home)     | Type a name                          | Go to the console whose name starts so        |
+| Your consoles (Home)     | Enter                                | Open that console's games                     |
+| Games (list or grid)     | Arrow keys                           | Move between games                            |
+| Games (list or grid)     | Home, End                            | First game, last game                         |
+| Games (list or grid)     | Page Up, Page Down                   | Up or down a screenful                        |
+| Games (list or grid)     | A letter or digit                    | The first game starting so (title order)      |
+| Games (list or grid)     | Enter or Space                       | Open the game's details                       |
+| Jump to letter           | Left, Right, Home, End               | Move along the letters                        |
+| Fix up and Settings tabs | Left, Right, Home, End               | Move between tabs                             |
+| Fix up and Settings tabs | Enter or Space                       | Show that tab                                 |
+| Details or Settings      | Escape                               | Close the panel                               |
 
 ## Gamepad
 
 Connect a controller and Romperoom shows its buttons at the bottom of the window. Xbox-style
 names are used. On other pads the buttons in the same positions do the same thing.
 
-| Button              | Does                                                          |
-| ------------------- | ------------------------------------------------------------- |
-| D-pad or left stick | Move                                                          |
-| A                   | Open or press what is selected                                |
-| B                   | Back: closes the open panel, otherwise returns to the library |
-| LB, RB              | Previous or next console                                      |
+| Button              | Does                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-pad or left stick | Move                                                                                                                                              |
+| A                   | Open or press what is selected                                                                                                                    |
+| B                   | Back: closes the open panel, else goes up one level (a console's games, a Fix up task or an SD card choice to its screen, another screen to Home) |
+| LB, RB              | Previous or next console on a games page, task in Fix up                                                                                          |
 
 Holding a direction repeats it.
 
 ## Questions
 
 **Does Romperoom change, move or delete my games?**
-Only when you ask it to in Tidy up, after a preview. Duplicates and leftover artwork are only set
+Only when you ask it to in Fix up, after a preview. Duplicates and leftover artwork are only set
 aside inside your library, where you can put them back; deleting them forever needs you to type
 `DELETE FOREVER`.
 [Standardise](#standardise-your-library) renames folders and games, and changes the game
@@ -1019,8 +1098,8 @@ Cover art never changes a game file: it only adds pictures to the library's own
 `.romperoom/media` folder when you ask, and removes only the ones it added.
 
 **Does it go online?**
-Only if you ask. Under Settings › Game databases, Download for me and Check for updates contact
-GitHub, and so do Get cover art and its Download under Health; Network activity lists every
+Only if you ask. Under Fix up › Game databases, Download for me and Check for updates contact
+GitHub, and so do Get cover art and its Download in Fix up › Artwork; Network activity lists every
 request. Everything else, importing art from an SD card included, works offline. See
 [security.md](security.md).
 
@@ -1035,7 +1114,8 @@ yet, or the file does not match what is in the databases you imported. See
 [What the labels mean](#what-the-labels-mean) for every reason and what to do about it.
 
 **Why are some games missing?**
-Their folder may not match a console: look under **Folders without a console** on Health. A
+Their folder may not match a console: look under **Folders without a console** in **Fix up** ›
+**Names**. A
 file that couldn't be read is listed there too. Two revisions of one game show as one until it is
 identified, and a game stored as a whole folder (some DOS and PC games) shows as several games
 until a game database identifies its files as one game. See [troubleshooting](troubleshooting.md).

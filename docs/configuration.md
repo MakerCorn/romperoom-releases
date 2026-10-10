@@ -245,13 +245,14 @@ Tests pass two more on the command line: `--force-device-scale-factor=1` (screen
 
 ## Saved settings
 
-The page saves three keys in localStorage:
+The page saves four keys in localStorage:
 
 | Key                            | Value                                                                                 | Default                                   |
 | ------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------- |
 | `romperoom.settings.v1`        | JSON `{ "theme": …, "mode": … }`                                                      | `console-shelf`, `system`                 |
 | `romperoom.deploy.v1`          | JSON: the card wizard's last device, consoles, region order and options; never a card | Every console of the device, box art only |
 | `romperoom.deploy.packages.v1` | JSON: the card wizard's saved packages, each a name, a device and its choices         | None saved                                |
+| `romperoom.gamesView.v1`       | `list` or `grid`: the games page's view                                               | none: List when most games have no art    |
 
 - `theme` is one of `console-shelf`, `crt-neon` or `clean-modern`.
 - `mode` is one of `light`, `dark` or `system` ("Match my computer").
@@ -269,7 +270,9 @@ The page saves three keys in localStorage:
   packages, named in up to 40 characters, unique ignoring case; at most 400 are read in all,
   counting the hidden packages of a device profile that no longer exists (the step counts those
   and can remove them together). It is independent of `romperoom.deploy.v1`.
-- Three sessionStorage keys only remember, for the window's life, which Tidy up, standardise and
+- `romperoom.gamesView.v1` (`src/renderer/lib/games-view.ts`) is read when a games page opens and
+  written when the player picks a view; an unreadable value counts as none.
+- Three sessionStorage keys only remember, for the window's life, which tidy, standardise and
   re-link result was already shown or closed (`romperoom.tidy.seen`,
   `romperoom.standardise.dismissed`, `romperoom.relink.dismissed`).
 - Choices made per library are kept in the catalog, not the page: the BIOS folder

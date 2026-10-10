@@ -165,9 +165,13 @@ and to the unpacked files `verify:package` expects
 
 ## Desktop renderer
 
-`apps/desktop/src/renderer` is a React app over `window.romperoom`, with hash routes `#/setup`
-(first-run wizard), `#/library` (the cover-art wall), `#/health`, `#/deploy` (the card wizard)
-and `#/tidy` (Tidy up). `#/` redirects to the library when one exists, else to setup.
+`apps/desktop/src/renderer` is a React app over `window.romperoom`, with hash routes
+(`lib/useHashRoute.ts`): `#/setup` (first-run wizard), `#/home` (Home; `#/home/<console>` or
+`#/home/all` is a games page), `#/fixup` (Fix up; `#/fixup/<task>` selects `names`,
+`duplicates`, `artwork`, `databases` or `history`) and `#/deploy` (SD card; `#/deploy/copy`,
+`sync` or `packages`). `#/` goes to Home when a library exists, else to setup; the 0.11 hashes
+(`#/library`, `#/health`, `#/tidy`) redirect, rewriting the address (see
+[architecture.md](architecture.md#the-renderers-screens-and-routes)).
 
 - `App.tsx` wires the shell (`shell/`: header, skip link, `<main id="main">`, settings drawer),
   the theme and the routes. The theme and light/dark mode are saved in localStorage
@@ -176,16 +180,23 @@ and `#/tidy` (Tidy up). `#/` redirects to the library when one exists, else to s
 - `data/` holds the react-query hooks over an injectable api (`RomperoomProvider`, `api-context`).
   Tests pass a fake; `main.tsx` passes `window.romperoom`. `lib/friendly.ts` turns every error
   into plain copy. The raw message is shown only behind ErrorState's "Show details".
-  `tidy/copy.ts` adds Tidy up's words, picked by the error's name (`errorNameOf()`, which reads
+  `tidy/copy.ts` adds Tidy's words, picked by the error's name (`errorNameOf()`, which reads
   the name the preload carried across the bridge).
-- `tidy/` holds the Tidy up tabs. `useTidyJob.ts` runs the one tidy job (progress, Cancel, the
-  result, adopting a running job after a reload), and `Recovery.tsx` the finish-or-undo drawer,
-  opened at startup only when the first health reading counts interrupted work.
+- `home/` holds Home (`Dashboard.tsx`, `ConsoleGrid.tsx`, `attention.ts`, the one Needs attention
+  deriver) and the games page (`GamesPage.tsx`, `GameList.tsx`, `LetterStrip.tsx`); `fixup/`
+  holds Fix up and its tasks, which render `health/` and `tidy/` components.
+- `tidy/` holds Tidy's panels, shown as Fix up's tasks. `useTidyJob.ts` runs the one tidy job
+  (progress, Cancel, the result, adopting a running job after a reload), and `Recovery.tsx` the
+  finish-or-undo drawer, opened at startup only when the first health reading counts interrupted
+  work.
 - `lib/nav.tsx` is one focus router shared by the keyboard and `gamepad/useGamepadNav.ts`. Zones
-  (the wall, the shelves) own their arrow keys, `back()` closes the top panel, and
-  `switchTab()` changes the shelf. The gamepad is polled with rAF only while a pad is connected.
-- `library/GameWall.tsx` virtualizes rows (`@tanstack/react-virtual`) and pages 200 games at a
-  time. It is one focusable region with a roving tab stop.
+  (the games list and grid, Home's console grid) own their arrow keys, `back()` closes the top
+  panel, and `switchTab()` (LB/RB) steps consoles on a games page or Fix up's tasks. The gamepad
+  is polled with rAF only while a pad is connected.
+- `library/GameWall.tsx` (the Grid view) and `home/GameList.tsx` (the List view) virtualize rows
+  (`@tanstack/react-virtual`) and read pages of 200 games by offset through
+  `data/game-pages.ts`, only where the window is. Each is one focusable region with a roving tab
+  stop.
 - Styling: `screens.css` and feature code use `@romperoom/ui` primitives and tokens only. The
   raw-value scan (`packages/ui/test/no-raw-values.test.ts`) covers every `.css`, `.tsx` and
   `.html` file here.
@@ -254,16 +265,16 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   guard cannot tell that library from an unmounted share or an empty mount point, so it never
   lets the media roots vouch for the ROMs, and it never marks the files missing.
   `confirmRemoval` does not lift this guard, because it runs before any folder is judged. To
-  recover, remove the library in **Settings** › **Libraries** (which forgets its catalog rows
+  recover, remove the library in **Home** › **Your libraries** (which forgets its catalog rows
   only, never files) and add the folder again. There is no way to confirm "this library really is
   empty".
-- **Change detection is size plus mtime.** A file rewritten with the same size and modification
-  time is not re-hashed. An `unreadable` file is retried on every scan, except a corrupt or
-  encrypted archive after 3 content failures in a row: that one is retried only once its size or
-  mtime changes (so repairing it in place with the same mtime is not noticed). A file failing
-  for infrastructure reasons 10 times in a row (a timeout: 3 times) is then tried only on every
-  10th scan, so after a NAS recovers it can take up to 10 scans to be catalogued, unless the
-  player presses "Try again" on Health (`retryUnreadable`), which hashes every one of them once.
+- **Change detection is size plus mtime.** A file rewritten with the same size and modification time
+  is not re-hashed. An `unreadable` file is retried on every scan, except a corrupt or encrypted
+  archive after 3 content failures in a row: that one is retried only once its size or mtime changes
+  (so repairing it in place with the same mtime is not noticed). A file failing for infrastructure
+  reasons 10 times in a row (a timeout: 3 times) is then tried only on every 10th scan, so after a
+  NAS recovers it can take up to 10 scans to be catalogued, unless the player presses "Try again" in
+  Fix up › Names (`retryUnreadable`), which hashes every one of them once.
 - **Scans can be cancelled, not paused.** A later scan skips files that did not change, so it
   picks up close to where a cancelled one stopped.
 - **Directory listing has no timeout.** A hung network mount can stall the walk. Hashing has a
@@ -297,7 +308,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 - **Case-insensitive search is ASCII-only.** It uses SQLite `LIKE`, so `é` does not match `É`.
 - **Search and sort use the stored title, not the cleaned one.** `listGames` searches and sorts
   the stored title: the collection-clean `display_title` when the directory is numbered, else the
-  title parsed from the file name. The wall then shows it through the display cleaner (control
+  title parsed from the file name. The games page then shows it through the display cleaner (control
   and invisible characters removed), which search and sort do not apply, so a title holding
   such characters sorts by them and a search must match them. Indexes are only recognized in
   directories of at least 20 names; a smaller numbered directory keeps its numbers. A leading
@@ -328,13 +339,13 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 
 ### Libraries
 
-- **Removing a library forgets its Tidy up history.** What it set aside stays in its
+- **Removing a library forgets its Fix up history.** What it set aside stays in its
   `.romperoom-quarantine` folder, but Undo, put back and Delete forever no longer offer it; move
   the files back by hand. Adding the folder again starts afresh.
 - **Add a library… can stall on a hung share.** `addLibrary` is synchronous in the main process
   and reads every existing library's folder (`placeOf`), so Romperoom stops responding until
   the drive answers or the system gives up on it.
-- **One stuck probe thread per hung library.** The Libraries tab's folder probe gives up after 3
+- **One stuck probe thread per hung library.** Home's Libraries folder probe gives up after 3
   seconds, but a read of a share that hangs keeps one thread of the main process's file-system
   pool until the share answers. Reads of one folder are shared while one is going, so that is at
   most one stuck thread per hung library.
@@ -346,7 +357,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   is not refused; its part fails with a foreign-key error, and the other libraries' parts run as
   usual. Nothing is lost.
 
-### Tidy up, Standardise and re-link
+### Tidying, Standardise and re-link
 
 - **A duplicate set's picture is the suggested copy's,** even after the player chooses to keep a
   different copy.
@@ -370,7 +381,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   list entries only that crashed before its journal was recorded stays "Interrupted" in History
   ([decision 44](decisions.md#44-re-link-renames-a-leftover-picture-after-the-one-game-that-clearly-matches-it)).
 - **Standardise and re-link share one run table.** A re-link waiting in Recovery refuses a
-  standardise run of that library, and the other way round, and after a reload Tidy up shows
+  standardise run of that library, and the other way round, and after a reload Fix up shows
   only the latest result of either kind (the other is in History).
 
 ### Across libraries
@@ -382,7 +393,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   overlap check cannot see it and every file in the share reads as held twice.
 - **The look can freeze the window on a hung share.** After the folder probe it reads each
   candidate copy's device and inode synchronously in the main process, as Duplicates does.
-- **A copy renamed while the tab looks reads as gone** (a Tidy up, Standardise or re-link run
+- **A copy renamed while the tab looks reads as gone** (a tidy, Standardise or re-link run
   renaming files at that moment), and its set may drop out until **Look again**.
 - **A pair hard-linked inside one library is one file,** so a copy of it in another library is
   not listed.
@@ -439,7 +450,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   `.toc` sheet, and a copy with no checksum or of 0 bytes. (Two different games of one name are
   not picked from either: each keeps its own name with a suffix, as before.)
 - **Art checksums fill as art is copied.** The card writer keeps the checksum of a picture it
-  reads whole, and Tidy up's leftover-artwork check its own; the scan never reads art, so a
+  reads whole, and the leftover-artwork check its own; the scan never reads art, so a
   picture never copied or compared carries none and the writer reads it the first time.
 - **Make it fit starts with the biggest games,** so it can leave out a big game when only a
   little is over; **Keep this one** asks for another choice. A list is for one card and one set
@@ -466,9 +477,6 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   read out each time their screen opens, not only the first time.
 - **Pressing Cancel while the first of several libraries finishes** stops the next library from
   starting, but the announcement says "Scan finished", not "Scan cancelled".
-- **End jumps to the last game loaded so far, not the last game.** The wall loads games a page at
-  a time as it scrolls, so on a large library End (and PageDown near the end) stops at the last
-  loaded tile. Reaching it loads the next page, so pressing End again goes further.
 - **The interface is English only**, and the plural helper is English-specific.
 - **A card writer refusal can name full paths.** Many of the writer's refusals start with the
   target's real path (for an export folder on a network drive: "`<path>` is on a network drive
@@ -482,7 +490,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   `e2e/resilience.spec.ts` checks both with a synthetic `DragEvent` carrying a `File` and with a
   CDP `Input.dispatchDragEvent` of a real file. A manual check before each release is still
   advisable: drag a `.html` file and a ROM from Finder (Explorer on Windows) onto the wizard and
-  the wall, and check that the window stays on the app, shows the not-allowed cursor and logs
+  a games page, and check that the window stays on the app, shows the not-allowed cursor and logs
   nothing.
 - **WebRTC is blocked by the IP policy and a dead proxy, not by a switch.** On Electron 44 the
   process-wide `--force-webrtc-ip-handling-policy` switch was measured inert: with only the
@@ -513,7 +521,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 ### Operations and hashing
 
 - **A stopped tidy waits until it is settled.** Cancel leaves the run's journal `running`; until it
-  is finished, undone or (a Tidy up run) its rest discarded, Health counts it and the next start
+  is finished, undone or (a tidy run) its rest discarded, the check-up counts it and the next start
   offers it again. Discard the rest refuses while a file of the run is not where the run left it
   ([decision 33](decisions.md#33-a-stopped-tidy-is-finished-or-undone-not-undone-in-part)).
 - **Artwork shows the first 200 leftover pictures** of a library, or of the cause shown; setting

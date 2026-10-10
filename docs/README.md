@@ -8,7 +8,7 @@ README is listed here; a test fails if one is not.
 | Document                              | What it covers                                                        |
 | ------------------------------------- | --------------------------------------------------------------------- |
 | [User guide](user-guide.md)           | Every screen, the keyboard and gamepad controls, and common questions |
-| [Troubleshooting](troubleshooting.md) | Unreachable folders, missing games, libraries, cards, Tidy up, Standardise and re-link |
+| [Troubleshooting](troubleshooting.md) | Unreachable folders, missing games, libraries, cards, Fix up, Standardise and re-link |
 | [Supported systems](systems.md)       | Every system and the folder names that map to it (generated)          |
 | [Roadmap](roadmap.md)                 | What is built, what is planned, and the known gaps                    |
 
@@ -16,7 +16,7 @@ README is listed here; a test fails if one is not.
 
 | Document                                   | What it covers                                                                             |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| [Architecture](architecture.md)            | Processes and IPC, the catalog schema, the scan and its guards, the journal, Tidy up, the hash pool, identification, cover art, card sync, Standardise, the deploy planner and card writer |
+| [Architecture](architecture.md)            | Processes and IPC, the catalog schema, the scan and its guards, the journal, the renderer's screens and routes, Tidy, the hash pool, identification, cover art, card sync, Standardise, the deploy planner and card writer |
 | [Development](development.md)              | Commands, the Electron binary, native modules, the renderer, known limitations             |
 | [Testing](testing.md)                      | Test strategy, the fixture library, e2e suites, coverage, mutation testing, CI             |
 | [Configuration](configuration.md)          | The data folder, environment variables, test seams, saved settings                         |

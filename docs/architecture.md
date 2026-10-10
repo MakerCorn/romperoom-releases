@@ -19,7 +19,7 @@ built `dist/`.
 flowchart TB
   subgraph renderer["Renderer · sandboxed, no Node"]
     direction TB
-    Screens["Wizard · Library · Drawer<br/>Health · SD card · Tidy up<br/>Settings"]
+    Screens["Wizard · Home · Games page<br/>Drawer · Fix up · SD card<br/>Settings"]
     Hooks["react-query hooks<br/>ScanProvider"]
     Screens --> Hooks
   end
@@ -408,27 +408,27 @@ erDiagram
 ```
 
 - A file that disappears is marked `missing`, never deleted from the catalog. Removing a library
-  (Settings › Libraries; `forgetLibrary` in `packages/engine/src/libraries.ts`) removes its
-  catalog rows only, never files: its `file` and `media` rows and its `source_root` row (which
-  cascades to its folder lists, `identify_run`, `art_added`, `art_dir`, `card_save`, `card_sync`,
+  (Home › Libraries; `forgetLibrary` in `packages/engine/src/libraries.ts`) removes its catalog rows
+  only, never files: its `file` and `media` rows and its `source_root` row (which cascades to its
+  folder lists, `identify_run`, `art_added`, `art_dir`, `card_save`, `card_sync`,
   `standardise_profile`, `standardise_run` and `standardise_backup`), then, by its path, its
-  `purge_item`, `op_step`, `op_journal`, `operation` and `library_reconnect` rows, and the games
-  no file holds. It is refused while any scan runs, while a job holds the library's lock, and
-  while anything of it waits in Recovery (a running journal or an interrupted Delete forever).
-  Adding a library refuses a folder that is one already added, or inside or around one, by real
-  path (stored and as it is now) and by device and inode. Settings lists each library through
+  `purge_item`, `op_step`, `op_journal`, `operation` and `library_reconnect` rows, and the games no
+  file holds. It is refused while any scan runs, while a job holds the library's lock, and while
+  anything of it waits in Recovery (a running journal or an interrupted Delete forever). Adding a
+  library refuses a folder that is one already added, or inside or around one, by real path (stored
+  and as it is now) and by device and inode. Home's Libraries lists each library through
   `engine:listLibraries` with `{ details: true }` (`describeLibraries`): its name (`libraryNames`,
-  in the page-safe `@romperoom/engine/format`; Tidy up, card sync, Standardise and the card wizard
-  name libraries by it too), games, last scan, and whether its folder answers
-  (`probeLibraryFolder`, asynchronous, at most 3 seconds, `lstat` then `readdir`, so a library
-  whose stored path is now a symbolic link reads as not reachable while scans still follow the
-  link). The probe gives up after 3 seconds, but a read of a share that hangs keeps one thread of
-  the main process's file-system pool until the share answers; reads of one folder are shared, so
-  that is at most one stuck thread per hung library. `addLibrary` stays synchronous and reads each
-  existing library's folder once, so with a share that hangs Romperoom stops responding until the
-  drive answers or the system gives up on it. An identify run over every library fixes its list
-  when it starts; a library removed before the run reaches it fails that part with a foreign-key
-  error (its `identify_run` row has no library), and the other libraries' parts run as usual.
+  in the page-safe `@romperoom/engine/format`; Fix up, card sync, Standardise and the card wizard
+  name libraries by it too), games, last scan, and whether its folder answers (`probeLibraryFolder`,
+  asynchronous, at most 3 seconds, `lstat` then `readdir`, so a library whose stored path is now a
+  symbolic link reads as not reachable while scans still follow the link). The probe gives up after
+  3 seconds, but a read of a share that hangs keeps one thread of the main process's file-system
+  pool until the share answers; reads of one folder are shared, so that is at most one stuck thread
+  per hung library. `addLibrary` stays synchronous and reads each existing library's folder once, so
+  with a share that hangs Romperoom stops responding until the drive answers or the system gives up
+  on it. An identify run over every library fixes its list when it starts; a library removed before
+  the run reaches it fails that part with a foreign-key error (its `identify_run` row has no
+  library), and the other libraries' parts run as usual.
 - A game is identified by `game_key` (migration 13): a filename game by its system, title and
   region, an identified game by its DAT game name, so two revisions of one title are two games.
   An identified game's title, region, revision and flags are parsed from the DAT game's
@@ -605,12 +605,12 @@ flowchart LR
   that timed out backs off after 3 in a row instead, so a file that hangs the drive costs 10
   minutes on 3 scans, not 10. The row keeps the last error, with every path removed, and the
   class is read back from that error.
-- **Trying again on request.** `scan(rootId, { retryUnreadable: true })` (Health's "Try again")
-  hashes every `unreadable` file in that scan, backed off or settled; the counts carry on after
-  it. `listUnreadable({ rootId?, offset, limit })` pages through the unreadable files (at most
-  200 at a time) with a plain reason for each (`unreadableReason`: damaged zip, encrypted,
-  too large, no permission, storage error, timed out, changed while reading, unknown), the
-  total and a count per reason.
+- **Trying again on request.** `scan(rootId, { retryUnreadable: true })` (Fix up › Names' "Try
+  again") hashes every `unreadable` file in that scan, backed off or settled; the counts carry on
+  after it. `listUnreadable({ rootId?, offset, limit })` pages through the unreadable files (at most
+  200 at a time) with a plain reason for each (`unreadableReason`: damaged zip, encrypted, too
+  large, no permission, storage error, timed out, changed while reading, unknown), the total and a
+  count per reason.
 - **Vanished re-verify.** A file or folder that disappears during the scan (`ENOENT`/`ENOTDIR`)
   counts as gone, but only after the end-of-scan re-read shows that its parent folder and the
   root are still there. A share that unmounts mid-scan therefore ends `could-not-read`.
@@ -656,13 +656,13 @@ flowchart LR
 Two ways to leave folders out of a scan. Both keep catalog rows as they were: a folder the scan
 does not look at is never judged, so nothing under it becomes `missing`.
 
-- **Ignored folders** (`ignoreFolder`, `unignoreFolder`, `listIgnored`; table
-  `ignored_folder`) persist per library. An ignored top-level folder is not walked, not listed
-  as unmapped, never suspect or absent, and its media root is not walked either. Health lists it
-  in `ignoredFolders` with the number of live rows the catalog still holds under it, and the
-  scan result names the ignored folders it listed. Assigning a system to a folder includes it
-  again; so does `unignoreFolder`, after which a folder no system resolves to is unmapped at
-  once. Removing the library removes its ignores (`ON DELETE CASCADE`).
+- **Ignored folders** (`ignoreFolder`, `unignoreFolder`, `listIgnored`; table `ignored_folder`)
+  persist per library. An ignored top-level folder is not walked, not listed as unmapped, never
+  suspect or absent, and its media root is not walked either. Fix up › Names lists it in
+  `ignoredFolders` with the number of live rows the catalog still holds under it, and the scan
+  result names the ignored folders it listed. Assigning a system to a folder includes it again; so
+  does `unignoreFolder`, after which a folder no system resolves to is unmapped at once. Removing
+  the library removes its ignores (`ON DELETE CASCADE`).
 - **Assigned folders** (`assignFolder`, `unassignFolder`; table `folder_map`) map a top-level
   folder to a system. `assignFolder` drops the folder's unmapped entry and its ignore.
   `unassignFolder(rootId, folder)` undoes it: it deletes the mapping and, when no system resolves
@@ -739,8 +739,8 @@ table). Content failures make the file `unreadable` and are left alone after 3.
 
 Moves and quarantines (`packages/engine/src/ops`) are planned, previewed, journaled and undoable.
 "Delete" always means moving into `<library>/.romperoom-quarantine`. The engine applies plans for
-the duplicate and artwork cleanups ([Tidying the library](#tidying-the-library)), which the
-Tidy up screens run.
+the duplicate and artwork cleanups ([Tidying the library](#tidying-the-library)), which Fix up's
+tidy tasks run.
 
 ```mermaid
 stateDiagram-v2
@@ -963,9 +963,10 @@ stateDiagram-v2
   (`prefer: 'archive'` reverses it), then the shallowest folder, the shortest path, the lowest
   id. A caller may pick the keeper of any group or skip groups.
 - The facade gives each group of the page it returns a picture, `coverMediaId`
-  (`duplicateCover`): the suggested keeper's game's first present box art, else its screenshot
-  (the Library's own cover rule), else another copy's game's; null when none has one. It reads
-  only, so the look's id stays good for planning.
+  (`duplicateCover`): the suggested keeper's game's cover by the games page's own rule
+  (`art/cover.ts` `coverOf`: box art, else a screenshot, else a title screen, else any other
+  picture), else another copy's game's; null when none has one. It reads only, so the look's id
+  stays good for planning.
 - One plan per library: every other copy goes to `.romperoom-quarantine/<date>/<its path>`.
 - The last-copy guard: when a step runs, the copy to keep is checked first (a regular file,
   inside the library, reached through no link: its real path is the library's real path plus
@@ -982,7 +983,7 @@ it still plans.
 - **Which libraries.** A library is compared only when the catalog vouches for it
   (`acrossScanProblem`: a complete scan, no present file the last complete scan did not verify,
   else `not-scanned` or `partial`; `scanning` while the engine scans it), its folder answers
-  (`probeLibraryFolder`, the folder probe of Settings › Libraries, else `offline`), and it
+  (`probeLibraryFolder`, the folder probe of Home › Libraries, else `offline`), and it
   overlaps no other compared library (`overlapRefusal`, the rule that refuses adding such a
   folder: the same real path or device and inode, inside or around; else `overlap`, both). Every
   library is returned with its problem, or null.
@@ -994,7 +995,7 @@ it still plans.
   key.
 - The facade's `findAcrossLibraries` pages the sets (the summary counts them all) and gives each
   set of the page its picture (`duplicateCover`). The host serves it on `tidy:findDuplicates` with
-  `across: true`, names each library as Settings › Libraries does (`libraryNames`) and passes no
+  `across: true`, names each library as Home › Libraries does (`libraryNames`) and passes no
   path. Each set carries `keepRootId`: the library holding the copy Duplicates' keeper rules put
   first.
 - **Setting copies aside.** A look is kept under an id (`acrossPlanId`, only the newest, bound to
@@ -1127,28 +1128,37 @@ free, or a later run already set that same file aside), then records each `faile
 
 ### The tidy facade
 
-`engine.tidy` is the surface the desktop host calls ([The Tidy up screens](#the-tidy-up-screens)).
+`engine.tidy` is the surface the desktop host calls ([Fix up's tidy tasks](#fix-ups-tidy-tasks)).
 Every input is checked at run time (zod, strict), every result is plain JSON, and it accepts ids,
 never paths. What a caller saw is held under a random id (at most 16, for 30 minutes, least recently
 used dropped first) and bound to the catalog's write generation: an id from before any catalog
 change is refused with `plan-stale`, an unknown or expired one with `plan-unknown`, one of the wrong
 kind with `plan-kind`. Plans and purge previews are single use.
 
-### The Tidy up screens
+### Fix up's tidy tasks
 
-`#/tidy` (`apps/desktop/src/renderer/tidy`) has seven tabs: Overview, Duplicates, Across
-libraries, Artwork, Standardise, History and Set aside. Across libraries asks
-`tidy:findDuplicates` with `across: true`; its **Set aside the extra copies** plans the look's
-sets with the player's choices and applies each plan as a tidy job, and History names the kept
-libraries (`keptIn`). On it the Library choice above the
-tabs is hidden in place (`visibility: hidden`) and the note "Every library is compared here."
-shares its grid cell, so the tab strip does not move. The words are plain: "set aside", never
-"quarantine", and the folder is named once, in the preview.
+Fix up (`#/fixup`, `apps/desktop/src/renderer/fixup`) runs Tidy's screens
+(`apps/desktop/src/renderer/tidy`) as tasks: its Needs attention holds the Overview, Duplicates has
+the choice **In one library** or **Across libraries**, Artwork holds leftover artwork and Re-link,
+History holds History, Set aside and the Recovery banner, and Standardise is the last section of
+Names. They replace Tidy up's seven tabs (Overview, Duplicates, Across libraries, Artwork,
+Standardise, History, Set aside). The Library choice ("Library to tidy", with a hint naming what it
+covers) sits in Fix up's header on Names, Duplicates, Artwork and History, not on Needs attention or
+Game databases. Duplicates, Artwork's leftover artwork and Re-link, and Set aside are keyed by the
+chosen library, so a plan, a chosen keeper or a Delete forever age made for one library never
+survives a switch (a plan arriving late opens no drawer), and a set-aside job runs in the name of
+the plan's own library; the preview names that library. Across libraries asks `tidy:findDuplicates`
+with `across: true`; its **Set aside the extra copies** plans the look's sets with the player's
+choices and applies each plan as a tidy job, and History names the kept libraries (`keptIn`). While
+Across libraries is chosen the Library choice is hidden in place (`visibility: hidden`, and `inert`
+so no Tab or d-pad stop lands on it) and the note "Every library is compared here." shares its grid
+cell, so the tab strip does not move. The words are plain: "set aside", never "quarantine", and the
+folder is named once, in the preview.
 
 ```mermaid
 flowchart LR
   subgraph page["Renderer"]
-    T["Tidy up tabs"] --> PV["Preview drawer<br/>names the count"]
+    T["Fix up tasks"] --> PV["Preview drawer<br/>names the count"]
     PV --> J["Job panel<br/>progress · Cancel · result"]
   end
   subgraph host["Main · tidy-host.ts"]
@@ -1185,7 +1195,7 @@ flowchart LR
   never started (after a Cancel between plans, a stop, or a plan that could not start) are counted
   as `notStarted`, apart from the stopped run's own `notRun` (which Finish or undo… settles). A run
   stopped because a kept library did not answer names that library (`keptLibrary`, from the
-  engine's `fatal.keeperRoot`). Every name is the library's name as Settings › Libraries gives it
+  engine's `fatal.keeperRoot`). Every name is the library's name as Home › Libraries gives it
   (a library removed since: its folder's last name), never a path.
 - **Recovery at startup.** When the first health reading counts interrupted work, a drawer
   offers to finish or undo each item. A run stopped later in the same session is offered from
@@ -1204,6 +1214,45 @@ flowchart LR
 - **Errors** are plain words with the technical text under "Details": busy (a scan or a copy to
   a card holds the library), the library folder not available, or "your library changed since
   you looked" (a stale plan), which offers "Look again".
+
+## The renderer's screens and routes
+
+Hash routes keep the app on the one page the app:// handler serves
+(`src/renderer/lib/useHashRoute.ts`): `#/home` (Home; `#/home/<console>` or `#/home/all` is a games
+page), `#/fixup` (Fix up; `#/fixup/<task>` selects a task: `names`, `duplicates`, `artwork`,
+`databases`, `history`), `#/deploy` (SD card; `#/deploy/copy`, `sync`, `packages`) and `#/setup`.
+`REDIRECTS` maps the 0.11 hashes (`library` → Home, `health` and `tidy` → Fix up) and the address is
+rewritten with `replaceState`; `#/` goes to Home when a library exists, else to setup. A part a
+screen does not have (`#/fixup/bogus`, `#/deploy/bogus`, `#/setup/x`) is rewritten to the screen;
+`#/home/<id>` naming no console in the libraries is kept (it may come back) and says "This console
+isn't in your libraries (any more)." under "Unknown console" when Romperoom knows no console of that
+id. A menu move focuses `<main>`; a move inside a screen focuses the new heading or tab (a Needs
+attention line on Home lands on its Fix up task's tab). B on a gamepad goes up one level: a games
+page, a Fix up task or an SD card choice to its screen, another screen to Home.
+
+Home (`home/Dashboard.tsx`) reads health, the libraries' details, the newest games (`listGames({
+sort: 'added' })`) and the consoles; its Needs attention lines come from `home/attention.ts`, the
+one deriver Fix up's Needs attention shares. The console grid shows 24 cards before "Show all N
+consoles"; its type-ahead looks through every console the filter matches and shows them all when the
+match is past the first 24. The games page (`home/GamesPage.tsx`) asks the engine for `gameLetters`
+(the total and each letter's offset in title order, the same filter as `listGames`) and reads games
+a page of 200 at a time **by offset** (`data/game-pages.ts`): only the pages on screen, page 0
+(which decides List or Grid) and the focused game's page, so a jump into a 50,000-game console reads
+two or three pages. A range the list scrolls to is read only once it has stayed put for `SETTLE_MS`
+(120 ms), so a fast drag queues no reads for the pages it passes; a move of the focused game (a
+letter, End) reads at once. The engine picks the page over the aggregates alone and works out the
+cover, screenshot, title and picture sizes only for its rows. The view decided from the first page
+(with no remembered choice) is kept for the page's life, so a refresh that changes the art majority
+never swaps the view, or drops focus, under the player. Both views (`home/GameList.tsx`,
+`library/GameWall.tsx`) are virtualised and keep the focused game mounted wherever they scroll.
+Every games query key starts with `games`, so a scan, an art run (`data/art-refresh.tsx`, always
+mounted), a database change or a review decision refreshes them.
+
+Fix up (`fixup/FixUp.tsx`) holds Tidy's job state for every task (`TidyProvider`), so a run
+outlives its tab; its tasks are the old Health and Tidy up screens' own components, regrouped (see
+[Fix up's tidy tasks](#fix-ups-tidy-tasks)). Scan again (Scan all libraries with more than one;
+unavailable, saying why, while a tidy runs) and the scan's outcome sit in its header above the
+tabs.
 
 ## Hash worker pool
 
@@ -1392,7 +1441,7 @@ follows the file in the same transaction.
 ```mermaid
 flowchart LR
   subgraph R["Renderer (no network)"]
-    P["Settings ›<br/>Game databases"]
+    P["Fix up ›<br/>Game databases"]
   end
   subgraph M["Main process"]
     H["dats-host<br/>argument checks"]
@@ -1410,7 +1459,7 @@ flowchart LR
   H -- "fixed URL" --> X["shell.openExternal"] --> B["Browser<br/>No-Intro · Redump"]
 ```
 
-Settings › Game databases offers two ways to get a DAT
+Fix up › Game databases offers two ways to get a DAT
 ([ADR 40](decisions.md#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)).
 
 **From the official site.** The page names a site (`no-intro` or `redump`), never a URL; the
@@ -1457,7 +1506,7 @@ requests (the branch head, the two folders and `dat`).
 ```mermaid
 flowchart LR
   subgraph R["Renderer (no network)"]
-    P["Health ›<br/>Games without cover art"]
+    P["Fix up › Artwork ›<br/>Games without cover art"]
   end
   subgraph M["Main process"]
     H["art-host<br/>argument checks · plans"]
@@ -1478,11 +1527,20 @@ flowchart LR
   SV --> CR --> CARD[("SD card<br/>read only")]
 ```
 
-Health's **Games without cover art** card fills gaps from the libretro-thumbnails collection on
-GitHub, or from the pictures a frontend already keeps on an SD card
-([ADR 41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)). The page sends console
-ids, kind names and back the review's opaque plan id; `apps/desktop/src/main/art-host.ts` checks
-each and keeps at most eight plans.
+Fix up › Artwork's **Games without cover art** card fills gaps from the libretro-thumbnails
+collection on GitHub, or from the pictures a frontend already keeps on an SD card ([ADR
+41](decisions.md#41-a-library-gains-one-writer-outside-tidy-up)). The page sends console ids, kind
+names and back the review's opaque plan id; `apps/desktop/src/main/art-host.ts` checks each and
+keeps at most eight plans.
+
+A game's cover (`art/cover.ts`): box art, then a screenshot, a title screen, then any other
+picture, lowest id first within a kind; never a video or manual. `listGames` and Tidy's
+`duplicateCover` build their query from the same `coverOf()`, and a test runs both over one
+catalog. ES-DE's `miximages` and `3dboxes` folders keep kind `unknown` (`format.ts`
+`ESDE_MEDIA_FOLDERS`, read by `scanner/media.ts`): they give a cover only through the last step
+and never count as box art. `HealthSummary.pictures` counts present pictures, linked ones, and the
+unlinked by reason (no game of that name, no console); Fix up › Artwork's **Why a game shows no
+picture** shows those counts and the folders the scanner reads (`PICTURE_FOLDERS`).
 
 **Get cover art.** The art service (`main/art-download/service.ts`) asks `api.github.com` for
 each console's recursive tree listing at the branch `packages/profiles/data/thumbnails.json`
@@ -1493,7 +1551,7 @@ is identified, otherwise by its ROM file name, exactly (libretro's ten replaced 
 aside); never fuzzily. Every game missing a kind is counted: the review shows, per console, the
 pictures no listing has (or that could not be saved or linked back) as "not available", the
 results add those for the chosen kinds to their "not available" figure (outside "Saved x of n"),
-and Health's counts come from the same games (`listArtWanted` and `artHealth` in
+and that card's counts come from the same games (`listArtWanted` and `artHealth` in
 `packages/engine/src/art/wanted.ts`). The review states the requests used and those left this
 hour, from GitHub's rate headers. **Download** fetches each picture from `raw.githubusercontent.com`
 through the same transport as game databases (one socket module, one request log), checks its
@@ -1510,46 +1568,45 @@ fill a gap is opened (its first bytes say PNG or JPEG), and the writer saves it 
 
 **Look up on ScreenScraper** (`main/scraper/`). The player's account is kept by
 `scraper/account.ts`: Electron's `safeStorage` encrypts it into
-`<dataDir>/screenscraper-account.json` (mode 0600), a run's read, a save and a forget run one
-after another (a promise queue, so a re-encrypting read never undoes a later Save or Forget) while
-`state` (never decrypting) is not queued, so Health and Settings never wait for a keychain prompt,
-and the page learns only `saved`, `none` or `unprotected` (no keychain, so nothing is saved) through
-`art:scraperAccount`; it sends the
-account once through `art:setScraperAccount`. Romperoom's developer details are not in the
-build: an unpackaged run may read them from `ROMPEROOM_SCREENSCRAPER_DEV`, a packaged build
-reads nothing, and without them the review and Health say "This copy of Romperoom can't use
-ScreenScraper yet." (so every release build does today). The review (`artReview({ source: 'screenscraper' })`) asks nothing: it
-counts the games missing a chosen kind or a description (`listScrapeWanted`); a game no picture
-can be saved for (`blocked`) counts for its description only, and a run never looks it up for
-pictures, so the count of games the review shows is the number of lookups sent. A run
-(`scraper/service.ts`) asks `api.screenscraper.fr` one game at a time (`/api2/jeuInfos.php` with
-the file's SHA-1, MD5, CRC, name, size and the console's ScreenScraper number), at most 1,000
-games, one request a second until the first answer gives the account's pace, then one every
-`ceil(60000 / perMinute)` milliseconds (that pace, faster or slower than a second), stopping at
-the account's daily limit or any status that is not about one game. Only an answer that matched the file's checksums is used
-(`exact`); a picture comes from `/api2/mediaJeu.php`, is checked against the answer's size and
-SHA-1, and goes through the same art writer with the source `screenscraper`; a description is
-cleaned and kept in `game_description` (at most 4,000 characters), shown in the game's drawer. A
-run holds no lock across its requests: before the first one it opens and ends a session (a busy,
-full or unwritable library stops the run there), then each picture is saved in a session of its
-own (`begin` for that one game and its bytes, `save`, `end`), so the `art` lock is held only while
-that picture is written and a scan, a copy to a card, Tidy up or Identify may run between two
-pictures. Each session works out again where the game's picture goes, whether the kind is still
-missing and whether there is room, so a library that changed or went away since reads as it is
-then (not available, present, or a stop on no space). Before each picture's download a session
-for that game opens and ends at once: a library busy then skips the picture under `busy` without
-downloading it (no daily request spent); one busy at the write is skipped the same way after it.
-Each row of `failed` is one reason and message, so a busy row names the work that held the
-library. Every save carries the file the lookup asked about (`asked`: its catalog id and SHA-1):
-the writer, under the lock, and `saveDescription` refuse it (`changed`) unless the game's pictures
-are still named after that file with that SHA-1, so a game id the catalog reused (Identify drops
-empty games, and `game.id` is not AUTOINCREMENT) or a game whose files changed takes nothing, and
-a run asks nothing about a game whose file changed since the review. A description is one
-synchronous catalog insert that never replaces one (`ON CONFLICT DO NOTHING`, `no-game` when the
-game went) and needs no lock; a run that asks only for descriptions takes none. The transport's
-allowlist has the third host with exactly those two paths; the account, the developer details and
-the checksums travel only in the query, and the request log and every error keep the host and path
-alone.
+`<dataDir>/screenscraper-account.json` (mode 0600), a run's read, a save and a forget run one after
+another (a promise queue, so a re-encrypting read never undoes a later Save or Forget) while `state`
+(never decrypting) is not queued, so Fix up and Settings never wait for a keychain prompt, and the
+page learns only `saved`, `none` or `unprotected` (no keychain, so nothing is saved) through
+`art:scraperAccount`; it sends the account once through `art:setScraperAccount`. Romperoom's
+developer details are not in the build: an unpackaged run may read them from
+`ROMPEROOM_SCREENSCRAPER_DEV`, a packaged build reads nothing, and without them the review and Fix
+up › Artwork say "This copy of Romperoom can't use ScreenScraper yet." (so every release build does
+today). The review (`artReview({ source: 'screenscraper' })`) asks nothing: it counts the games
+missing a chosen kind or a description (`listScrapeWanted`); a game no picture can be saved for
+(`blocked`) counts for its description only, and a run never looks it up for pictures, so the count
+of games the review shows is the number of lookups sent. A run (`scraper/service.ts`) asks
+`api.screenscraper.fr` one game at a time (`/api2/jeuInfos.php` with the file's SHA-1, MD5, CRC,
+name, size and the console's ScreenScraper number), at most 1,000 games, one request a second until
+the first answer gives the account's pace, then one every `ceil(60000 / perMinute)` milliseconds
+(that pace, faster or slower than a second), stopping at the account's daily limit or any status
+that is not about one game. Only an answer that matched the file's checksums is used (`exact`); a
+picture comes from `/api2/mediaJeu.php`, is checked against the answer's size and SHA-1, and goes
+through the same art writer with the source `screenscraper`; a description is cleaned and kept in
+`game_description` (at most 4,000 characters), shown in the game's drawer. A run holds no lock
+across its requests: before the first one it opens and ends a session (a busy, full or unwritable
+library stops the run there), then each picture is saved in a session of its own (`begin` for that
+one game and its bytes, `save`, `end`), so the `art` lock is held only while that picture is written
+and a scan, a copy to a card, a tidy or Identify may run between two pictures. Each session works
+out again where the game's picture goes, whether the kind is still missing and whether there is
+room, so a library that changed or went away since reads as it is then (not available, present, or a
+stop on no space). Before each picture's download a session for that game opens and ends at once: a
+library busy then skips the picture under `busy` without downloading it (no daily request spent);
+one busy at the write is skipped the same way after it. Each row of `failed` is one reason and
+message, so a busy row names the work that held the library. Every save carries the file the lookup
+asked about (`asked`: its catalog id and SHA-1): the writer, under the lock, and `saveDescription`
+refuse it (`changed`) unless the game's pictures are still named after that file with that SHA-1, so
+a game id the catalog reused (Identify drops empty games, and `game.id` is not AUTOINCREMENT) or a
+game whose files changed takes nothing, and a run asks nothing about a game whose file changed since
+the review. A description is one synchronous catalog insert that never replaces one (`ON CONFLICT DO
+NOTHING`, `no-game` when the game went) and needs no lock; a run that asks only for descriptions
+takes none. The transport's allowlist has the third host with exactly those two paths; the account,
+the developer details and the checksums travel only in the query, and the request log and every
+error keep the host and path alone.
 
 ## Card sync
 
@@ -1564,7 +1621,7 @@ flowchart LR
   subgraph E["Engine"]
     RV["review<br/>layout · hash pool · three-way"]
     RN["run<br/>sync lock · part files"]
-    J["Tidy up journal<br/>move steps · undo"]
+    J["Operations journal<br/>move steps · undo"]
   end
   P -- "sync:* IPC" --> H --> RV
   H --> RN
@@ -1596,22 +1653,22 @@ library's style), unless a different file has the name there. Saves are paired b
 key and extension with `.romperoom/saves/<system>/` and decided three ways against the base, the
 last state both sides agreed on (`sync/decide.ts`).
 
-**Run** (`sync/run.ts`), under the library's `sync` lock. A new card gets
-`.romperoom/card.json`. Card bytes go to `sync-<uuid>.part` files in `.romperoom/tmp` and are
-checked against the review's SHA-1; then one Tidy up journal moves each into place (a replaced
-library save first moves to `.romperoom/saves-backup/<system>/<stem>.<time><ext>`). Then each
-library save going to the card is written beside its target as a part file and renamed over it,
-only after the card's own bytes were saved in the backup folder and the card file still holds
-what the review saw. The bases of the saves now in step are recorded (`card_save`), with the
-bases they replaced, so **Undo this sync** (`sync/undo.ts`) can reverse the journal and put them
-back. Stop finishes or discards the file being copied; what was copied before stays.
+**Run** (`sync/run.ts`), under the library's `sync` lock. A new card gets `.romperoom/card.json`.
+Card bytes go to `sync-<uuid>.part` files in `.romperoom/tmp` and are checked against the review's
+SHA-1; then one operations journal (`ops`, as Fix up's tidying uses) moves each into place (a
+replaced library save first moves to `.romperoom/saves-backup/<system>/<stem>.<time><ext>`). Then
+each library save going to the card is written beside its target as a part file and renamed over it,
+only after the card's own bytes were saved in the backup folder and the card file still holds what
+the review saw. The bases of the saves now in step are recorded (`card_save`), with the bases they
+replaced, so **Undo this sync** (`sync/undo.ts`) can reverse the journal and put them back. Stop
+finishes or discards the file being copied; what was copied before stays.
 
 ## Standardise the library
 
 ```mermaid
 flowchart LR
   subgraph R["Renderer (no network)"]
-    P["Tidy up ›<br/>Standardise"]
+    P["Fix up › Names ›<br/>Standardise"]
   end
   subgraph M["Main process"]
     H["standardise-host<br/>argument checks"]
@@ -1619,7 +1676,7 @@ flowchart LR
   subgraph E["Engine"]
     RV["review<br/>folders · games · lists"]
     RN["run<br/>op lock · units"]
-    J["Tidy up journals<br/>move · move-dir · undo"]
+    J["Operations journals<br/>move · move-dir · undo"]
   end
   P -- "standardise:* IPC" --> H --> RV
   H --> RN
@@ -1630,9 +1687,10 @@ flowchart LR
   J --> Q[(".romperoom-quarantine")]
 ```
 
-**Standardise** (a Tidy up tab) renames a library's console folders to one device profile's folder
-names and identified games to their official DAT names, with what names them, after a review
-([ADR 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
+**Standardise** (in Fix up › Names) renames a library's console folders to one device profile's
+folder names and identified games to their official DAT names, with what names them, after a review
+([ADR
+43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
 The chosen profile is remembered per library (`standardise_profile`).
 
 **Review** (`packages/engine/src/standardise/review.ts`) reads only. Each top-level folder is
@@ -1664,8 +1722,9 @@ whose unit already failed, or that depends on a unit that failed (a merge on the
 into, a game on the folder move or merge that moves its files), does not run; the done steps of a
 failed unit are put back before the journal closes. The main journal stays open (`keepOpen`, so in
 Recovery) until its units are settled and the game lists' journal is recorded; a step that cannot be
-put back keeps it there and stops the run (`needs-recovery`: "Romperoom couldn't put everything back
-after an item failed. Tidy up's Recovery finishes it or undoes it."). Once the run row exists, every
+put back keeps it there and stops the run (`needs-recovery`, the spec's "Romperoom couldn't put
+everything back after an item failed. Tidy up's Recovery finishes it or undoes it.", which the page
+now ends "Fix up's History finishes it or undoes it."). Once the run row exists, every
 outcome is recorded with its reason: an error the run did not expect is recorded as a stop before it
 is thrown on, and only a crash leaves the row `running`. Rewritten cue sheets and playlists are
 staged as `std-<uuid>.part` in `.romperoom/tmp`; each original moves to
@@ -1673,19 +1732,19 @@ staged as `std-<uuid>.part` in `.romperoom/tmp`; each original moves to
 each). The game lists follow in a second journal, rewritten from the games that really were renamed.
 The catalog follows each step (file and media rows; a folder's rows, mapping, unmapped and ignored
 entries), a moved picture's stem and cover art's own record follow it, and a run interrupted by a
-crash or a lost library waits in Tidy up's Recovery, which settles the run when it finishes (with
-the same unit checks; an undo that landed before it was marked counts as done, and so does a rename
-that landed before it was marked even when its old name is taken since, so its put-back reports the
-name taken and the run waits in Recovery or the rollback ends partial) or rolls back. **Undo**
-(`standardise/undo.ts`) reverses the lists, then the rest, where unchanged. When a run, its Undo or
-its Recovery ends, the library's other journals are recorded again with the folder as it is now
-(`rerecordLibraryIdentity`, a `library_reconnect` row with the trigger `standardise`), only while
-the folder is provably the one the run's journal recorded and each of them recorded that same
-library; so a remount after renamed top-level folders does not lock them out. A library at the path
-with other top-level folder names is refused; one with the same names is taken for the same library,
-as the existing fingerprint rule takes it, and the re-record then records its device and inode.
-A re-link (`standardise_run.kind = 'relink'`, see Re-link artwork) is settled by the same Undo and
-Recovery, which rebuild its game lists from its saved pictures and entries.
+crash or a lost library waits in Recovery (Fix up's **Finish or undo…**), which settles the run when
+it finishes (with the same unit checks; an undo that landed before it was marked counts as done, and
+so does a rename that landed before it was marked even when its old name is taken since, so its
+put-back reports the name taken and the run waits in Recovery or the rollback ends partial) or rolls
+back. **Undo** (`standardise/undo.ts`) reverses the lists, then the rest, where unchanged. When a
+run, its Undo or its Recovery ends, the library's other journals are recorded again with the folder
+as it is now (`rerecordLibraryIdentity`, a `library_reconnect` row with the trigger `standardise`),
+only while the folder is provably the one the run's journal recorded and each of them recorded that
+same library; so a remount after renamed top-level folders does not lock them out. A library at the
+path with other top-level folder names is refused; one with the same names is taken for the same
+library, as the existing fingerprint rule takes it, and the re-record then records its device and
+inode. A re-link (`standardise_run.kind = 'relink'`, see Re-link artwork) is settled by the same
+Undo and Recovery, which rebuild its game lists from its saved pictures and entries.
 
 ## Deploy planner
 

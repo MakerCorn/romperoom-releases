@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Problems you might meet, and what to do. Only Tidy up changes your games: it sets files aside,
+Problems you might meet, and what to do. Only Fix up changes your games: it sets files aside,
 where you can put them back, and Standardise renames folders and games, which Undo puts
 back; cover art only adds pictures to Romperoom's own `.romperoom/media` folder, when you ask;
 Sync a card only adds the games and saves you approve, and backs up any save it replaces. None of
@@ -41,7 +41,7 @@ these problems can harm your collection.
 - [A game from the card wasn't offered](#a-game-from-the-card-wasnt-offered)
 - [A save wasn't synced](#a-save-wasnt-synced)
 - [Undo this sync left something](#undo-this-sync-left-something)
-- [Tidy up says Romperoom is busy](#tidy-up-says-romperoom-is-busy)
+- [Fix up says Romperoom is busy](#fix-up-says-romperoom-is-busy)
 - [Your library folder isn't available](#your-library-folder-isnt-available)
 - [A library says it can't reach its folder, but it scans](#a-library-says-it-cant-reach-its-folder-but-it-scans)
 - [Your library changed since you looked](#your-library-changed-since-you-looked)
@@ -90,10 +90,11 @@ folder names it knows is in [systems.md](systems.md).
 
 ## Some games are missing
 
-- **Their folder needs a console.** Health lists it under **Folders without a console**. Choose
+- **Their folder needs a console.** **Fix up** › **Names** lists it under **Folders without a
+  console**. Choose
   a console for it in setup, then press **Scan again**.
-- **You ignored the folder.** Health lists it under **Ignored folders**. Press **Include
-  again**, then **Scan again**.
+- **You ignored the folder.** **Fix up** › **Names** lists it under **Ignored folders**. Press
+  **Include again**, then **Scan again**.
 - **The file couldn't be read.** See [below](#files-that-couldnt-be-read).
 - **The file's extension isn't one that console uses.** Such files are skipped.
 - **Two revisions of one game** (such as `(Rev 1)` and the original) show as one game until it
@@ -103,7 +104,7 @@ folder names it knows is in [systems.md](systems.md).
 
 ## Some games stay unidentified
 
-The **Identify your games** card on Health says why, next to each reason:
+The **Identify your games** card in **Fix up** › **Names** says why, next to each reason:
 
 | Reason                        | What to do                                                       |
 | ----------------------------- | ---------------------------------------------------------------- |
@@ -112,15 +113,16 @@ The **Identify your games** card on Health says why, next to each reason:
 | No database for this console  | Add a game database for this console, then identify.             |
 | Not in your databases         | May be a hack, a translation or a bad copy; it still plays fine. |
 
-If you only just imported a database, press **Identify games** on Health — importing one does not
-identify your library by itself (a scan that finishes after a database exists does, from then on).
-A file a scan hasn't read yet shows as **Not checked yet**, never as a zero: identify it again
-once a later scan has read it. Files counted as **not identified yet** were read, but no identify
-has looked at them since (after removing a database, say): press **Identify games**.
+If you only just imported a database, press **Identify games** in **Fix up** › **Names** — importing
+one does not identify your library by itself (a scan that finishes after a database exists does,
+from then on). A file a scan hasn't read yet shows as **Not checked yet**, never as a zero: identify
+it again once a later scan has read it. Files counted as **not identified yet** were read, but no
+identify has looked at them since (after removing a database, say): press **Identify games**.
 
 ## A game database won't download
 
-Download for me and Check for updates (Settings › Game databases), and Get cover art on Health, are
+Download for me and Check for updates (Fix up › Game databases), and Get cover art (Fix up ›
+Artwork), are
 the only things that take Romperoom online to GitHub (a ScreenScraper lookup goes only to
 ScreenScraper). Each request is listed under
 **Network activity**, with its outcome. A file that fails leaves nothing behind: no partial file and
@@ -157,11 +159,11 @@ official site.
 
 ## Cover art won't download
 
-**Get cover art** (Health › Games without cover art) and its review's **Download** take cover
-art online only to GitHub; **Look up on ScreenScraper** is the other way, and goes only to
-ScreenScraper (see
-[A ScreenScraper lookup stopped or found nothing](#a-screenscraper-lookup-stopped-or-found-nothing)).
-Each request is listed under **Network activity**. A picture that fails is never kept half-written, and one failure never undoes the
+**Get cover art** (Fix up › Artwork › Games without cover art) and its review's **Download** take
+cover art online only to GitHub; **Look up on ScreenScraper** is the other way, and goes only to
+ScreenScraper (see [A ScreenScraper lookup stopped or found
+nothing](#a-screenscraper-lookup-stopped-or-found-nothing)). Each request is listed under **Network
+activity**. A picture that fails is never kept half-written, and one failure never undoes the
 pictures already saved. The review or the results say what happened:
 
 | The message starts with                      | What to do                                    |
@@ -195,6 +197,10 @@ and trusts only the certificate authorities built into Romperoom (see
 
 ## A picture didn't appear
 
+First open **Fix up** › **Artwork**: **Why a game shows no picture** says how many pictures were
+found, how many linked, and why the rest weren't, and lists the folders Romperoom reads (see
+[Why a game shows no picture](user-guide.md#why-a-game-shows-no-picture)).
+
 - **The ROM was renamed after its picture was saved.** A picture is named after the ROM file
   (without its extension), and a scan links pictures to games by that name. Rename the picture
   in `.romperoom/media/<console>/<kind>/` to match, or remove it and get cover art again.
@@ -206,7 +212,7 @@ and trusts only the certificate authorities built into Romperoom (see
   shown as not available. Rename the ROM.
 - **There is no picture for that game.** Games without a DAT match are matched by their exact
   file name, never a similar one. A file named differently from the collection's No-Intro name
-  gets nothing; identifying the game first (Settings › Game databases) matches it by its DAT name.
+  gets nothing; identifying the game first (Fix up › Game databases) matches it by its DAT name.
 
 ## The card's art wasn't imported
 
@@ -245,11 +251,11 @@ Romperoom won't save a password, so ScreenScraper can't be used there.
   ScreenScraper refused Romperoom's own registration, and "ScreenScraper no longer accepts this
   version of Romperoom. Update Romperoom." means this version is too old for it. Neither is
   about your account; what was saved before it stopped is kept.
-- **A picture skipped because the library was busy.** "The library is busy with a scan. Try
-  again when it finishes." (or copying to a card, Tidy up or Standardise, identifying games):
-  that work held the picture's library, so the picture was skipped, usually before it was
-  downloaded (no daily lookup spent). Nothing else changed; look up again once that work is done
-  and only what is still missing is asked for.
+- **A picture skipped because the library was busy.** "The library is busy with a scan. Try again
+  when it finishes." (or copying to a card, tidying or Standardise in Fix up, identifying games):
+  that work held the picture's library, so the picture was skipped, usually before it was downloaded
+  (no daily lookup spent). Nothing else changed; look up again once that work is done and only what
+  is still missing is asked for.
 - **A game skipped.** "Romperoom couldn't ask ScreenScraper about this game, so it was skipped."
   The game's file name or size can't be sent as it is (for example a name with a backslash); the
   lookup goes on with the next game.
@@ -267,7 +273,7 @@ or gone**.
 
 ## Files that couldn't be read
 
-Health lists each file with a reason:
+**Fix up** › **Names** lists each file with a reason:
 
 | Reason                      | What to do                                                  |
 | --------------------------- | ----------------------------------------------------------- |
@@ -307,11 +313,11 @@ scratch (for example, to choose another library):
    Windows `%APPDATA%\Romperoom` (see [configuration.md](configuration.md#data-folder)).
 3. Open Romperoom again. Your theme choice and the card wizard's saved packages are reset too.
 
-Files you set aside in Tidy up stay in the `.romperoom-quarantine` folder inside your library,
+Files you set aside in Fix up stay in the `.romperoom-quarantine` folder inside your library,
 but a fresh start no longer knows about them. Put back what you want first, or move them back
 by hand afterwards: each one sits under a dated folder, at its old path.
 
-To use another folder instead, add it in **Settings** › **Libraries** and remove the old one
+To use another folder instead, add it in **Home** › **Your libraries** and remove the old one
 (see [Your libraries](user-guide.md#your-libraries)): nothing in either folder changes.
 
 If your library is gone after updating from a build before 0.1.0: those builds kept their
@@ -320,7 +326,7 @@ it to the folder above, or add your library again and re-scan.
 
 ## A folder can't be added as a library
 
-**Add a library…** in **Settings** › **Libraries** refuses a folder and says why:
+**Add a library…** in **Home** › **Your libraries** refuses a folder and says why:
 
 - "That folder is already one of your libraries": it's in the list (perhaps under another name,
   or reached through a shortcut).
@@ -341,18 +347,19 @@ the system gives up on it. Reconnect the drive.
 
 ## A library can't be removed
 
-**Remove** in **Settings** › **Libraries** waits for whatever is using the library, and says so:
+**Remove** in **Home** › **Your libraries** waits for whatever is using the library, and says so:
 
 - "A scan is running": wait for the scan to finish (or cancel it), then try again.
-- "Romperoom can't remove roms right now": Tidy up, Standardise, re-link, cover art, identifying
+- "Romperoom can't remove roms right now": a tidy, Standardise, re-link, cover art, identifying
   games, a game database import, or a card is busy with that library. Wait for it to finish.
 - "Something Romperoom was doing in roms stopped before it finished", or "This library has an
-  interrupted standardise run": open Tidy up, press **Finish or undo…** on the Overview, settle
+  interrupted standardise run": open **Fix up**, press **Finish or undo…** on **Needs attention**
+  (or **History**), settle
   the run, then remove the library.
 
 Nothing is forgotten when it refuses.
 
-Once a library is removed, Romperoom forgets its Tidy up history: History and Set aside no
+Once a library is removed, Romperoom forgets its Fix up history: History and Set aside no
 longer list its runs, and Undo, put back and Delete forever no longer offer what it set aside.
 Those files stay in the `.romperoom-quarantine` folder inside that library's folder, each under a
 dated folder at its old path; move back what you want by hand. Adding the folder again later
@@ -428,7 +435,7 @@ stays.
 When a game file is in two of your libraries and the copies are different (two dumps of one
 game with the same name), only one can go to the card. The **Check** step lists them under
 **Copies that differ**, each with the library its copy comes from. Romperoom keeps the copy
-that matches your game database (Settings › Game databases), else the one in the shorter folder
+that matches your game database (Fix up › Game databases), else the one in the shorter folder
 name (`GBA` before `Game Boy Advance`), else the one it found first, so without a game database
 a new scan can change which one goes. It never asks per game.
 
@@ -491,7 +498,7 @@ are never changed.
 
 The check step says how Romperoom treated the BIOS folder:
 
-- "BIOS files are copied by name. Download the BIOS checksums under Settings › Game databases to
+- "BIOS files are copied by name. Download the BIOS checksums under Fix up › Game databases to
   check them." Without libretro's list Romperoom copies BIOS files under their own names.
 - "N BIOS files are not in libretro's list; copied by their own names." The file's contents
   match nothing in the list (another region or revision, or a file that is not a BIOS).
@@ -544,10 +551,10 @@ keep; **Decide later** leaves both as they are. Devices whose save folders Rompe
 Undo puts back only what still holds exactly what the sync wrote: a game or save that changed
 since is left, and listed. Saves written to the card are never undone; their earlier copies are
 in the library's `.romperoom/saves-backup` folder, named `<game>.<date and time>.<ext>`. A sync
-cut short by a crash or by the library going away waits in Tidy up's Recovery, like a tidy, to
-be finished or rolled back.
+cut short by a crash or by the library going away waits under **Finish or undo…** in Fix up,
+like a tidy, to be finished or rolled back.
 
-## Tidy up says Romperoom is busy
+## Fix up says Romperoom is busy
 
 "Romperoom is busy with a scan/copy. Try again when it finishes." means a scan, a copy to a
 card, another tidy or another job (Standardise, re-link, identifying games, cover art or a card
@@ -563,7 +570,7 @@ opens in Finder, then try again.
 
 A run from **Across libraries** needs both libraries: the one its copies were set aside in, and
 the one that kept the other copy. Setting aside says "The library that keeps the other copies
-isn't connected" and names it ("Connect roms, then finish from Tidy up."). **Finish** needs it
+isn't connected" and names it ("Connect roms, then finish from Fix up."). **Finish** needs it
 only for files it still has to move (files that had already moved before the stop need nothing
 of it); when it can't reach it, the **Finish tidying up** drawer asks "Is roms still the library
 that keeps the other copies?". If the drive was mounted again or the folder put back, **Yes,
@@ -574,13 +581,13 @@ libraries after it were not started: look again on **Across libraries** to set t
 
 ## A library says it can't reach its folder, but it scans
 
-Settings › Libraries says "Can't reach its folder" when the library's folder was moved and a
+Home's **Your libraries** says "Can't reach its folder" when the library's folder was moved and a
 symbolic link (a shortcut made in Terminal with `ln -s`) was left at its old place. Romperoom
 looks at the folder itself and doesn't follow the link to say it's there, though **Scan now**
 still reads through it and counts its games. Nothing is wrong with your games. To make it read
-normally, remove the library in Settings › Libraries and add the folder where it now is, then
-press **Scan now**. Removing it forgets its Tidy up history, so finish or undo anything waiting
-in Recovery first.
+normally, remove the library in **Home** › **Your libraries** and add the folder where it now
+is, then press **Scan now**. Removing it forgets its Fix up history, so finish or undo anything
+waiting under **Finish or undo…** first.
 
 ## Your library changed since you looked
 
@@ -597,16 +604,16 @@ checked** with the reason. The libraries it can check are still compared with ea
 - **It hasn't been scanned completely** or **its last scan didn't see every file:** press **Scan
   again** on the tab.
 - **Its folder isn't available:** connect the drive or the network share, then press **Look
-  again**. An unplugged drive's empty folder counts as not available, as in **Settings** ›
-  **Libraries**. A library whose folder was moved and replaced by a symbolic link also reads this
+  again**. An unplugged drive's empty folder counts as not available, as in **Home** › **Your
+  libraries**. A library whose folder was moved and replaced by a symbolic link also reads this
   way (see [A library says it can't reach its folder, but it
   scans](#a-library-says-it-cant-reach-its-folder-but-it-scans)).
 - **Part of its folder is also another library:** one library's folder is inside the other's, or
   both lead to the same folder, so every file would look like a copy of itself. Romperoom refuses
   to compare them, as **Add a library…** refuses to add such a folder. This usually comes from a
   drive mounted somewhere else or a moved folder: put the folders back as they were, then press
-  **Look again**. If two libraries really are one folder, remove one in **Settings** ›
-  **Libraries** (removing a library forgets its history; see
+  **Look again**. If two libraries really are one folder, remove one in **Home** › **Your
+  libraries** (removing a library forgets its history; see
   [Your libraries](user-guide.md#your-libraries)).
 
 ## Across libraries leaves out a copy, or shows one twice
@@ -616,14 +623,15 @@ different contents are not copies. It leaves some files out on purpose:
 
 - **A file "has moved or gone since the last scan":** a copy was moved, renamed or deleted
   after the last scan, so Romperoom can't check it, and its set may be missing from the list.
-  Press **Scan again**, then **Look again**. This can also happen for a moment while Tidy up,
+  Press **Scan again**, then **Look again**. This can also happen for a moment while a tidy,
   Standardise or re-link is renaming files in one of your libraries; press **Look again** when it
   ends.
 - **A file replaced since the last scan** with a different one of the same name is still listed:
   the list is as each library's last scan saw it. Scan both libraries again before you remove a
   copy by hand.
 - **Files that couldn't be read** have nothing to compare, so they are neither listed nor counted.
-  **Health** lists them (see [Files that couldn't be read](#files-that-couldnt-be-read)).
+  **Fix up** › **Names** lists them (see [Files that couldn't be
+  read](#files-that-couldnt-be-read)).
 - **Tracks of a multi-file game** and **the same file in two consoles' folders** are left out
   and counted, as on **Duplicates**.
 - **A file hard-linked in two places** (one file with two names, made in Terminal with `ln`) is
@@ -633,7 +641,7 @@ different contents are not copies. It leaves some files out on purpose:
 The same network share connected twice (at two different places in Finder) and added as two
 libraries looks like two libraries: every file in it then shows as held twice. Connect the share
 at one place again if you can, as it was when you added it. If you no longer need one of the two
-libraries, remove it in **Settings** › **Libraries** (removing a library forgets its history; see
+libraries, remove it in **Home** › **Your libraries** (removing a library forgets its history; see
 [Your libraries](user-guide.md#your-libraries)).
 
 The look checks each possible copy on disk. On a slow network share that stops answering
@@ -646,10 +654,10 @@ what went wrong), and a result the same as the last one read out is not read aga
 
 ## A copy set aside from Across libraries wasn't deleted
 
-**Delete forever** deletes a copy set aside from **Across libraries** only while the copy it was
-set aside for is still provably there: the library that kept it is connected and still in
-Settings › Libraries, and its copy has the same contents. Otherwise the copy stays set aside and
-the preview counts it as kept. Connect the library and try again, or put the copy back.
+**Delete forever** deletes a copy set aside from **Across libraries** only while the copy it was set
+aside for is still provably there: the library that kept it is connected and still in Home's **Your
+libraries**, and its copy has the same contents. Otherwise the copy stays set aside and the preview
+counts it as kept. Connect the library and try again, or put the copy back.
 
 After **Standardise** renamed folders or games in the library that kept the other copy, Delete
 forever finds the kept copy under its new name by its contents and checks it the same way. If you
@@ -677,12 +685,13 @@ after a Cancel, press **Finish or undo…** on the result. For each run:
 
 - **Finish** moves the files that were left, with the same checks as a new run.
 - **Undo what was done** puts back the files that already moved.
-- **Discard the rest** (a Tidy up run only) keeps what already moved set aside and leaves the
+- **Discard the rest** (a tidy run only) keeps what already moved set aside and leaves the
   other files where they are; nothing moves. If it says "Romperoom couldn't discard the rest.", a
   file of the run isn't where the run left it, so part of it may already have moved: choose
   **Finish** or **Undo what was done** instead. A Standardise, re-link or card-sync run has no
   Discard the rest: it is finished or undone as a whole.
-- **Later** leaves it for now. Tidy up's overview keeps offering it until you choose.
+- **Later** leaves it for now. **Needs attention** and **History** keep offering it until you
+  choose.
 
 If it says your library folder isn't available, reconnect the drive first: Finish, Undo what
 was done and Discard the rest all need it, and change nothing without it. An interrupted
@@ -694,8 +703,8 @@ The review says why, in one line:
 
 - **"This profile has no folder name for this console."** The device you chose has no folder for
   it: choose another device, or leave it.
-- **"Romperoom doesn't know which console this folder is for."** Assign the folder a console (on
-  Health), then review again.
+- **"Romperoom doesn't know which console this folder is for."** Assign the folder a console (in
+  **Fix up** › **Names**), then review again.
 - **"This folder could be more than one console."** Its games were catalogued as more than one
   console, or as another console than its name says. If the folder really holds two consoles,
   move one console's games to its own folder; otherwise scan again. Then review again.
@@ -717,22 +726,22 @@ The review says why, in one line:
   without it. Untick that clash to rename the game.
 - **"Romperoom couldn't put everything back after an item failed."** An item failed part way and
   something it had already moved couldn't go back (its old name was taken meanwhile). The run
-  waits under Tidy up's **Finish or undo…**: free the name and finish it, or undo it.
+  waits under Fix up's **Finish or undo…**: free the name and finish it, or undo it.
 
 A run as a whole can end early, with one of these lines:
 
 - **"Not enough space in the library."** A rewritten game list, cue sheet or playlist needs room
   on the drive. Free some space, then review again; anything already renamed stays.
-- **"The library is busy with …"** Another job (Tidy up, a scan, identify, cover art, a card sync
+- **"The library is busy with …"** Another job (a tidy, a scan, identify, cover art, a card sync
   or a deploy) is using the library. Try again when it finishes.
 - **"Stopped. Everything done before you pressed Stop is kept and can be undone."** You pressed
-  **Stop**. What was left waits under Tidy up's **Finish or undo…**.
+  **Stop**. What was left waits under Fix up's **Finish or undo…**.
 - **"Your library folder isn't available."** The drive went away during the run. Reconnect it;
-  Tidy up's **Finish or undo…** finishes or rolls back the rest.
+  Fix up's **Finish or undo…** finishes or rolls back the rest.
 
 While a run waits under **Finish or undo…**, Romperoom won't start another run of that library
-(it says **"An earlier run of this library was interrupted"**) or remove the library in Settings ›
-Libraries (it says **"This library has an interrupted standardise run"**). Finish it or undo it
+(it says **"An earlier run of this library was interrupted"**) or remove the library in Home ›
+Your libraries (it says **"This library has an interrupted standardise run"**). Finish it or undo it
 first, then try again.
 
 Games that aren't identified are never renamed. When two folders merge, a file whose name is
@@ -760,7 +769,7 @@ a save of the old name.
 Undo puts back only what still holds exactly what the run wrote: a file or folder that changed or
 moved since, or whose old name is now taken, is left and listed. Every game list, cue sheet and
 playlist the run replaced keeps its original in `.romperoom/lists-backup/<run>/` in your library.
-A run cut short by a crash or by the library going away waits in Tidy up's **Finish or undo…**,
+A run cut short by a crash or by the library going away waits in Fix up's **Finish or undo…**,
 like a tidy.
 
 ## A picture wasn't offered for re-linking

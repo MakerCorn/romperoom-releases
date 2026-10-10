@@ -29,6 +29,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live saved packages run](#live-saved-packages-run)
 - [Live batch 2 run](#live-batch-2-run)
 - [Live batch 3 run](#live-batch-3-run)
+- [Live UI reorganisation run](#live-ui-reorganisation-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -136,30 +137,38 @@ cannot be deleted.
 `apps/desktop/e2e` drives the **built** app (`out/main/index.js`) with Playwright's Electron
 support, so run `npm run build` first. There is no browser to install.
 
-| Spec                   | What it covers                                                                                                                                                                                                                                                                                                           |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                                                                                                      |
-| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                          |
-| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, a refusal with no path, hostile IPC, zoom, gamepad                                                      |
-| `a11y.spec.ts`         | axe with zero violations on the wizard, library, drawer and health, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                                                                                                   |
-| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                                                                                              |
-| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                                                                                                       |
-| `tidy.spec.ts`         | Tidy up on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries set aside across libraries and put back                                                    |
-| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages, the BIOS checksums and a BIOS file renamed on a card                                                                                             |
-| `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                                                                                           |
-| `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                                                                                                   |
-| `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Health, a scan that identifies by itself, a file that is not a DAT refused                                                                                                                                                      |
-| `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Health card, ScreenScraper not set up, and a reviewed lookup against a stand-in server |
-| `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                                                                                          |
-| `libraries.spec.ts`    | Settings › Libraries by keyboard: a second library added, scanned and removed, then the last one, with nothing in either folder changed                                                                                                                                                                                  |
-| `packaged.spec.ts`     | Not in this run: `npm run e2e:packaged -w @romperoom/desktop` runs it on the packaged app ([release.md](release.md#what-packaging-guarantees))                                                                                                                                                                           |
-| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                                                                                                                                                                     |
+| Spec                   | What it covers                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                                                                                                       |
+| `fixup.spec.ts`        | Fix up: the old hashes land on Home and Fix up, a Needs attention line opens its task with focus on its tab, an arrow key and Enter to the next task, every task (once loaded) at 320 px and 200% zoom                                                                                                                    |
+| `home.spec.ts`         | Home over 32 real consoles: the bounded console grid, keyboard to a console and a game and back, 320 px at 200% zoom, All games a bounded scroller at 320 px in List and Grid                                                                                                                                             |
+| `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                           |
+| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, a refusal with no path, hostile IPC, zoom, gamepad                                                       |
+| `a11y.spec.ts`         | axe with zero violations on the wizard, Home, All games, drawer and every Fix up task, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                                                                                 |
+| `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                                                                                               |
+| `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                                                                                                        |
+| `tidy.spec.ts`         | Fix up's tidy tasks on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries set aside across libraries and put back                                         |
+| `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages, the BIOS checksums and a BIOS file renamed on a card                                                                                              |
+| `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                                                                                            |
+| `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                                                                                                    |
+| `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Fix up › Names, a scan that identifies by itself, a file that is not a DAT refused                                                                                                                                               |
+| `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Artwork card, ScreenScraper not set up, and a reviewed lookup against a stand-in server |
+| `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                                                                                           |
+| `libraries.spec.ts`    | Home › Libraries by keyboard: a second library added, scanned and removed, then the last one, with nothing in either folder changed                                                                                                                                                                                       |
+| `packaged.spec.ts`     | Not in this run: `npm run e2e:packaged -w @romperoom/desktop` runs it on the packaged app ([release.md](release.md#what-packaging-guarantees))                                                                                                                                                                            |
+| `capture/`             | Not a test: the screenshot capture (see [Screenshots](#screenshots))                                                                                                                                                                                                                                                      |
 
 How the harness (`e2e/support.ts`) works:
 
 - Each test gets its own temp folder, with a fresh `ROMPEROOM_DATA_DIR` and a copy of the
   fixture library. The fixture is imported from the engine's test folder, not copied.
   `ROMPEROOM_TEST_PICK_FOLDER` stands in for the folder dialog.
+- `e2e/console-fixtures.ts` (`makeConsoleLibrary`) builds a library of 32 real consoles from
+  `@romperoom/profiles`, so Home and the games page are laid out at a real collection's size.
+- The helpers name the screens as a player finds them: `consoleCard` (a card in Home's Your
+  consoles), `chooseView` (List or Grid), `openFixUp` (Fix up, at a task once it has loaded),
+  `openGameDatabases` (Fix up › Game databases, returning its panel) and `openCardCopy` (SD card,
+  then Copy games to a card).
 - Every console error from the main process or the page, and every uncaught page error, fails
   the test. The one scoped exception is the security test's own probe. Chromium logs each
   blocked `file:///etc/hosts` load, and that test consumes exactly those messages and asserts
@@ -224,6 +233,27 @@ The rules that make a hand mutation mean something:
   produce by accident.
 
 Commit messages for a new guard say which mutation it was checked against.
+
+The UI reorganisation's rows (each printed `KILLED` when it landed, the last five in its final fix
+wave), with `E='npm test -w @romperoom/engine -- engine.test tidy-batch media.test art-wanted'` and
+`L='npm test -w @romperoom/desktop -- games-page'`:
+
+| Guard                           | File                                                                              | `MUT_OLD` → `MUT_NEW`                                                                             | `MUT_CMD`                                             |
+| ------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| The cover rule                  | `packages/engine/src/art/cover.ts`                                                | `WHEN 'title' THEN 2` → `WHEN 'title' THEN 4`                                                     | `$E`                                                  |
+| The cover rule                  | `packages/engine/src/art/cover.ts`                                                | `m.kind NOT IN ('video', 'manual')` → `m.kind IN ('box', 'screenshot', 'title')`                  | `$E`                                                  |
+| The cover rule, games           | `packages/engine/src/engine.ts`                                                   | `${coverOf('g.id')} coverMediaId,` → the old box-or-screenshot subquery                           | `$E`                                                  |
+| The cover rule, Tidy            | `packages/engine/src/tidy/dedupe.ts`                                              | `SELECT ${coverOf('f.game_id')} id …` → the old box-or-screenshot join                            | `$E`                                                  |
+| The art-refresh listener        | `apps/desktop/src/renderer/data/art-refresh.tsx`                                  | `void invalidateAfterArt(qc);` after `done` → `void qc;`                                          | `npm test -w @romperoom/desktop -- art-refresh`       |
+| The redirect table              | `apps/desktop/src/renderer/lib/useHashRoute.ts`                                   | `['health', 'fixup'],` → `['health', 'home'],`                                                    | `npm test -w @romperoom/desktop -- lib.test app.test` |
+| The games list's focus          | `apps/desktop/src/renderer/home/GameList.tsx`                                     | `if (current < range.count && !out.includes(current)) {` → `if (false) {`                         | `$L`                                                  |
+| The games list's focus          | `apps/desktop/src/renderer/home/GameList.tsx`                                     | `    if (!el) return;` → a condition that always returns                                          | `$L`                                                  |
+| The games list's focus          | `apps/desktop/src/renderer/home/GameList.tsx`                                     | the `shownRows(…, current)` call → the first and last rendered rows only                          | `$L`                                                  |
+| The listGames page order        | `packages/engine/src/engine.ts`                                                   | the outer `p.title COLLATE NOCASE, p.region, p.id` → without the case fold, or without the region | `npm test -w @romperoom/engine -- engine.test`        |
+| Paging after the scroll settles | `apps/desktop/src/renderer/data/game-pages.ts`                                    | the settle timer → reading at once                                                                | `$L`                                                  |
+| The default view kept           | `apps/desktop/src/renderer/home/GamesPage.tsx`                                    | telling the page the decided view → never                                                         | `$L`                                                  |
+| A plan stays with its library   | `apps/desktop/src/renderer/fixup/FixUp.tsx`, `ArtworkTask.tsx`, `HistoryTask.tsx` | `key={rootId}` on Duplicates, Artwork and Set aside → none, or a constant                         | `npm test -w @romperoom/desktop -- tidy.test`         |
+| B closes a drawer first         | `tidy/parts.tsx`, `tidy/History.tsx`, `tidy/Recovery.tsx`                         | `useCloser(open, …)` → `useCloser(false, …)`                                                      | `npm test -w @romperoom/desktop -- app.test`          |
 
 The tidy engine (duplicates, unused artwork, undo and the purge) was checked with a scripted
 run of more than 50 mutants, one guard each, over the full engine suite. Its tests follow the
@@ -550,7 +580,7 @@ The procedure, on macOS, with the built app (`npm run build`) and no test transp
    all its helpers, and resolve the hosts with `dig +short`. Run the positive control first
    (`curl -sI https://example.com` under the same poller): a control the capture does not see
    makes the capture "not evaluated", never "clean". DNS queries are not visible without root.
-3. **Idle.** 60 s on Settings › Game databases with Network activity open: the log stays empty,
+3. **Idle.** 60 s on Fix up › Game databases with Network activity open: the log stays empty,
    `network-log.json` is not created, and the capture shows no connection but loopback.
 4. **Official site.** Open the No-Intro and Redump pages: the browser opens the exact URLs and
    the log stays empty. Download a DAT there and press Import a DAT file to see whether the
@@ -622,7 +652,7 @@ repositories. Run it before a release that changes anything under
    `api.github.com` and `raw.githubusercontent.com` during the run; only their addresses and
    loopback may appear.
 3. **Idle.** Set up the library (a fresh `ROMPEROOM_DATA_DIR`, the scratch library through
-   `ROMPEROOM_TEST_PICK_FOLDER`) and stay 60 s on Health without pressing anything: no connection
+   `ROMPEROOM_TEST_PICK_FOLDER`) and stay 60 s on Fix up without pressing anything: no connection
    but loopback, `network-log.json` absent.
 4. **Get cover art.** Only `api.github.com`, one `art-listing` request per console; the review's
    "used N GitHub requests" equals the log's count. Cancel and press it again: 0 requests.
@@ -694,7 +724,7 @@ throwaway Playwright script over the built app (`npm run build`), in the manner 
    only `v` and `id`.
 4. **Undo from the results.** The game and the new library saves are gone, the scratch
    library's fingerprint outside `.romperoom` equals the one before, and the next review offers
-   them again. Sync again, then **Scan these consoles**: the new game appears on the wall.
+   them again. Sync again, then **Scan these consoles**: the new game appears on its games page.
 5. **Again.** Read the card a second time: nothing to do, and no game is hashed again (the large
    copy's review takes milliseconds, not seconds: the card's hash cache).
 6. **Each way, then both.** Change the card's save and a library save, and sync: each goes the
@@ -779,7 +809,7 @@ never committed:
    replace with each DAT before importing it. Set up the library (Choose your ROM folder, Go to my
    library), import each DAT (a header the app cannot place, such as
    `Sega - Mega Drive - Genesis`, asks for its console), then Identify games.
-3. **Review.** Tidy up › Standardise, choose ES-DE, Review the changes. Record the
+3. **Review.** Fix up › Names › Standardise, choose ES-DE, Review the changes. Record the
    folders (renamed, merged, left and why), the games (offered, left and why, what follows), the
    clashes and the game lists. `standardiseReview` through the bridge gives the same as data.
 4. **Run.** Tick the identical clash, Standardise. Check: folders and games have their new names;
@@ -792,11 +822,11 @@ never committed:
    fingerprint outside `.romperoom` equals the one before, modification times included. Review
    again: it equals the first review, the scan between the run and its Undo notwithstanding (the
    disc games are offered again, none left as not matching).
-6. **Stop, then Finish or undo….** Review again, tick the clash, Standardise, and press Stop a
-   few steps in. Each game is either renamed whole or untouched, the run says Stopped with the
-   changes that did not run, and its journal waits in Tidy up's Recovery. Press Finish or undo…,
-   then Finish: everything is renamed and both game lists are rewritten. Scan, open the library:
-   the renamed game's picture shows on the wall. Undo the run from History.
+6. **Stop, then Finish or undo….** Review again, tick the clash, Standardise, and press Stop a few
+   steps in. Each game is either renamed whole or untouched, the run says Stopped with the changes
+   that did not run, and its journal waits in Recovery (Fix up's Finish or undo…). Press Finish or
+   undo…, then Finish: everything is renamed and both game lists are rewritten. Scan, open its games
+   page: the renamed game's picture shows there. Undo the run from History.
 7. **A kill.** Review and run again (the bridge is enough), and kill the app's process
    (`SIGKILL`) about half way, while a disc game is being renamed. Fingerprint. Start the app
    again with the same data folder: the "Finish tidying up" panel opens by itself; press Undo what
@@ -897,7 +927,7 @@ outside the repository and never committed:
    `ROMPEROOM_TEST_PICK_FOLDER`, and one path through `ROMPEROOM_TEST_PICK_FILE` whose file you
    replace with each DAT before importing it (`Sega - Mega Drive - Genesis` needs its console
    named); Choose your ROM folder, Go to my library, then identify.
-3. **Review.** Tidy up › Artwork. Record the section: the pictures offered (and which
+3. **Review.** Fix up › Artwork. Record the section: the pictures offered (and which
    start unticked), the entries offered and listed, and every reason; and the leftover list below
    it. `standardiseRelinkReview` through the bridge gives the same as data. Expected: Tetris (both
    pictures), Super Mario Land, Sonic, Columns and every `gbc` picture offered; Alleyway unticked
@@ -912,7 +942,7 @@ outside the repository and never committed:
    elements and the re-pointed entries' `<path>` (the byte order mark, line ends and comment kept;
    the `psx` list untouched); its original is in `.romperoom/lists-backup/<run>/`; every SHA-1
    from before is somewhere after; the leftover list no longer shows the renamed pictures, and
-   the game's cover (`listGames`' `coverMediaId`, and the Tetris tile on the library wall) is the
+   the game's cover (`listGames`' `coverMediaId`, and the Tetris game on its games page) is the
    renamed picture without a scan.
 5. **Undo from the results.** The fingerprint outside `.romperoom` equals the one before,
    modification times included.
@@ -1080,9 +1110,9 @@ repository:
    three (path, size, modification time and SHA-1 of every file; a fingerprint that fails to read
    is "not evaluated") before and after each add and remove.
 2. **Setup** with the first, a fresh `ROMPEROOM_DATA_DIR` and `ROMPEROOM_TEST_PICK_FOLDER`. Quit
-   and start again with the second as the picked folder and a slowed Tidy up
+   and start again with the second as the picked folder and a slowed tidy
    (`ROMPEROOM_TEST_TIDY_DELAY_MS`).
-3. **Add.** Settings › Libraries › **Add a library…**: the second is listed as `roms (2)`, "Not
+3. **Add.** Home › Libraries › **Add a library…**: the second is listed as `roms (2)`, "Not
    scanned yet", focus on its **Scan now**, and nothing scans. **Scan now**: its games and "Last
    scanned" with today's date.
 4. **Refusals.** Pick, in turn, the second again, the first's `GBA` folder, the first's parent, a
@@ -1097,7 +1127,7 @@ repository:
    its row stays, marked "Can't reach its folder. Is the drive connected?". Put it back. Then
    move it and leave a symbolic link at its old path: the row reads "Can't reach its folder" and
    **Scan now** still counts its games. Put it back.
-7. **Remove while Tidy up runs.** Set aside some of `roms (2)`'s duplicates (a finished run), then
+7. **Remove while a tidy runs.** Set aside some of `roms (2)`'s duplicates (a finished run), then
    start a slowed run of the rest and **Remove** it meanwhile: "Romperoom can't remove roms (2)
    right now", nothing forgotten.
 8. **Remove while Recovery waits.** Start a slowed run of the first library's duplicates, kill the
@@ -1106,7 +1136,7 @@ repository:
    run.
 9. **Remove** `roms (2)`: asked first in place of the list, then gone from the list, announced,
    focus on "Your libraries"; its folder byte-identical (its `.romperoom-quarantine` too), the
-   others untouched, its games gone from the wall, nothing of it in History or Set aside.
+   others untouched, its games gone from Home, nothing of it in History or Set aside.
 10. **The network log** (`datsNetworkLog`, and no `network-log.json`) is empty.
 11. **Remove** the third, then `roms`: the confirmation says it's the only library, setup opens,
     Settings closes and focus is on `<main>`. Every folder is as it was before its remove.
@@ -1233,7 +1263,7 @@ Playwright script kept outside the repository:
    every file; a fingerprint that fails to read is "not evaluated") before and after each look.
 2. **One library.** Set up with the first (a fresh `ROMPEROOM_DATA_DIR`, the folder through
    `ROMPEROOM_TEST_PICK_FOLDER`): **Across libraries** says "Only one library".
-3. **Two and three libraries.** Quit, start again, add the others in **Settings** ›
+3. **Two and three libraries.** Quit, start again, add the others in **Home** ›
    **Libraries** (**Add a library…**, then **Scan now**; the host reads the picker seam each time
    it opens). Record the sets, the line above them, the badges, the skipped count, the pager,
    the live region and where focus goes with **Look again** and **Scan again**, and whether the
@@ -1243,7 +1273,7 @@ Playwright script kept outside the repository:
    an empty folder at its place; a copy moved off since the scan; a parent folder of a library
    swapped for a symbolic link into another library (nested), or to another library's own
    folder (the same folder); a library's own folder swapped for a link. Put each back.
-5. **During a tidy.** Start again with a slowed Tidy up (`ROMPEROOM_TEST_TIDY_DELAY_MS`), set
+5. **During a tidy.** Start again with a slowed tidy (`ROMPEROOM_TEST_TIDY_DELAY_MS`), set
    aside the first library's pairs, look across while it runs, then undo the run.
 6. **Nothing changed.** Every fingerprint identical; the network log empty.
 
@@ -1368,17 +1398,17 @@ end-to-end suite builds its own sandbox. Run this on a Mac before a release that
    `ROMPEROOM_TEST_PICK_FOLDER` at the first library and `ROMPEROOM_TEST_VOLUME` at an empty
    scratch card folder (so the app lists no real drive; keep its path short, since the seam's
    volume id is `test:<real path>` and ids over 100 characters are refused): set up, quit, start
-   again with the picker at the second library, add and scan it in **Settings** › **Libraries**.
+   again with the picker at the second library, add and scan it in **Home** › **Libraries**.
 3. **SD card** › ES-DE › the default choices › the scratch card › **Check**: record
    **Copies that differ** (expected: "Advance Wars (USA).gba: the copy in roms"), **Left out**
    (expected: the CD game, "Another game would use the same file name"), the step heading's
    focus and the live region (nothing new said). Copy, and compare the card's
    `ROMs/gba/Advance Wars (USA).gba` with each library's copy by SHA-1.
 4. **With a game database** matching the second library's Advance Wars (a hand-written DAT,
-   imported in **Settings** › **Game databases**, then identify both): check again; expected
+   imported in **Fix up** › **Game databases**, then identify both): check again; expected
    "the copy in roms (2)", and the card's copy replaced with it on the next copy.
-5. **Tidy up** › **Across libraries** for the same two libraries: record what it lists for the
-   differing pair.
+5. **Fix up** › **Duplicates** › **Across libraries** for the same two libraries: record what it
+   lists for the differing pair.
 6. **One library, three libraries, the cap.** Add to the first library a game held twice with
    different bytes (`GBA/` and `Game Boy Advance/`) and give the second a third copy of it; put a
    game in all three of three libraries with three different byte sets (the third library's in
@@ -1560,7 +1590,7 @@ each app is closed.
    sandbox.
 7. **A copy's cover and Look again:** a new sandbox with `SNES/Mario (USA).zip` (the bytes of
    `Zelda (USA).zip`) and its own picture, and a second library holding `Advance Wars (USA).gba`:
-   on **Tidy up** › **Duplicates** record each copy's picture; on **Across libraries** press
+   on **Fix up** › **Duplicates** record each copy's picture; on **Across libraries** press
    **Look again** twice and record the region's nodes.
 8. **A long suggestion:** an empty sandbox with 70 NES games (one with a long unbroken name, one
    with Hebrew and Arabic), `volumeBytes` 60,000: open the suggestion, count its rows and read the
@@ -1631,7 +1661,7 @@ deleted before committing) drives the harness, every launch with `testVolume` at
 every library is a scratch copy of the fixture library under the temp folder.
 
 1. **Across libraries, by keyboard:** a second library `more` holding a byte copy of Advance Wars,
-   added and scanned in Settings › Libraries. On **Across libraries** record the set's rows; open
+   added and scanned in Home › Libraries. On **Across libraries** record the set's rows; open
    **Keep the copy in a different library** with Enter, Tab into the radios, move with the arrow
    keys and back, recording the rows each time. Measure the page's sideways scroll and anything
    outside the window at 1280, 480 and 320 CSS px (320 at 200% zoom), light and dark, and run axe.
@@ -1718,6 +1748,101 @@ fixed with tests before this run, and this run found nothing new:
 - a screen reader, a real handheld, a real ScreenScraper answer, Windows (and its keychain),
   Linux (and its keychains), a network drive: **not evaluated** (above).
 
+## Live UI reorganisation run
+
+CI lays Home and the games page out over 32 consoles with three games each
+(`e2e/home.spec.ts`), Fix up's tasks over the fixture library at 320 px (`e2e/fixup.spec.ts`),
+and a 50,000-game console only in jsdom (`games-page.test.tsx`). Run this on a Mac before a
+release that changes Home, the games page or Fix up:
+
+1. **A scratch library of 45 consoles** outside the repository and outside your library's share:
+   the 32 of `makeConsoleLibrary` (`e2e/console-fixtures.ts`) and 13 more real ones, 40 made-up
+   games in each and 50,000 in `snes` (titles spread over A to Z), a picture per game in
+   `<console>/images/` for every other console, one ES-DE mix image
+   (`downloaded_media/gba/miximages/`) for a game with no other picture, three pictures no game
+   has and two in an ES-DE folder no console has. Fingerprint it before and after.
+2. **The built app** (`npm run build`) with a fresh `ROMPEROOM_DATA_DIR`,
+   `ROMPEROOM_TEST_PICK_FOLDER` at the scratch library and `ROMPEROOM_TEST_VOLUME` at an empty
+   scratch card folder on every launch (so the app lists no real drive), driven by a throwaway
+   Playwright spec using the harness (deleted before committing). It counts `engine:listGames`
+   calls by wrapping the registered handler from the main process (`app.evaluate`, Electron's
+   `ipcMain._invokeHandlers`); if that cannot be done, the counts are **not evaluated**.
+3. **Home:** the console cards shown before **Show all**, its label, the cards and focus after it,
+   the filter, and type-ahead to a console past the first 24.
+4. **The 50,000-game console, measured** (`page.evaluate`): the time from pressing **M** on the
+   letter strip, a letter typed in the list, End, Home, a scroll to the middle (`scrollTop`) and
+   a search, each to the right game having focus or the right count, and how many
+   `engine:listGames` calls each made; End in the Grid too.
+5. **Keyboard and pad paths:** a game's details by Enter, Escape back to its row, B (a synthetic
+   standard pad) from the console's page to Home with focus on its card; RB and LB on a games page
+   and in Fix up; Fix up's tabs by arrow keys and Enter.
+6. **The old hashes:** `#/library`, `#/health`, `#/tidy`, `#/fixup/bogus`, `#/home/notaconsole`,
+   `#/` and `#/nope` land where the spec says, and the address is rewritten.
+7. **Art:** Fix up › Artwork's counts and the cover art card's; the mix-image game's cover and
+   drawer.
+8. **Layout, light and dark:** at 1280×800 and at 640×480 with 200% zoom (a 320 px CSS
+   viewport), on Home, Home with every console, All games in List and in Grid, the `snes` page,
+   every Fix up task and the SD card landing: `document.documentElement.scrollWidth -
+   clientWidth` (expected 0) and the elements whose edges pass the window.
+
+What it cannot observe: a real handheld or a real gamepad (the pad is synthetic), the owner's
+real library and catalogue (which of the spec's ten causes hides their art), Windows and Linux,
+a screen reader, a real ScreenScraper answer (it stays unused), and a library on a network drive.
+
+**Last run: 2026-10-10,** macOS, the scratch library above (51,760 games, 926 pictures), one
+throwaway Playwright spec through the harness (deleted after), every launch with `testVolume` at
+an empty scratch folder. The first two runs, on the built app of `feat/ui-reorg` at `7f0c49d`,
+found two defects, each fixed with a test: type-ahead on Home did not reach a console past the
+first 24 (`home.test.tsx`), and at 320 px the List view grew to all its rows, so a 50,000-game
+console read every page and hung the window (`home.spec.ts` › "All games stays a bounded
+scroller"). The third run (those fixes in) and the fourth, after the final review's fix wave
+(`a790729`: paging after a scroll settles, the page's default view kept, the console page for an
+unknown id, the art wording), each had 81 cells observed, 0 failed, 8 not evaluated, and so did
+a fifth on `92df2b1` (Recently added's tile width), whose layout cells were all clean again; the
+numbers below are the fourth run's. The scan was still checking files in the background while it
+measured:
+
+- first run: **observed**; **Go to my library** 12.3 s after choosing the folder ("Every game is
+  in your library already. Checking carries on in the background.").
+- Home: **observed** (5 cells); 25 cards (All games and 24 consoles), "24 of 45 consoles", **Show
+  all 45 consoles**; after Enter on it 46 cards, focus on the 25th console (Mattel Electronics
+  Intellivision); "Atari" left 7 consoles and All games; "zzzz" read "No console matches “zzzz”."
+  and "0 consoles".
+- Home by keyboard: **observed** (3 cells); "sup" from All games showed every console and focused
+  Super Nintendo (24 shown before); Enter opened `#/home/snes` with focus on its heading; it opened
+  in List with "50,000 games".
+- the 50,000-game console: **observed** (7 cells); **M** on the letter strip focused Mgame 00012 in
+  69 ms with 1 `engine:listGames` call; "q" typed in the list focused Qgame 00016 in 50 ms, 1
+  call; End focused Zgame 49997 (the true last) in 51 ms, 1 call, the list at `scrollTop` 2,399,585
+  of 2,400,000; Home focused Agame 00000 in 6 ms, 0 calls; a scroll to the middle (`scrollTop`
+  1,200,000) showed Mgame and Ngame rows in 212 ms (the 120 ms settle included), 2 calls, 26 rows
+  mounted; "game 4999" showed 10 games in 282 ms, 1 call; End in the Grid focused Zgame 49997 in
+  10 ms, 0 calls.
+- keyboard and pad: **observed** (5 cells); Enter opened Agame 00000's details, Escape put focus
+  back on its row; B went to Home with focus on the Super Nintendo card; RB went to the next
+  console (`#/home/coco`) and LB back; in Fix up ArrowRight and Enter moved Names → Duplicates →
+  Artwork → Game databases → History (the address following), Home went back to Needs attention;
+  RB from Names went to Duplicates, LB back, B to `#/fixup`.
+- the old hashes: **observed** (7 cells); `#/library` → `#/home`, `#/health` and `#/tidy` →
+  `#/fixup`, `#/fixup/bogus` → `#/fixup`, `#/` and `#/nope` → `#/home`; `#/home/notaconsole` kept,
+  headed "Unknown console".
+- art: **observed** (3 cells); "Romperoom found 926 pictures in your libraries. 921 are linked to
+  a game.", "3 couldn't be linked: no game of that exact name in that library (case ignored).
+  …", "2 are in a folder Romperoom
+  couldn't match to a console."; the cover art card "Box art: 50,840 missing" (the mix-image game
+  still counts as missing box art); the mix-image game's tile showed its picture, the next game a
+  placeholder, and its drawer's Cover art row a size.
+- layout: **observed** (48 cells: 12 surfaces, 2 sizes, light and dark); no sideways scroll and
+  nothing past the window's edges anywhere.
+- the console and the library: **observed** (2 cells); no console error; the library's
+  fingerprint after equalled the one before.
+- a real handheld or gamepad, the owner's library and catalogue, Windows, Linux, a screen reader,
+  a real ScreenScraper answer, a network drive, a Needs attention line on Home opening its task
+  (pinned by `fixup.spec.ts` and `app.test.tsx` instead): **not evaluated**. Not in the run
+  either, and pinned by tests instead: the fix wave's SD card landing after a report it sent the
+  player to (`card-screen.test.tsx`, `app.test.tsx`), B over a drawer (`app.test.tsx`) and a
+  library switched while a plan was made (`tidy.test.tsx`).
+
 ## Screenshots
 
 `docs/screenshots/` is generated, never edited by hand:
@@ -1727,27 +1852,27 @@ npm run build && npm run screenshots -w @romperoom/desktop
 ```
 
 The script (`apps/desktop/scripts/capture-screenshots.mjs`) runs `e2e/capture` against the
-built app and the fixture library. The window is 1280 x 800 at a device scale factor of 1. It
-captures in Console Shelf, light and dark:
+built app and the fixture library. The window is 1280 x 800 at a device scale factor of 1 (Home
+whole in a window 1450 pixels tall, and a few reviews in taller windows so they show to their
+buttons). It captures in Console Shelf, light and dark:
 
-- Settings (Appearance, Libraries and Game databases, with the download review and results),
-  the wizard and an unmapped folder;
-- the library and the game drawer;
-- Health, unreadable files and the removal review;
-- Health's Identify card and the name matches to check;
-- cover art: the Health card, its review and its results;
-- the card wizard's device and check steps (where to and done in light only);
-- Sync a card's review and results;
-- Standardise's review and results, and the re-link review and results;
-- Settings › ScreenScraper;
-- Tidy up's overview, duplicates, across libraries and artwork tabs (the set-aside preview and
-  the Set aside tab in light only). The artwork shot scans its own small library (one game, a
-  picture no game has and an extra copy of a kept picture), so its Show row has two causes and no
-  other shot changes. The across libraries shot scans two small libraries of its own ("roms" and
-  "more", the second added in Settings › Libraries), sharing two games, in a window 900 pixels
-  tall so both sets show whole.
+- Settings (Appearance, Network activity and ScreenScraper), the wizard and an unmapped folder;
+- Home, and Home's Libraries;
+- All games in List and in Grid, and the game drawer;
+- Fix up's Needs attention; Names (unreadable files, Identify your games and the name matches to
+  check); Artwork (the cover art card, its review and its results); Game databases (with the
+  download review and results); and the removal review;
+- the SD card landing, Sync a card's review and results, and the card wizard's device and check
+  steps (where to and done in light only);
+- Fix up › Duplicates, In one library and Across libraries (the set-aside preview and History
+  with what is set aside in light only), and leftover artwork. The artwork shot scans its own
+  small library (one game, a picture no game has and an extra copy of a kept picture), so its
+  Show row has two causes and no other shot changes. The across libraries shot scans two small
+  libraries of its own ("roms" and "more", the second added on Home's Libraries), sharing two
+  games, in a window 900 pixels tall so both sets show whole;
+- Standardise's review and results, and the re-link review and results.
 
-It also captures the library in CRT Neon and Clean Modern (dark). It writes `manifest.json`,
+It also captures Home in CRT Neon and Clean Modern (dark). It writes `manifest.json`,
 which records for each file the surface, theme, mode, viewport, command and app commit. The
 commit gets `-dirty` when `apps/` or `packages/` had uncommitted changes, so commit code changes
 before capturing. Files the manifest no longer lists are deleted. The script fails if a listed
