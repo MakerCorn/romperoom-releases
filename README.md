@@ -6,7 +6,7 @@ your computer. Romperoom never includes or downloads games.
 
 | Light | Dark |
 | --- | --- |
-| ![The library, one shelf per console](docs/screenshots/library-console-shelf-light.png) | ![The library, dark](docs/screenshots/library-console-shelf-dark.png) |
+| ![Home: your consoles, with search and what needs attention](docs/screenshots/home-console-shelf-light.png) | ![Home, dark](docs/screenshots/home-console-shelf-dark.png) |
 
 More screens, step by step, are in the [user guide](docs/user-guide.md).
 
