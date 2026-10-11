@@ -76,7 +76,8 @@ not be opened: the drive is unplugged, the network share is not mounted, or the 
 dropped.
 
 1. Open the folder in Finder. If Finder can't open it, reconnect the drive or share first.
-2. Back in Romperoom, press **Scan again**.
+2. Back in Romperoom, press Fix up's scan button (**Scan all libraries**, or **Scan** and your
+   library's name when you have one).
 
 "Romperoom isn't allowed to open that folder" means the share or the folder's permissions
 refuse your account. Fix the sharing permissions, then try again.
@@ -92,9 +93,9 @@ folder names it knows is in [systems.md](systems.md).
 
 - **Their folder needs a console.** **Fix up** › **Names** lists it under **Folders without a
   console**. Choose
-  a console for it in setup, then press **Scan again**.
+  a console for it in setup, then scan from **Fix up**.
 - **You ignored the folder.** **Fix up** › **Names** lists it under **Ignored folders**. Press
-  **Include again**, then **Scan again**.
+  **Include again**, then scan from **Fix up**.
 - **The file couldn't be read.** See [below](#files-that-couldnt-be-read).
 - **The file's extension isn't one that console uses.** Such files are skipped.
 - **Two revisions of one game** (such as `(Rev 1)` and the original) show as one game until it
@@ -108,7 +109,7 @@ The **Identify your games** card in **Fix up** › **Names** says why, next to e
 
 | Reason                        | What to do                                                       |
 | ----------------------------- | ---------------------------------------------------------------- |
-| Not read yet                  | Scan again, then identify.                                       |
+| Not read yet                  | Scan its library, then identify.                                 |
 | In another console's database | Move it to that console's folder, then identify again.           |
 | No database for this console  | Add a game database for this console, then identify.             |
 | Not in your databases         | May be a hack, a translation or a bad copy; it still plays fine. |
@@ -266,10 +267,9 @@ Romperoom won't save a password, so ScreenScraper can't be used there.
 ## Some game folders look empty or gone
 
 Romperoom never takes games off its list on its own when whole folders seem to vanish, because a
-drive that is only partly connected looks the same. If the drive was disconnected, reconnect it
-and press **Scan again**. If you removed those games on purpose, press **It's OK — they were
-removed**. Only Romperoom's list changes. The same goes for **Some cover art folders look empty
-or gone**.
+drive that is only partly connected looks the same. If the drive was disconnected, reconnect it and
+scan from **Fix up**. If you removed those games on purpose, press **It's OK — they were removed**.
+Only Romperoom's list changes. The same goes for **Some cover art folders look empty or gone**.
 
 ## Files that couldn't be read
 
@@ -300,8 +300,9 @@ about 17 MB/s, so fingerprinting all of them would take about 6.6 hours on that 
 
 ## The scan didn't finish
 
-"The last scan didn't finish" appears if Romperoom closed during a scan. Press **Scan again**.
-It continues from what it already found.
+"The last scan didn't finish" appears if Romperoom closed during a scan. Press Fix up's scan
+button (**Scan all libraries**, or **Scan** and your library's name). It continues from what it
+already found.
 
 ## Starting over
 
@@ -421,7 +422,7 @@ seconds, or your computer's list of drives couldn't be read).
 The **Where** step shows the space the games, artwork and the card's own format take. If it doesn't
 fit, it says by how much and offers what to leave out: the artwork, the other versions of each game,
 or a big console. **Suggest games to leave out** lists the games it would leave out, biggest first;
-keep any you want, then **Leave these games out** (see [Make it fit](user-guide.md#make-it-fit)).
+keep any you want, then **Leave out selected** (see [Make it fit](user-guide.md#make-it-fit)).
 You can also go **Back** and untick consoles. Copying stays off until it fits. The card's format
 loses some space to every file, so a card full of small games fits fewer than their sizes suggest;
 Romperoom counts that.
@@ -446,10 +447,10 @@ a new scan can change which one goes. It never asks per game.
   library folder, scan that library again, and check again.
 - A game made of several files (a CD game with a cue sheet and tracks, or discs and a playlist)
   whose files differ between libraries is still left out, under **Left out**: "Another game would
-  use the same file name". Keep one complete copy of it, then scan again.
+  use the same file name". Keep one complete copy of it, then scan.
 - Two different copies inside **one** library (in two of its folders, such as `GBA` and
   `Game Boy Advance`) are not chosen between either: the game is left out the same way. Keep one
-  of them in that library, then scan again.
+  of them in that library, then scan it.
 
 ## A detail is left out on the Done screen
 
@@ -522,9 +523,9 @@ The check step says how Romperoom treated the BIOS folder:
 ## A card can't be synced
 
 Sync a card lists only cards Romperoom could also copy games to: not the disk your computer runs
-from, not a read-only or locked card, not a network drive, and not a card that holds (or is
-inside) your library. Unlock the card or plug it in directly, then press **Look again**. If the
-card was synced from another window or taken out since the review, read it again.
+from, not a read-only or locked card, not a network drive, and not a card that holds (or is inside)
+your library. Unlock the card or plug it in directly, then press **Refresh list**. If the card was
+synced from another window or taken out since the review, read it again.
 
 ## A game from the card wasn't offered
 
@@ -577,23 +578,24 @@ that keeps the other copies?". If the drive was mounted again or the folder put 
 reconnect** records it as it is now, then press **Finish** again; otherwise choose **Not now**,
 connect it, and finish. **Undo** works without it. When several libraries were tidied together and
 one stopped, the result says which ("It stopped at roms (2).") and how many files of the
-libraries after it were not started: look again on **Across libraries** to set those aside.
+libraries after it were not started: press **Refresh list** on **Across libraries** to set those
+aside.
 
 ## A library says it can't reach its folder, but it scans
 
 Home's **Your libraries** says "Can't reach its folder" when the library's folder was moved and a
-symbolic link (a shortcut made in Terminal with `ln -s`) was left at its old place. Romperoom
-looks at the folder itself and doesn't follow the link to say it's there, though **Scan now**
-still reads through it and counts its games. Nothing is wrong with your games. To make it read
-normally, remove the library in **Home** › **Your libraries** and add the folder where it now
-is, then press **Scan now**. Removing it forgets its Fix up history, so finish or undo anything
-waiting under **Finish or undo…** first.
+symbolic link (a shortcut made in Terminal with `ln -s`) was left at its old place. Romperoom looks
+at the folder itself and doesn't follow the link to say it's there, though its **Scan** button still
+reads through it and counts its games. Nothing is wrong with your games. To make it read normally,
+remove the library in **Home** › **Your libraries** and add the folder where it now is, then press
+its **Scan** button. Removing it forgets its Fix up history, so finish or undo anything waiting
+under **Finish or undo…** first.
 
 ## Your library changed since you looked
 
 A preview is only good for the library as it was when you looked. A scan, a copy to a card or
 another tidy in between makes it out of date, and Romperoom refuses it rather than move the
-wrong file. Press **Look again** to see what is there now.
+wrong file. Press **Refresh list** to see what is there now.
 
 ## A library says Not checked under Across libraries
 
@@ -612,7 +614,7 @@ checked** with the reason. The libraries it can check are still compared with ea
   both lead to the same folder, so every file would look like a copy of itself. Romperoom refuses
   to compare them, as **Add a library…** refuses to add such a folder. This usually comes from a
   drive mounted somewhere else or a moved folder: put the folders back as they were, then press
-  **Look again**. If two libraries really are one folder, remove one in **Home** › **Your
+  **Refresh list**. If two libraries really are one folder, remove one in **Home** › **Your
   libraries** (removing a library forgets its history; see
   [Your libraries](user-guide.md#your-libraries)).
 
@@ -623,9 +625,9 @@ different contents are not copies. It leaves some files out on purpose:
 
 - **A file "has moved or gone since the last scan":** a copy was moved, renamed or deleted
   after the last scan, so Romperoom can't check it, and its set may be missing from the list.
-  Press **Scan again**, then **Look again**. This can also happen for a moment while a tidy,
-  Standardise or re-link is renaming files in one of your libraries; press **Look again** when it
-  ends.
+  Press **Scan all libraries** at the top of Fix up, then **Refresh list**. This can also happen
+  for a moment while a tidy, Standardise or re-link is renaming files in one of your libraries;
+  press **Refresh list** when it ends.
 - **A file replaced since the last scan** with a different one of the same name is still listed:
   the list is as each library's last scan saw it. Scan both libraries again before you remove a
   copy by hand.
@@ -648,7 +650,7 @@ The look checks each possible copy on disk. On a slow network share that stops a
 part way, the window can stop responding until the share answers again.
 
 With a screen reader: nothing is read out when you open the tab or turn a page (the line above
-the list says where you are). After **Look again** the result is read out once, with how many
+the list says where you are). After **Refresh list** the result is read out once, with how many
 libraries were not checked. A look that fails reads nothing out (the message on the tab says
 what went wrong), and a result the same as the last one read out is not read again.
 
@@ -707,7 +709,7 @@ The review says why, in one line:
   **Fix up** › **Names**), then review again.
 - **"This folder could be more than one console."** Its games were catalogued as more than one
   console, or as another console than its name says. If the folder really holds two consoles,
-  move one console's games to its own folder; otherwise scan again. Then review again.
+  move one console's games to its own folder; otherwise scan the library. Then review again.
 - **"A different file with this name is already there."** Something else has the new name.
   Romperoom never overwrites: move or rename it yourself, then review again.
 - **"The official name can't be used as a file name."** The game database's name has a character

@@ -15,7 +15,8 @@ libretro-thumbnails repository list used by the cover art feature. Neither is a 
 entry or a device profile: `loadShippedProfiles()` skips both by name, the same way it skips
 `systems.json` (see [libretro.json](#libretrojson) and [thumbnails.json](#thumbnailsjson) below).
 
-**Status:** four profiles ship: `batocera`, `es-de`, `muos` and `onion`. All are `community`.
+**Status:** six profiles ship: `batocera`, `dspico`, `es-de`, `muos`, `onion` and `r4xmp`. All
+are `community`.
 The [deploy planner](architecture.md#deploy-planner) reads them to lay
 out an SD card, and the card wizard ([user guide](user-guide.md#put-games-on-an-sd-card)) copies
 to that layout. Sync a card, cover art from a card and Standardise (its folder names) read them
@@ -51,13 +52,16 @@ table lists every key of the schema.
 | `family`                       | text                                                                        | A grouping, such as `frontend` or `linux-handheld`.                                                                   |
 | `status`                       | `verified` or `community`                                                   | How far the layout is confirmed (see [Status and sources](#status-and-sources)).                                      |
 | `sources`                      | URLs, at least one                                                          | The documentation the layout was taken from.                                                                          |
-| `root.roms`                    | relative path                                                               | The folder that holds one folder per system.                                                                          |
+| `notes` | lines of text, at least one, optional | What the sources leave open or could not confirm, one point a line (R4xMP's unconfirmed points). |
+| `root.roms` | relative path, or `.` | The folder that holds one folder per system. `.` is the card root itself (a flashcart kernel such as the R4xMP's reads its folders there); then no BIOS, media or saves folder may be set, since each would sit inside the ROM tree. |
 | `root.bios`                    | relative path, optional                                                     | The BIOS folder. Leave it out when the firmware has none.                                                             |
 | `root.media`                   | relative path, optional                                                     | The media folder, including any parent (`ES-DE/downloaded_media`). Without it, media folders are inside `root.roms`. |
 | `systems.<id>.folder`          | one path segment                                                            | The device's folder name for the system. `<id>` is an id from the systems catalog.                                    |
 | `systems.<id>.extensions`      | `.ext` in lower case, at least one, optional                                | The extensions the device accepts. Leave it out when the device takes any file in the folder (muOS).                  |
 | `systems.<id>.acceptsArchives` | true or false, optional                                                     | Whether the device runs the system's games from `.zip` or `.7z`. Left out means not documented, treated as no.        |
 | `systems.<id>.mediaFolder`     | one path segment, optional                                                  | The system's name in media folders, for `{mediaFolder}` (muOS's catalogue name).                                      |
+| `systems.<id>.optIn` | true or false, optional | Supported, but copied only when the player ticks it: the wizard offers it unticked, and a package that names no consoles leaves it out. For consoles that need extra software on the card (DSpico's emulator programs). |
+| `optInNote` | text, optional | Why the opt-in consoles are unticked, shown beside them. Required when a system is `optIn`, refused otherwise; at least one system must stay chosen by default. |
 | `media.<kind>.folder`          | relative path template                                                      | Where that kind of media goes (see [Templates](#templates)).                                                         |
 | `media.<kind>.format`          | `png`, `jpg`, `mp4` or `pdf`, or a list of them                             | The file formats the device reads. `jpg` also covers `.jpeg`.                                                         |
 | `media.<kind>.suffix`          | text, optional                                                              | Added to the ROM's stem to name the media file (Batocera's `-image`).                                                 |
@@ -70,6 +74,8 @@ table lists every key of the schema.
 | `gamelist.path`                | relative path template                                                      | Where one system's game list goes. Required with a format, refused with `none`.                                       |
 | `limits.fileSystem`            | `fat32`, `exfat`, `ntfs`, `ext4` or `any`                                   | The card file system the device needs.                                                                                |
 | `limits.maxFileBytes`          | whole number, optional                                                      | The largest single file the device can use.                                                                           |
+| `limits.maxCardBytes` | whole number, optional, at most 2^47 | The largest card its seller says the device reads. A larger card gets a warning on the Check step (its size to one decimal), not a refusal. |
+| `limits.fileSystemAssumed` | true or false, optional | The file system is assumed, not confirmed (DSpico): another one is a warning saying what to do, not a refusal. |
 | `naming.stripRegionTags`       | true or false                                                               | Whether file names should drop tags such as `(USA)`.                                                                  |
 | `naming.maxPathLength`         | whole number                                                                | The longest path the device handles.                                                                                  |
 
@@ -96,7 +102,9 @@ A profile describes paths on someone's card, so every path is checked before any
 can join it to a real folder:
 
 - Every path is relative to the card root. A leading `/`, `\` or `~` is refused, and so are
-  `..`, drive letters (`C:`), empty or `.` segments and control characters.
+  `..`, drive letters (`C:`), empty or `.` segments and control characters. The one exception is
+  `root.roms` written as exactly `.`, the card root; every system folder below it obeys every
+  rule here, and no other root may overlap it.
 - A system `folder` is a single segment: no `/` or `\`.
 - Every segment must also be portable to FAT32, exFAT and NTFS cards. That rules out:
   - Windows device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1`-`COM9`, `LPT1`-`LPT9`), with or
@@ -123,8 +131,9 @@ path before it writes (see [security.md](security.md#deploy-containment)).
 - `community` means anything less: documentation that implies a layout, forum posts, or a
   layout seen once.
 
-All four shipped profiles are `community`: they are taken from each project's own source code
-and documentation, but none has been checked on a real device.
+All six shipped profiles are `community`: Batocera, ES-DE, muOS and Onion are taken from each
+project's own source code and documentation, `r4xmp` from one seller's page and `dspico` from
+third-party guides (see their `notes`); none has been checked on a real device.
 
 **A note for the community.** If you have one of these devices, the most useful thing you can do
 is copy a few games with Romperoom and say whether they show up and start, with their box art
@@ -134,7 +143,8 @@ confirms its layout, with that report listed in `sources`. List every page you u
 
 ## Shipped profiles and their sources
 
-Each profile covers the same twelve consoles (Onion has no N64 emulator, so eleven). Where a source
+Each frontend and handheld profile covers the same twelve consoles (Onion has no N64 emulator,
+so eleven); the R4xMP and DSpico flashcarts cover DS, GBA, GBC and NES (the DSpico's last three opt-in). Where a source
 lists an extension the catalog does not, the profile leaves it out, because the planner only
 ever sees files the catalog classified.
 
@@ -144,6 +154,8 @@ ever sees files the catalog classified.
 | `batocera` | `roms/<folder>`, `bios`, art in `roms/<folder>/images/<stem>-image`, `-thumb` and `-marquee`, `videos/<stem>-video.mp4`, `manuals/<stem>-manual.pdf`, and `roms/<folder>/gamelist.xml`. Genesis is `megadrive`.       | `es_systems.yml` (folder = system key, `FORMATS.md`), the bundled `roms/` tree, batocera-emulationstation `Scraper.cpp` (`getSaveAsPath`), `MetaData.cpp` (tags), `Settings.cpp` (defaults), and wiki.batocera.org system pages (formats).       |
 | `es-de`    | `ROMs/<folder>`, art in `ES-DE/downloaded_media/<folder>/covers`, `screenshots`, `marquees`, `videos`, `manuals` and `titlescreens`, and `ES-DE/gamelists/<folder>/gamelist.xml`. No BIOS folder of its own.          | The ES-DE user guide (media folders, game list location, the `./` path rule) and `es_systems.xml` (folders and extensions).                                                                                                                       |
 | `onion`    | `Roms/<FOLDER>` (upper case, such as `FC` and `SFC`), `BIOS`, box art in `Roms/<FOLDER>/Imgs/<stem>.png` at most 250 wide. FAT32 only. No game list written.                                                          | Onion's docs (rom folders, BIOS in the root `/BIOS`, the scraping guide, FAT32 install) and each emulator's `config.json` (`rompath`, `imgpath`, `extlist`).                                                                                      |
+| `dspico` | `roms/<folder>` (`nds`, `gba`, `gbc`, `nes`) beside Pico Launcher at the card root (`_picoboot.nds`, `_pico/`), which Romperoom never touches. DS (`.nds`) is chosen by default; GBA, GBC and NES are `optIn` (each needs an emulator program on the card; `.gba`, `.gb`/`.gbc`, `.nes` unconfirmed). No archives, BIOS, art, saves or game list. FAT32 assumed. | Third-party guides, seen in search results and not fetched: `https://sanrax.github.io/flashcart-guides/cart-guides/dspico/` (launcher files, card setup), `https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/` (emulator programs for other consoles), `https://github.com/LNH-team/pico-loader` and `https://github.com/uvsq22104773/dspico_sd_card` (the `_pico` folder's files). The official manual was not read. `roms` is the owner's choice, since the launcher browses any folder. |
+| `r4xmp` | `NDS ROMS`, `GBA ROMS`, `GBC ROMS` and `NES ROMS` at the card root (`root.roms` is `.`), beside the kernel the player installs (`__rpg/`, `_DS_MENU.DAT`, `_DSMENU.DAT`), which Romperoom never touches. `.nds`, `.gba`, `.gb`/`.gbc` and `.nes` only, no archives. No BIOS, art, saves or game list. FAT32, 32 GB or smaller. | One seller page, `http://www.hawktec.shop/r4xmp/` (folder names, file types, kernel files, card limits). The card's own GBAtemp wiki page could not be read. |
 
 Known judgement calls, all reasons the profiles stay `community`:
 
@@ -159,6 +171,27 @@ Known judgement calls, all reasons the profiles stay `community`:
   `gamelist.xml`, and its own generator (`miyoogamelist_gen.sh`) writes `./<rom>` paths and
   `./Imgs/<stem>.png` images, but the profile names no game list, so none is written and
   Standardise does not change one.
+- R4xMP: the seller names the folders, file types and kernel files, nothing more, so these
+  stay unconfirmed and conservative: archives are not accepted (`acceptsArchives: false`), only
+  the file types named are listed, the name limit is FAT32's 255 characters, there is no Game
+  Boy folder (its games are reported as not playable on this device), and no saves, art or game
+  list are written. Its catalog aliases (`NDS ROMS`, `GBA ROMS`, `GBC ROMS`, `NES ROMS`) let a
+  library standardised to it, or a card's folder imported by Sync, still be read as the right
+  console. They also mean a library folder already named one of those is now recognised as that
+  console (before, it was a folder Romperoom could not place), so Standardise may offer to merge
+  it into the console's other folder; a `GBC ROMS` folder of `.gb` files is read as Game Boy
+  Color. A test checks each of the four names one console only, and no other profile's folder
+  for another console. With ROMs at the card root, a system folder may not be named like a
+  flashcart's own files or the writer's (`CARD_ROOT_TAKEN`: `__rpg`, `_DS_MENU.DAT`,
+  `_DSMENU.DAT`, `_pico`, `_picoboot.nds`, `.romperoom-removed`, `romperoom-manifest.json`,
+  in any case). The profile's
+  `notes` carry the same points.
+- DSpico: only `.nds` for DS games is confirmed. The other three consoles run through emulator
+  programs the player installs, so they are `optIn` with `optInNote`, and their extensions,
+  archives (`acceptsArchives: false`), the file system (FAT32 assumed: `fileSystemAssumed`, so
+  another one is a warning, not a refusal), the 255-character name
+  limit, saves and the covers in `_pico/covers` are unconfirmed; no saves, art or game list are
+  written.
 - **Standardise** and **re-link** read the game list of the formats the shipped profiles name
   (`gamelist.xml`: Batocera's, and ES-DE's when it reads lists from the ROM folders) in each
   console folder of a library: its `<game>` and `<folder>` entries' `<path>`, relative to the
@@ -182,7 +215,9 @@ names games of two consoles is left alone.
 | `muos`     | `MUOS/save/file/<core>/<stem>.srm`             | all but DS (DraStic by default) | MustardOS `internal`: `retroarch.default.cfg` (`savefile_directory`, `sort_savefiles_enable`), `bind.sh` (`MUOS/save` on the card) and the manifest's default cores; core names from `libretro-core-info` (`corename`).             |
 | `onion`    | `Saves/CurrentProfile/saves/<core>/<stem>.srm` | all but DS (DraStic)            | Onion's `retroarch.cfg` (`savefile_directory`, `sort_savefiles_enable`), each emulator's `launch.sh` (its core; gpSP's `saves/gpSP`) and Onion's FAQ (`.srm`, named like the ROM); core names from `libretro-core-info`.            |
 | `batocera` | `saves/<folder>/<stem>.srm`                    | all but DS                      | `batocera-launch-libretro`'s `emulator.py` (saves go to the system's saves folder, sorting off), `batocera_launch`'s `emulator.py` (`saves_dir` is `SAVES / system`) and `batocera_common/paths.py` (`SAVES` is `/userdata/saves`). |
+| `dspico` | none | | The guides do not say where saves go, so none are synced (unconfirmed). |
 | `es-de`    | none                                           |                                 | ES-DE leaves saves to each emulator, outside its own folders; its user guide names no save location, so nothing on a card says where they are.                                                                                      |
+| `r4xmp`    | none                                           |                                 | The seller's page says nothing about saves, so none are synced (unconfirmed). |
 
 Judgement calls, recorded so a check on a real device can overturn them:
 

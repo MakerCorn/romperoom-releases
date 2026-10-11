@@ -30,6 +30,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live batch 2 run](#live-batch-2-run)
 - [Live batch 3 run](#live-batch-3-run)
 - [Live UI reorganisation run](#live-ui-reorganisation-run)
+- [Live accept selected run](#live-accept-selected-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -143,7 +144,7 @@ support, so run `npm run build` first. There is no browser to install.
 | `fixup.spec.ts`        | Fix up: the old hashes land on Home and Fix up, a Needs attention line opens its task with focus on its tab, an arrow key and Enter to the next task, every task (once loaded) at 320 px and 200% zoom                                                                                                                    |
 | `home.spec.ts`         | Home over 32 real consoles: the bounded console grid, keyboard to a console and a game and back, 320 px at 200% zoom, All games a bounded scroller at 320 px in List and Grid                                                                                                                                             |
 | `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                           |
-| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, a refusal with no path, hostile IPC, zoom, gamepad                                                       |
+| `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, R4xMP folders at the card root beside a kernel left byte-identical, DSpico's opt-in consoles unticked and its launcher left byte-identical, a refusal with no path, hostile IPC, zoom, gamepad                                                       |
 | `a11y.spec.ts`         | axe with zero violations on the wizard, Home, All games, drawer and every Fix up task, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                                                                                 |
 | `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                                                                                               |
 | `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                                                                                                        |
@@ -254,6 +255,51 @@ wave), with `E='npm test -w @romperoom/engine -- engine.test tidy-batch media.te
 | The default view kept           | `apps/desktop/src/renderer/home/GamesPage.tsx`                                    | telling the page the decided view → never                                                         | `$L`                                                  |
 | A plan stays with its library   | `apps/desktop/src/renderer/fixup/FixUp.tsx`, `ArtworkTask.tsx`, `HistoryTask.tsx` | `key={rootId}` on Duplicates, Artwork and Set aside → none, or a constant                         | `npm test -w @romperoom/desktop -- tidy.test`         |
 | B closes a drawer first         | `tidy/parts.tsx`, `tidy/History.tsx`, `tidy/Recovery.tsx`                         | `useCloser(open, …)` → `useCloser(false, …)`                                                      | `npm test -w @romperoom/desktop -- app.test`          |
+
+The select-and-accept bar's rows (decision 63; 28 rows, each printed `KILLED` by the test named
+for its guard, last run after the review's fixes), with `U`, `R` and `F` =
+`npx vitest run --root apps/desktop test/renderer/` and `unmapped.test.tsx`,
+`identify.test.tsx` or `deploy-fit.test.tsx`, and
+`S='npx vitest run --root packages/ui test/SelectionBar.test.tsx'`. Files are under
+`apps/desktop/src/renderer/` ("ui" is `packages/ui/src/primitives/`). Four first survived:
+the frozen guards in `toggle`, `setMany` and the bar each hid behind another, and the
+folders' count was derived twice; tests now reach each guard alone, and the count once.
+
+The name-match tests run on pages and batches of 5 (`ReviewSizes`, the host's sizes by default),
+and one test keeps the default batch (`MAX_REVIEW_BATCH`) over 501 matches on pages of 5. So each
+runs in well under a second (a CI runner is several times slower), and the batch-size row still
+has a test to fail.
+
+| Guard                                    | File                  | `MUT_OLD` → `MUT_NEW`                                                           | `MUT_CMD` |
+| ---------------------------------------- | --------------------- | ------------------------------------------------------------------------------- | --------- |
+| The count is what will be accepted       | wizard/Unmapped.tsx   | `const candidates = rows.filter(suggested);` → every row with a guess           | $U        |
+| The count is what will be accepted       | deploy/steps.tsx      | `gameIds.filter((id) => !pinned.includes(id))` → `gameIds`                      | $F        |
+| An item that leaves is forgotten         | ui SelectionBar.tsx   | `if ([...flipped].some((k) => !listed.has(k)))` → `if (false)`                  | $S        |
+| Selection survives paging                | health/ReviewList.tsx | the candidates' `loadedKeys` → only the last page (`loadedKeys.slice(-5)`)      | $R        |
+| Selection survives paging                | wizard/Unmapped.tsx   | `useSelection(candidates.map(keyOf), …)` → only the folders shown               | $U        |
+| Nothing applies before the press         | ui SelectionBar.tsx   | "Select all"'s `onChange` → it also calls `onAction()`                          | $S        |
+| Nothing applies before the press         | wizard/Unmapped.tsx   | a folder's checkbox `onChange` → it also calls `assign.mutateAsync(…)`          | $U        |
+| Nothing applies before the press         | health/ReviewList.tsx | a match's checkbox `onChange` → it also calls `decide.mutateAsync(…)`           | $R        |
+| Nothing applies before the press         | deploy/steps.tsx      | `onSelectAll={selection.setAll}` → it also calls `p.fit.leaveOut(…)`            | $F        |
+| Batches are the host's size              | health/ReviewList.tsx | `REVIEW_SIZES`' `batch: MAX_REVIEW_BATCH` → `MAX_REVIEW_BATCH + 1`              | $R        |
+| A tick is for the match (C1)             | data/hooks.ts         | `` `${i.fileId}:${i.gameId}` `` → `` `${i.fileId}:0` ``                         | $R        |
+| A failed read is forgotten (I1)          | health/ReviewList.tsx | clearing `pendingAll` on a read error → `if (false)`                            | $R        |
+| The read shows its progress (I1)         | health/ReviewList.tsx | the bar's `status={reading ? … : undefined}` → `undefined`                      | $R        |
+| Frozen while it runs (I2)                | health/ReviewList.tsx | `useSelection(candidates, 'none', running !== null)` → `false`                  | $R        |
+| The count pressed stays (I2)             | health/ReviewList.tsx | `const count = running?.count ?? selection.count;` → `selection.count`          | $R        |
+| Frozen while it runs (I2)                | wizard/Unmapped.tsx   | `useSelection(…, 'none', frozen)` → `false`                                     | $U        |
+| The pickers wait (I2)                    | wizard/Unmapped.tsx   | `if (!frozen) choose(…)` → `if (true)`                                          | $U        |
+| The count pressed stays (I2)             | wizard/Unmapped.tsx   | `const barCount = accepting?.keys.size ?? selection.count;` → `selection.count` | $U        |
+| The hook ignores a frozen toggle (I2)    | ui SelectionBar.tsx   | `toggle`'s `if (frozen) return;` → `if (false)`                                 | $S        |
+| The hook ignores a frozen setMany (I2)   | ui SelectionBar.tsx   | `setMany`'s `if (frozen) return;` → `if (false)`                                | $S        |
+| Select all waits while busy (I2)         | ui SelectionBar.tsx   | `if (!busy) onSelectAll(…)` → `if (true)`                                       | $S        |
+| Counted once each (I3)                   | health/ReviewList.tsx | `[...new Set([...known, ...loadedKeys])]` → without the `Set`                   | $R        |
+| Its decisions leave the read list (I3)   | health/ReviewList.tsx | `dropRead(fileIds);` in `decideMany` → `dropRead([]);`                          | $R        |
+| A failed batch reads the list again (M2) | health/ReviewList.tsx | `void qc.invalidateQueries({ queryKey: keys.review });` → `void qc;`            | $R        |
+| Focus never drops to the page (M9)       | health/ReviewList.tsx | the running focus fallback → `if (false)`                                       | $R        |
+| Focus never drops to the page (M9)       | wizard/Unmapped.tsx   | the running focus fallback → `if (false)`                                       | $U        |
+| An unticked game is kept (I4)            | deploy/steps.tsx      | `if (!selection.has(id)) p.fit.pin(id);` → `if (false)`                         | $F        |
+| What is still needed is said (I4)        | deploy/steps.tsx      | `{freed < fit.needBytes && (` → `{false && (`                                   | $F        |
 
 The tidy engine (duplicates, unused artwork, undo and the purge) was checked with a scripted
 run of more than 50 mutants, one guard each, over the full engine suite. Its tests follow the
@@ -659,8 +705,8 @@ repositories. Run it before a release that changes anything under
 5. **Download.** Only `raw.githubusercontent.com`; every `art_added` row's file has its recorded
    size and SHA-1, its git blob SHA equals the listing's (checked against a listing fetched
    independently) and it starts with the PNG signature. The library shows the covers without a
-   rescan; a drawer shows a screenshot and a title screen. **Scan again**: every picture stays
-   linked and `health().art` does not change.
+   rescan; a drawer shows a screenshot and a title screen. **Scan roms** (Fix up's header): every
+   picture stays linked and `health().art` does not change.
 6. **Remove downloaded art.** Every recorded file and every folder Romperoom made is gone, and
    the scratch library's fingerprint equals the one taken before.
 7. **Card.** Relaunch with `ROMPEROOM_TEST_VOLUME` naming a fixture card folder in a device
@@ -818,10 +864,10 @@ never committed:
    line, only in the renamed games' `<path>` and `<image>` elements; the originals of every game
    list, cue sheet and playlist the run replaced are in `.romperoom/lists-backup/<run>/`; the
    set-aside copy is in `.romperoom-quarantine`; every SHA-1 from before is somewhere after.
-5. **Scan and Undo from the results.** Press Scan again on the results, then Undo this run. The
-   fingerprint outside `.romperoom` equals the one before, modification times included. Review
-   again: it equals the first review, the scan between the run and its Undo notwithstanding (the
-   disc games are offered again, none left as not matching).
+5. **Scan and Undo from the results.** Press Fix up's **Scan roms** (the results point at it), then
+   Undo this run. The fingerprint outside `.romperoom` equals the one before, modification times
+   included. Review again: it equals the first review, the scan between the run and its Undo
+   notwithstanding (the disc games are offered again, none left as not matching).
 6. **Stop, then Finish or undo….** Review again, tick the clash, Standardise, and press Stop a few
    steps in. Each game is either renamed whole or untouched, the run says Stopped with the changes
    that did not run, and its journal waits in Recovery (Fix up's Finish or undo…). Press Finish or
@@ -1113,20 +1159,20 @@ repository:
    and start again with the second as the picked folder and a slowed tidy
    (`ROMPEROOM_TEST_TIDY_DELAY_MS`).
 3. **Add.** Home › Libraries › **Add a library…**: the second is listed as `roms (2)`, "Not
-   scanned yet", focus on its **Scan now**, and nothing scans. **Scan now**: its games and "Last
-   scanned" with today's date.
+   scanned yet", focus on its **Scan roms (2)**, and nothing scans. **Scan roms (2)**: its games
+   and "Last scanned" with today's date.
 4. **Refusals.** Pick, in turn, the second again, the first's `GBA` folder, the first's parent, a
    symbolic link to the second, and a folder that doesn't exist: "That folder is already one of
    your libraries", "That folder is inside one of your libraries", "That folder holds one of your
    libraries", "That folder is already one of your libraries", "Can't reach your game folder";
    nothing is added.
-5. **Remove while a scan runs.** Add the third and press its **Scan now**: every **Scan now** says
-   why it waits and the third reads "Scanning now". **Remove** `roms (2)` meanwhile: "A scan is
-   running", the confirmation stays, nothing is forgotten.
+5. **Remove while a scan runs.** Add the third and press its own **Scan** button: every row's
+   **Scan** says why it waits and the third reads "Scanning now". **Remove** `roms (2)` meanwhile:
+   "A scan is running", the confirmation stays, nothing is forgotten.
 6. **Not reachable.** Rename the second library's folder away, then switch tabs and back at once:
    its row stays, marked "Can't reach its folder. Is the drive connected?". Put it back. Then
    move it and leave a symbolic link at its old path: the row reads "Can't reach its folder" and
-   **Scan now** still counts its games. Put it back.
+   its **Scan** button still counts its games. Put it back.
 7. **Remove while a tidy runs.** Set aside some of `roms (2)`'s duplicates (a finished run), then
    start a slowed run of the rest and **Remove** it meanwhile: "Romperoom can't remove roms (2)
    right now", nothing forgotten.
@@ -1263,11 +1309,12 @@ Playwright script kept outside the repository:
    every file; a fingerprint that fails to read is "not evaluated") before and after each look.
 2. **One library.** Set up with the first (a fresh `ROMPEROOM_DATA_DIR`, the folder through
    `ROMPEROOM_TEST_PICK_FOLDER`): **Across libraries** says "Only one library".
-3. **Two and three libraries.** Quit, start again, add the others in **Home** ›
-   **Libraries** (**Add a library…**, then **Scan now**; the host reads the picker seam each time
-   it opens). Record the sets, the line above them, the badges, the skipped count, the pager,
-   the live region and where focus goes with **Look again** and **Scan again**, and whether the
-   Library choice is hidden with its note.
+3. **Two and three libraries.** Quit, start again, add the others in **Home** › **Libraries** (**Add
+   a library…**, then the new row's **Scan** button; the host reads the picker seam each time it
+   opens). Record the sets, the line above them, the badges, the skipped count, the pager, the live
+   region and where focus goes with **Refresh list** and the header's **Scan all libraries** (the
+   tab points at it rather than offering its own), and whether the Library choice is hidden with its
+   note.
 4. **Not checked.** The unscanned library; a folder of the third made unreadable (`chmod 000`)
    and the library scanned again; the fifth's scan running; the second's folder moved away, then
    an empty folder at its place; a copy moved off since the scan; a parent folder of a library
@@ -1577,7 +1624,7 @@ each app is closed.
    what the region said and where focus is. Measure the page's sideways scroll and anything
    outside the window at 1280, 480 and 320 CSS px (320 at 200% and 300% zoom), light and dark,
    and the announcer's node. Tab to the first **Keep this one** and press Enter: record focus, the
-   region and the new list. **Leave these games out** (Enter): record focus and whether the panel
+   region and the new list. **Leave out selected** (Enter): record focus and whether the panel
    is gone; **Next**: record the Check step's **Left out** line; copy, and list the card.
 4. **Art checksums:** for every `media` row, compare `checksum` with the file's SHA-1.
 5. **The cached checksum:** change the learned picture's last byte, keeping its size and time;
@@ -1588,10 +1635,10 @@ each app is closed.
 6. **Refusal names:** a new sandbox with `exportFolder` at a folder inside the library; export
    there and **Write**: record **Details** and whether the page's HTML holds any path of the
    sandbox.
-7. **A copy's cover and Look again:** a new sandbox with `SNES/Mario (USA).zip` (the bytes of
+7. **A copy's cover and Refresh list:** a new sandbox with `SNES/Mario (USA).zip` (the bytes of
    `Zelda (USA).zip`) and its own picture, and a second library holding `Advance Wars (USA).gba`:
    on **Fix up** › **Duplicates** record each copy's picture; on **Across libraries** press
-   **Look again** twice and record the region's nodes.
+   **Refresh list** twice and record the region's nodes.
 8. **A long suggestion:** an empty sandbox with 70 NES games (one with a long unbroken name, one
    with Hebrew and Arabic), `volumeBytes` 60,000: open the suggestion, count its rows and read the
    line below them, and measure the layout as in step 3.
@@ -1842,6 +1889,59 @@ measured:
   either, and pinned by tests instead: the fix wave's SD card landing after a report it sent the
   player to (`card-screen.test.tsx`, `app.test.tsx`), B over a drawer (`app.test.tsx`) and a
   library switched while a plan was made (`tidy.test.tsx`).
+
+## Live accept selected run
+
+CI runs the select-and-accept bar (decision 63) in jsdom on all three screens and once in the
+built app (`a11y.spec.ts`, folders at 320 px); this run records the three in the built app by
+hand. Run it before a release that changes `SelectionBar.tsx`, `wizard/Unmapped.tsx`,
+`health/ReviewList.tsx` or the Where step's suggestion. A throwaway Playwright spec (deleted
+before committing) drives the harness, every launch with `testVolume` at a scratch card folder.
+Shots are taken with Electron's own `webContents.capturePage()`: Playwright's page screenshot
+comes back blank once the window's zoom factor is changed.
+
+1. **Folders:** an empty sandbox whose library holds `Game Boy Advanced`, `Nintendo Gamecub`,
+   `nes3d_launchers` and `Plain Box` (one file each) and one SNES game. Set up; tick **Use Game
+   Boy Advance for Game Boy Advanced**. At 1280, 480 and 320 CSS px (320 at 200% and 300% zoom),
+   light and dark: measure the page's sideways scroll and anything outside the window, and look at
+   the bar. Run axe. From the heading, Tab to **Select all 3**: record the Tabs, the focus ring and
+   whether it is mixed. Space, Tab, Enter: record where focus lands and what the announcer says.
+2. **Name matches:** the fixture library with a GBA DAT whose hashes are placeholders (every GBA
+   file a name match). Import it, **Identify games**, and repeat step 1's layout and axe on **Check
+   name matches**. Space on the first match: record the ring and the button's name. Enter on
+   **Accept selected (1)**: record focus and the announcer.
+3. **Make it fit:** the fixture library, `volumeBytes` 87,780, ES-DE: **Suggest games to leave
+   out**, record the bar's text, and repeat the layout and axe. Space on the game: record the
+   button and the bar. Space again, Enter on **Leave out selected (1)**: record focus.
+4. **The network log:** whether `network-log.json` exists in each data folder (expected: no), and
+   any console error (the harness fails the run on one).
+
+What it cannot observe: a screen reader's speech (the region's text is recorded), a review long
+enough to page (covered in jsdom: 600 matches in two batches), Windows and Linux.
+
+**Last run: 2026-10-10,** macOS, the built app of `feat/accept-selected` before its first commit,
+three sandboxes. 39 cells observed, 0 failed, 3 not evaluated:
+
+- layout: **observed** (24 cells); every screen at 1280, 480 and 320 CSS px (200% and 300%), light
+  and dark: no sideways scroll and nothing outside the window; the bar wraps to three lines at 320.
+- axe: **observed** (3 cells); no violations, with one folder ticked ("Select all" mixed).
+- folders (keyboard): **observed**; one Tab from the heading to **Select all 3**, mixed, a 3 px
+  solid ring; after Space and Tab, focus on **Accept selected (3)** with the ring; after Enter,
+  focus on "One folder needs a console" and the announcer "Assigned 3 folders. Undo is under
+  Recently assigned."
+- name matches: **observed**; the bar held "Select all 2", "0 selected" and **Accept selected (0)**
+  (two GBA files); Space ticked the first with the ring; **Accept selected (1)**; after Enter,
+  focus on "Check name matches" and the announcer "Kept 1 match".
+- make it fit: **observed**; the bar held "Select all 1" (ticked), "1 selected", "Frees 8.2 KB" and
+  **Leave out selected (1)**; unticked, **Leave out selected (0)** dimmed (`aria-disabled`) and
+  "Frees 0 B"; after Enter, focus on "1 game left out to make it fit." (The " · " between the count
+  and the space freed was added after this run, from its shots.)
+- the network log: **observed** (3 sandboxes); none. The console: **observed**; no errors.
+- a screen reader, a paged review, Windows and Linux: **not evaluated** (above).
+
+**Rerun after the review, 2026-10-11:** one cell, in the built app. Shift+Space: **observed**; with
+the first folder's box ticked by Space, Shift+Space on the third ticked all three (the keyboard's
+click carries Shift), so the user guide names it beside Shift-click.
 
 ## Screenshots
 

@@ -952,7 +952,21 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
   is never replaced or removed, except moved aside on request (`overwriteUnmanaged`). Every
   card path goes through `resolveInside`, which refuses `..`, empty segments, backslashes,
   colons, NUL and anything that joins outside the root. A fuzz test writes 200 hostile plans
-  and checks nothing landed outside the card.
+  and checks nothing landed outside the card. A planned file outside the profile's folders
+  refuses the whole plan, with or without `overwriteUnmanaged`; for ROMs at the card root (the
+  R4xMP) those folders are the system folders, never the root, so its kernel (`__rpg/`,
+  `_DS_MENU.DAT`, `_DSMENU.DAT`) is never named by a write, a move or a removal; likewise the
+  DSpico's launcher (`_picoboot.nds`, `_pico/`) beside its `roms` folder. The card root still
+  gets the writer's own `romperoom-manifest.json` and `.romperoom-removed/`.
+- **No step goes through a link.** Writing makes or checks each folder of a path with `lstat`
+  and refuses one that is a link or a file (`ensureDirs`). Removing does the same before any
+  move aside, erase, stale part file, leftover reservation or empty folder: a file whose folder
+  on the card is a link or a file is left where it is, kept in the manifest, and listed as a
+  conflict. On FAT32 and exFAT cards no link can exist, so this matters for export folders and
+  cards formatted APFS, HFS+, NTFS or ext4: there, a folder the player swapped for a link (to
+  the library, or to the card root) can no longer lead a removal outside the profile's folders
+  or off the card. A link made between the check and the step (a race on a card being changed
+  while Romperoom runs) is not covered.
 - **No half-written file under a final name.** Copies go to `.romperoom-part` files and are
   renamed into place without clobbering, then read back. Removal is a move to
   `.romperoom-removed/` on the card; erasing needs `eraseRemoved` and a fresh matching hash.
@@ -1007,7 +1021,7 @@ follows the deploy host's pattern.
 - **Stale plans are refused.** The engine binds each plan to the catalog generation: after any
   catalog change (a scan, another tidy run, a checksum Tidy up writes; not an art checksum the card
   writer fills in) the id is refused with
-  `TidyPlanError` and the page asks to look again. Paging re-asks the engine and refuses when
+  `TidyPlanError` and the page offers **Refresh list**. Paging re-asks the engine and refuses when
   the totals changed, so one plan never mixes two answers.
 - **One job at a time.** Apply, undo, restore, delete forever and recovery share one slot, taken
   before any wait. The engine's per-library work lock also refuses while a scan or a copy to a

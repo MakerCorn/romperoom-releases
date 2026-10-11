@@ -65,6 +65,10 @@ design history.
 57. [Home and Fix up replace Library, Health and Tidy up](#57-home-and-fix-up-replace-library-health-and-tidy-up)
 58. [The games page reads by offset](#58-the-games-page-reads-by-offset)
 59. [Tab names stay two words; Settings keeps what is about the app](#59-tab-names-stay-two-words-settings-keeps-what-is-about-the-app)
+60. [A profile's ROMs may sit at the card root, and the writer stays in its folders](#60-a-profiles-roms-may-sit-at-the-card-root-and-the-writer-stays-in-its-folders)
+61. [A profile may offer consoles unticked](#61-a-profile-may-offer-consoles-unticked)
+62. [Scan reads drives and names its scope; Refresh list re-reads the catalog](#62-scan-reads-drives-and-names-its-scope-refresh-list-re-reads-the-catalog)
+63. [Suggestions are accepted with one shared select-and-accept bar](#63-suggestions-are-accepted-with-one-shared-select-and-accept-bar)
 
 ## 1. One repository, four workspaces
 
@@ -848,7 +852,8 @@ Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
 
 - **Decision:** when the games do not fit, the wizard asks the engine for a suggestion (the
   largest games first, then a game with another version going, never a game the player kept) and
-  shows it for review; nothing is left out until the player presses **Leave these games out**.
+  shows it for review; nothing is left out until the player presses **Leave out selected**
+  (decision 63: every suggested game ticked, any can be unticked).
   The applied list travels as `selection.excludeGameIds` (the excluded games, not an allow-list
   and not a held id), is left out after regions are picked, and is never stored: any change of
   choices or destination forgets it.
@@ -993,3 +998,100 @@ Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
   not the library.
 - **Cost:** "History" also holds Set aside and Recovery, which its name alone doesn't say (the
   panel's own headings do).
+
+## 60. A profile's ROMs may sit at the card root, and the writer stays in its folders
+
+- **Decision:** `root.roms` may be `.` (`CARD_ROOT`), the card root itself, for the R4xMP
+  flashcart, whose kernel reads `NDS ROMS` and the other folders there. Only `root.roms` may be
+  it; with it, no BIOS, media or saves folder may be set. Paths are joined by one helper
+  (`cardPath`, `romsFolderOf`), the writer manages each system folder rather than the root, and
+  it refuses any plan naming a file outside the profile's folders.
+- **Why:** an empty `root.roms` would have made every joined path start with `/`, and managing
+  the root would have put the player's kernel (`__rpg/`, `_DS_MENU.DAT`, `_DSMENU.DAT`) inside
+  Romperoom's reach. An explicit `.` reads as meant, and the writer's check holds whatever plan
+  it is given.
+- **Cost:** a profile can no longer write a file straight into the card root (none did), and a
+  profile at the card root has nowhere for BIOS, art or saves until a source says where.
+  Profiles gained two optional fields on the way, `notes` (what the sources leave unconfirmed)
+  and `limits.maxCardBytes` (a warning only).
+
+## 61. A profile may offer consoles unticked
+
+- **Decision:** a system may be `optIn` (with the profile's `optInNote` saying why). The wizard
+  lists it unticked with that note as its description, "Select all" ticks it, and a package that
+  names no consoles leaves it out with a warning naming it (the planner and the wizard both read
+  `optInSystemIds`; `defaultSystemIds` is the complement, for callers listing what goes by
+  default). Choosing any other device starts from that device's defaults, never from consoles
+  ticked for the last one.
+- **Why:** the DSpico plays DS games itself but GBA, GBC and NES only through emulator programs
+  the player installs, with file types nobody confirmed; copying those by default would fill the
+  card with games it may not run.
+- **Cost:** one more field in the profile summary; "Select all" on such a device stores the list
+  it ticked, so a console added to the library later is not ticked by itself.
+## 62. Scan reads drives and names its scope; Refresh list re-reads the catalog
+
+- **Decision:** a button that says **Scan** always reads the drives and always says what it reads:
+  **Scan all libraries** (two or more), **Scan** and the library's name (one library, also when it
+  is the only one), or **Scan these consoles** (after a card sync). A button that asks Romperoom
+  again for what it already knows says **Refresh list**, with "Checks what Romperoom already
+  knows. It does not read your drives." under it (the card lists say "Checks which cards are
+  plugged in. It does not read them."). Fix up has one scan button, in its header, with "Reads
+  your drives for new, moved and removed games. Takes a while for big libraries." under it; a task
+  that needs a scan says why and points at it ("Press Scan all libraries above."). A task keeps a
+  scan of its own only where it reads fewer libraries than the header: Duplicates' **Scan** of the
+  library shown, when there are several. Home's Libraries keeps each row's **Scan** of that
+  library. The words live in `renderer/scan/scan-copy.ts`.
+- **Why:** the owner could not tell which button did what: **Scan again**, **Scan now**, **Scan
+  all libraries** and **Look again** sat on the same screens, some reading the drives for minutes
+  and some only asking the catalog again.
+- **Cost:** Across libraries and Standardise's results no longer have a scan of their own: they
+  now point at Fix up's header scan, which scans every library, so the scan they lead to is slower
+  on a big collection. Across libraries used to scan only the libraries a scan would fix.
+- **Known trade-off:** Standardise's results used to scan only the one library just renamed, a
+  smaller set than the header's. By the rule above that would keep a button of its own, as
+  Duplicates does; the owner's approved list removes it anyway, to keep one scan button per
+  screen, accepting a full scan after a rename when there are several libraries. The engine's own refusal messages ("look again") are unchanged; they only show
+  behind **Show details**.
+
+## 63. Suggestions are accepted with one shared select-and-accept bar
+
+- **Decision:** the three lists of suggestions (folders with a suggested console in setup, name
+  matches in Fix up › Names, and the games Make it fit suggests leaving out) share one bar,
+  `SelectionBar` with `useSelection` in `packages/ui`: a checkbox on every suggested row, and above
+  the list "Select all N", the count, and one button that names it ("Accept selected (12)",
+  "Leave out selected (3)"). "Select all" reaches every page, not just the rows shown. Nothing
+  happens until the button is pressed. It replaces "Accept all on this page"; each row's own
+  buttons stay.
+- **Why:** the owner asked for a way to accept every suggestion, and for multi-select wherever
+  there is an accept. One component keeps the three screens alike (Space, Shift-click for a range,
+  a mixed "Select all", the count in the button) and styled from one place.
+- **Detail:** the selection is held as the items that differ from the default (none ticked, or
+  every suggested game ticked on Make it fit), so it survives paging, and it is counted over the
+  items on the list as last read, without repeats: one that leaves (decided here or in another
+  window, a kept game) drops out of the count and is forgotten. While the action runs every tick,
+  "Select all" and (for folders) the pickers are frozen (`aria-disabled`, "Accepting…"), so what
+  is sent is exactly what was ticked at the press, and the count shown stays the one pressed.
+  Each press does what the per-row action does: one `assignFolder` per folder in turn (with
+  progress, a failed folder named and left ticked), `identifyDecideReview` in batches of
+  `MAX_REVIEW_BATCH` (a failed batch stops the rest, is reported, and the list is read again),
+  and the same left-out list as before, with every unticked game kept (pinned) as Keep this one
+  keeps it.
+- **Name matches:** a tick is for a match, the file and its game (`fileId:gameId`), so a match
+  rejected and matched again (one by one or by "Reject all on this page") comes back unticked.
+  "Select all" with pages not loaded reads every match once with the existing
+  `identifyListReview` calls, a page at a time, showing its progress; a failed read is shown and
+  announced and never applies later, and the matches read are added to the player's ticks, never
+  in place of them. The matches read are kept current in place: this screen's own decisions take
+  their files out of it (a batch whose answer was lost too, so it is never counted again), and
+  anything else that changes the list (an identify run, a scan) reads it again. No new IPC
+  channel or engine function.
+- **What N promises:** the number of ticked items on the list as Romperoom last read it. The host
+  only changes name matches still waiting, and decides by file: if the catalog changes between
+  that read and the press (an identify run elsewhere matching a file to another game), what is
+  kept can differ, and the announcement uses the host's own count. Guarding that fully needs the
+  engine to accept a file only as the game shown, an engine and IPC change left for later.
+- **Cost:** "Select all" on a very large review reads every page once, and again only when
+  something else changes the list; each batch still refreshes the loaded pages, health and the
+  games lists as a single Accept does. The Make it fit games not listed can only be ticked or
+  unticked together. There is no bulk Undo: each folder is under Recently assigned with its own
+  Undo, and accepted name matches have none (as before).

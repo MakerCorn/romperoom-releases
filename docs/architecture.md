@@ -1213,7 +1213,8 @@ flowchart LR
   folder path.
 - **Errors** are plain words with the technical text under "Details": busy (a scan or a copy to
   a card holds the library), the library folder not available, or "your library changed since
-  you looked" (a stale plan), which offers "Look again".
+  you looked" (a stale plan), which offers "Refresh list" (it asks the catalog again and never
+  reads a drive; decision 62).
 
 ## The renderer's screens and routes
 
@@ -1250,9 +1251,13 @@ mounted), a database change or a review decision refreshes them.
 
 Fix up (`fixup/FixUp.tsx`) holds Tidy's job state for every task (`TidyProvider`), so a run
 outlives its tab; its tasks are the old Health and Tidy up screens' own components, regrouped (see
-[Fix up's tidy tasks](#fix-ups-tidy-tasks)). Scan again (Scan all libraries with more than one;
-unavailable, saying why, while a tidy runs) and the scan's outcome sit in its header above the
-tabs.
+[Fix up's tidy tasks](#fix-ups-tidy-tasks)). Its one scan button (Scan all libraries with more
+than one library, "Scan <library>" with one; described by what a scan does, and unavailable, saying
+why, while a tidy runs) and the scan's outcome sit in its header above the tabs. A task that needs
+a scan points at that button instead of showing its own (Overview, leftover artwork, Across
+libraries, Standardise's results); only Duplicates keeps a scan of the library shown when the
+header scans more than it. The words, and "Refresh list" for asking the catalog again, live in
+`scan/scan-copy.ts` (decision 62).
 
 ## Hash worker pool
 
@@ -2018,7 +2023,13 @@ flowchart TB
   create, then a rename onto it) or, for its own file re-checked just before, a plain rename.
   A partly written file never has a final name. The read-back hashes the placed file again; a
   copy that differs is removed and reported.
-- **Removal is a move.** Files the plan no longer has, inside the profile's folders, are moved
+- **Only the profile's folders.** A plan naming a file outside them (`managedRootsOf`: the
+  roots, the fixed start of each template, and each system folder when ROMs sit at the card root,
+  as on the R4xMP) is refused before anything is written, so files the device's own software
+  keeps beside them (a flashcart's kernel at the card root) are never replaced or moved aside.
+- **Removal is a move.** Each folder on a removed file's path is checked with `lstat` first; a
+  link or a file there leaves the file alone (a conflict, kept in the manifest), as writing
+  refuses one. Files the plan no longer has, inside the profile's folders, are moved
   to `.romperoom-removed/<time>/` on the same card. `eraseRemoved` deletes them instead, only
   after a fresh hash shows they are still exactly what was written. Empty folders the writer
   made are removed at the end.

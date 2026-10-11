@@ -75,8 +75,26 @@ a folder by mistake while moving through the list. If a folder isn't games at al
 **Not a console — ignore this folder** and press **Ignore folder**. Ignored folders are listed in
 **Fix up** › **Names**, where **Include again** brings one back.
 
-Each assignment can be undone under **Recently assigned**. Press **Scan again** afterwards to
-add the games in the folders you gave a console.
+When Romperoom can guess a folder's console from its name, it says so ("Looks like Game Boy
+Advance"): **Use suggestion** fills the picker in, and you press **Assign** as usual. To take
+several suggestions at once, tick **Use Game Boy Advance** (and so on) on each folder you want, or
+**Select all** above the list (it reaches every folder, also those past **Show all**), then press
+**Accept selected (N)**. N is the number of ticked folders it will assign: a folder that leaves
+the list, or whose picker you set to something else, drops out of it. A folder with no guess has
+no tick box. Nothing is assigned until you press the button; the folders are then assigned one
+after another, with "Assigning 2 of 5" while it works, and Romperoom says how many it assigned.
+While it works, the tick boxes, **Select all** and the pickers wait ("Accepting…"), so what is
+assigned is exactly what was ticked when you pressed it. If one can't be assigned, it stays in
+the list, still ticked, and the message names it; the others are still assigned. Space ticks a
+box. Shift-click (or Shift+Space) on a box does the same to every folder between it and the last
+box you changed: ticks them if it ticks, clears them if it clears.
+
+There is no Undo for the whole lot at once: each folder it assigned is under **Recently assigned**
+with its own **Undo**.
+
+Each assignment can be undone under **Recently assigned**. Press the scan button below the list
+afterwards (**Scan** and your library's name, or **Scan all libraries**) to add the games in the
+folders you gave a console.
 
 | Light                                                                          | Dark                                                                                |
 | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
@@ -94,8 +112,8 @@ add the games in the folders you gave a console.
   work that stopped part way. Each line opens where it is done: most in **Fix up**; a library that
   isn't connected, in Home's libraries just below. With nothing to do, the list isn't shown.
 - **Recently added**: the newest games, one row.
-- **Your libraries**: your libraries, with **Add a library…**, **Scan now** and **Remove** (see
-  [Your libraries](#your-libraries)).
+- **Your libraries**: your libraries, each with its own **Scan** (named by the library) and
+  **Remove**, and **Add a library…** (see [Your libraries](#your-libraries)).
 - **Your consoles**: **All games** and a card per console, with its games and size. **Filter
   consoles** narrows the cards and **Sort consoles by** orders them by name, games or size. With
   many consoles Home shows the first 24; **Show all N consoles** shows the rest, and so does
@@ -162,10 +180,11 @@ Is the drive connected?" (or "Its folder is empty. Is the drive connected?" when
 empty folder behind).
 
 - **Add a library…** opens the folder picker. Choose the folder that holds your console folders.
-  Romperoom doesn't scan it until you press **Scan now** on its row. It refuses a folder that is
+  Romperoom doesn't scan it until you press its **Scan** button. It refuses a folder that is
   already one of your libraries, or one inside or around another library (its games would be
   counted twice).
-- **Scan now** counts that library's games, as **Scan again** in Fix up does.
+- **Scan** and the library's name (for example **Scan roms (2)**) reads that library's folder for
+  new, moved and removed games, and counts them. Fix up's scan button reads every library.
 - **Remove** asks first. It only makes Romperoom forget the library: its games, its Fix up
   history and what it set aside, its Standardise and re-link runs and its card syncs. Nothing in
   its folder is moved, changed or deleted. Files set aside in Fix up stay in its
@@ -190,7 +209,7 @@ Good to know:
   drive can read as not reachable and be fine a moment later. The list reads every folder again
   each time you open Home.
 - A library whose folder was moved and replaced by a symbolic link reads "Can't reach its
-  folder", yet **Scan now** still works and counts its games (see
+  folder", yet its **Scan** button still works and counts its games (see
   [troubleshooting](troubleshooting.md#a-library-says-it-cant-reach-its-folder-but-it-scans)).
 - If a network drive holding one of your libraries stops answering, **Add a library…** makes
   Romperoom stop responding until the drive answers or the system gives up on it (see
@@ -202,14 +221,19 @@ Good to know:
 ## Fix up
 
 **Fix up** gathers everything that looks after your library. It opens on **Needs attention**: the
-same short list as Home; the cleanups' overview (what each could free, what is set aside, the
-device Standardise uses); the space used by console and the largest games; and any folders that
-look empty or gone (see [When folders look empty or gone](#when-folders-look-empty-or-gone)).
-**Scan again** (with more than one library, **Scan all libraries**) and the last scan's outcome sit
-above the tabs, whatever tab is open; press it after you change your files. It waits, saying why,
-while a tidy runs. With more than one library, **Library to tidy** in Fix up's header says which
-library Duplicates, Standardise (in Names), leftover artwork and Re-link, and Set aside work on; it
-is not shown on Needs attention and Game databases, which cover every library. The tabs:
+same short list as Home; the cleanups' overview (what each could free, what is set aside, the device
+Standardise uses); the space used by console and the largest games; and any folders that look empty
+or gone (see [When folders look empty or gone](#when-folders-look-empty-or-gone)). Fix up's one scan
+button and the last scan's outcome sit above the tabs, whatever tab is open: **Scan all libraries**
+with more than one library, or **Scan** and the library's name with one. It reads your drives for
+new, moved and removed games, which takes a while for a big library; press it after you change your
+files. It waits, saying why, while a tidy runs. A tab that needs a scan says why and points at this
+button rather than showing its own; only **Duplicates** keeps a scan of the one library it shows,
+when you have several. **Refresh list**, where you see it, only asks Romperoom again for what it
+already knows: it never reads your drives. With more than one library, **Library to tidy** in Fix
+up's header says which library Duplicates, Standardise (in Names), leftover artwork and Re-link, and
+Set aside work on; it is not shown on Needs attention and Game databases, which cover every library.
+The tabs:
 
 - **Names**: identify your games and check name matches, the unidentified games, the folders
   without a console (and the ones you ignored), the files that couldn't be read, and
@@ -457,7 +481,7 @@ card above, and a game's own details):
 
 An unidentified file says why:
 
-- **Not read yet:** Romperoom couldn't read this file. Scan again, then identify.
+- **Not read yet:** Romperoom couldn't read this file. Scan its library, then identify.
 - **In another console's database:** the file matches a game in another console's database. Move
   it to that console's folder to identify it.
 - **No database for this console:** you have not imported a database for its console.
@@ -479,9 +503,25 @@ A name match, or a file that matches several games at once, is offered for revie
 card, named by the database's title and the file it matches. **Accept** it to keep it. **Reject**
 asks you to confirm, since Romperoom never offers that pairing again; once confirmed, it tries the
 next match, or puts the file back under its own file name once you have rejected every match it
-had (the file then leaves the list). **Accept all on this page** and
-**Reject all on this page** decide everything currently loaded at once (Reject all asks first,
-too). **Show more** loads further matches when there are many.
+had (the file then leaves the list). **Show more** loads further matches when there are many.
+
+To keep many matches at once, tick the ones you want (Space ticks one; Shift-click or
+Shift+Space does the same to every match between it and the last one you changed), or tick
+**Select all** above the list, which reaches every match, also those not loaded yet: it reads
+them first ("Reading every match: 200 of 600"), then ticks them all, keeping any you ticked
+meanwhile. If that read fails, Romperoom says so and ticks nothing more. A tick is for a match,
+the file and the game together: when a match is rejected (on its own or with **Reject all on this
+page**) and Romperoom offers the file's next match, that new match is not ticked.
+
+Then press **Accept selected (N)**: N is the number of ticked matches on the list as Romperoom
+last read it, counted once each, and a match that leaves the list drops out of it. Nothing is
+kept until you press it. While it works, the tick boxes and **Select all** wait ("Accepting…"),
+and N stays as it was when you pressed it. Romperoom keeps only matches still waiting on a
+decision, and then says how many it kept (its own count, which can be fewer if the list changed
+meanwhile, for example after identifying games in another window). If some couldn't be kept, it
+says how many, reads the list again so it shows what was kept, and the rest stay ticked. Kept
+matches have no Undo. **Reject all on this page** rejects everything currently loaded at once,
+after asking.
 
 | Light                                                    | Dark                                                          |
 | --------------------------------------------------------- | ---------------------------------------------------------------- |
@@ -494,7 +534,8 @@ does **not** take those games off your list straight away. A drive that is only 
 connected looks just like deleted games. Instead it shows **Some game folders look empty or
 gone** or **Some cover art folders look empty or gone**, with the folders named.
 
-- If the drive was disconnected, reconnect it and press **Scan again**.
+- If the drive was disconnected, reconnect it and scan (Fix up's **Scan all libraries**, or
+  **Scan** and the library's name).
 - If you removed the games on purpose, press **It's OK — they were removed**. Romperoom takes
   them off its list. Nothing on your drive is deleted.
 
@@ -553,15 +594,45 @@ nothing is written. Put the card in your computer first. Cover art from a card i
 | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
 | ![SD card's choices](screenshots/deploy-landing-console-shelf-light.png) | ![SD card's choices, dark](screenshots/deploy-landing-console-shelf-dark.png) |
 
-1. **Device.** Pick the device or frontend the card is for. Each one says how many consoles it
-   plays. All four are marked **Community**: they were set up from the projects' own
-   documentation and what other players shared, and not yet tested on a real device by us.
+1. **Device.** Pick the device or frontend the card is for: Batocera, ES-DE, muOS, Onion (Miyoo
+   Mini), or the DSpico or R4xMP flashcart. Each one says how many consoles it plays. All six are marked
+   **Community**: they were set up from the projects' own documentation and what other players
+   shared, and not yet tested on a real device by us. A console in your library that the device
+   can't play is named under the choices, and its games stay off the card.
+
+   **R4xMP** (a Nintendo DS flashcart) gets your DS, Game Boy Advance, Game Boy Color and NES games
+   in its own folders at the card's root: `NDS ROMS`, `GBA ROMS`, `GBC ROMS` and `NES ROMS`. Only
+   `.nds`, `.gba`, `.gb`, `.gbc` and `.nes` files go; no box art, BIOS, saves or game lists, and no
+   Game Boy games (it has no folder for them). Before you copy, the card must be formatted FAT32
+   (another file system is refused, with a warning that reformatting erases the kernel too), be
+   32 GB or smaller (Romperoom warns about a larger one, with its size), and hold the R4xMP's kernel, which you
+   install yourself: the `__rpg` folder, `_DS_MENU.DAT` and `_DSMENU.DAT` at the card's root.
+   Romperoom never writes, moves or removes those. Like every card it copies to, the root also
+   gets Romperoom's own `romperoom-manifest.json` (what it copied) and, once a later copy leaves
+   a game out, a `.romperoom-removed` folder holding it. The layout comes from one seller's page and is
+   **unconfirmed** on a real card, as are these: whether zipped games work (Romperoom copies none),
+   how long a file name may be (Romperoom uses FAT32's 255 characters), and any other console or
+   file type.
+
+   **DSpico** (a Nintendo DS flashcart that boots Pico Launcher) gets your DS games in `roms/nds`
+   on the card. Game Boy Advance, Game Boy Color and NES are offered too, in `roms/gba`, `roms/gbc`
+   and `roms/nes`, but start unticked: each needs an emulator program you install on the card
+   yourself, and which files it reads is **unconfirmed**. Tick one under **What to copy** to add
+   it; until you do, none of its games is copied (and a package that names no consoles says so).
+   FAT32 is assumed, not confirmed: on another file system the Check step warns and still copies.
+   If the card already starts Pico Launcher, copy as it is; reformatting it erases everything on
+   it, Pico Launcher too. The card must hold Pico Launcher, which you install: `_picoboot.nds` and
+   the `_pico` folder at the card's root. Romperoom never writes, moves or removes those (its own
+   `romperoom-manifest.json` and `.romperoom-removed` go at the root too). Only `.nds` for DS games is confirmed,
+   from third-party guides rather than the official manual; zipped games, file name limits,
+   saves and covers are unconfirmed, so no archives, saves, art or game lists are copied.
 
    | Light                                            | Dark                                           |
    | ------------------------------------------------ | ---------------------------------------------- |
    | ![Choosing the device, light][deploy-device-lt] | ![Choosing the device, dark][deploy-device-dk] |
 
-2. **What to copy.** Tick the consoles you want. **One version of each game** keeps the best
+2. **What to copy.** Tick the consoles you want. A console a device plays only with extra
+   software (DSpico's emulator programs) starts unticked, with a note saying why. **One version of each game** keeps the best
    region in the order you set and leaves the rest out; a region that has every disc of a
    multi-disc game wins over one missing a disc, and the review step names any disc the library
    doesn't have. **Skip identical copies** leaves out a
@@ -652,9 +723,17 @@ still going comes first. Nothing is left out yet:
   leave out") until the new list is there; a screen reader then hears what you did and the new
   heading, such as "Keeping Zelda (NES, USA). Leave out 2 games to make it fit." **Start the list
   again** forgets the games you kept.
-- **Leave these games out** applies the list. A note says how many are left out, the meter shows
-  the new size, and the **Check** step lists them under **Left out**. **Put them back** forgets
-  the list.
+- Every game on the list is ticked, as suggested. Untick any you want to keep (Space unticks one;
+  Shift-click or Shift+Space does the same to every game between it and the last one you
+  changed). **Select all** ticks or clears every game, including the ones counted under "And 2
+  more games". The heading counts the ticked games, and the bar says how much they free of what
+  the card needs ("Frees 1.2 GB of 1.5 GB needed"). When that is not enough, a line under it says
+  what is still needed and what to do.
+- **Leave out selected (N)** applies the list: it leaves out the N ticked games only, and keeps
+  the ones you unticked, as **Keep this one** does, so Romperoom never suggests them again. A note
+  says how many are left out, the meter shows the new size, and the **Check** step lists them
+  under **Left out**. If the card still doesn't fit, **Suggest games to leave out** chooses others
+  in place of the games you kept. **Put them back** forgets the list.
 - If even leaving out every game you didn't keep can't make room, Romperoom says so: keep fewer
   games, or choose a bigger card.
 
@@ -815,29 +894,30 @@ would keep on Duplicates) and setting aside the copies in the others. **Keep the
 library** chooses another library for that set, or **Keep every copy** leaves the set alone. **Set
 aside the extra copies** opens the preview: each copy goes to the set-aside folder of its own
 library, never to another drive, and you can put it back from **History** as with any tidy. It is
-unavailable, saying why, while a scan runs or while **Look again** is fetching the list. The
+unavailable, saying why, while a scan runs or while **Refresh list** is fetching the list. The
 libraries are tidied one after another; if one stops part way (or you press **Cancel**), the result
 names the library it stopped at, counts the files of the libraries it never reached ("3 files in the
-other libraries were not started. Look again to set them aside."), and names the kept library to
-connect when that is the reason. Just before anything moves Romperoom checks each kept copy again
+other libraries were not started. Refresh the list to set them aside."), and names the kept library
+to connect when that is the reason. Just before anything moves Romperoom checks each kept copy again
 (it must still be there, with the same contents), and both libraries must be connected and scanned.
 Copies inside the kept library are never touched here: **Duplicates** handles those. With one
 library there is nothing to compare: add another in **Home** › **Your libraries** (see [Your
-libraries](#your-libraries)). **Library to tidy** at the top of Fix up doesn't apply to this
-choice, which compares every library: "Every library is compared here." stands in its place.
+libraries](#your-libraries)). **Library to tidy** at the top of Fix up doesn't apply to this choice,
+which compares every library: "Every library is compared here." stands in its place.
 
 A library Romperoom can't compare is listed under **Not checked**, with the reason: it is being
 scanned, it hasn't been scanned completely, its last scan didn't see every file, its folder isn't
 available (is the drive connected?), or part of its folder is also another library. The other
-libraries are still compared. **Scan again** scans the libraries a scan would fix, and **Look
-again** looks once more, for example after you connect a drive. As on Duplicates, tracks of a disc
-set and the same file in two consoles' folders are left out and counted, and a file hard-linked into
-two libraries is one file, so it is not listed. Files that couldn't be read aren't compared (**Fix
-up** › **Names** lists them), and a copy moved or renamed since the last scan is counted as moved or
-gone until you scan again. The list is as each library's last scan saw it: a file replaced since
-with a different one of the same name is still listed. Scan both libraries again before you remove a
-copy by hand. After **Look again**, a screen reader hears the result once (not again if it is the
-same as the last thing read out). See
+libraries are still compared. When a scan would fix it, the tab says so and points at **Scan all
+libraries** at the top of Fix up; **Refresh list** asks Romperoom once more for what it already
+knows (it never reads your drives), for example after you connect a drive. As on Duplicates, tracks
+of a disc set and the same file in two consoles' folders are left out and counted, and a file
+hard-linked into two libraries is one file, so it is not listed. Files that couldn't be read aren't
+compared (**Fix up** › **Names** lists them), and a copy moved or renamed since the last scan is
+counted as moved or gone until the next scan. The list is as each library's last scan saw it: a
+file replaced since with a different one of the same name is still listed. Scan both libraries again
+before you remove a copy by hand. After **Refresh list**, a screen reader hears the result once (not
+again if it is the same as the last thing read out). See
 [troubleshooting](troubleshooting.md#a-library-says-not-checked-under-across-libraries) for each
 reason, and for the copies the list [leaves out or shows
 twice](troubleshooting.md#across-libraries-leaves-out-a-copy-or-shows-one-twice).
@@ -957,7 +1037,7 @@ re-links**) puts the pictures and the lists back, as long as they haven't change
 While it runs you see the progress, and **Stop** stops between pictures: everything done before you
 pressed it is kept. A run that stopped part way offers **Finish or undo…**, to finish the rest or
 put back what already changed. If your library changed since the list was made, or Romperoom is
-busy with another job, the run is refused before anything changes, and **Look again** makes a
+busy with another job, the run is refused before anything changes, and **Refresh list** makes a
 fresh list. While a stopped or interrupted re-link waits to be finished or undone, Standardise
 won't run on that library (and the other way round). After you reload the window, Fix up
 shows only the latest result, of a re-link or a standardise run; the other is under **History**.
@@ -988,7 +1068,8 @@ over the years often has `GBA`, `gba` and `Game Boy Advance` side by side, and g
 `tetris.gb`: this makes them one scheme. You review every change first, nothing is deleted, and
 the whole run can be undone. **Needs attention** shows the device you chose last.
 
-1. Choose the device whose folder names you want: ES-DE, muOS, Onion (Miyoo Mini) or Batocera.
+1. Choose the device whose folder names you want: ES-DE, muOS, Onion (Miyoo Mini), Batocera,
+   DSpico or R4xMP (`NDS ROMS`, `GBA ROMS`, `GBC ROMS` and `NES ROMS`).
    Romperoom remembers it for this library, and you can pick another later. **Review the
    changes** checks the library (**Stop** goes back to choosing) and shows the review.
 2. In the review, tick what to change. Anything left unticked stays as it is. It has these parts:
@@ -1010,11 +1091,11 @@ the whole run can be undone. **Needs attention** shows the device you chose last
      folder. An identical copy can be set aside instead (tick it), and a different one always
      stays where it is.
    - **Game lists** that will change, and any left alone with the reason.
-3. **Standardise.** Progress shows each change; **Stop** stops between games, keeping what is
-   done. The results say what was renamed and anything left as it was, with **Undo this run**
-   and **Scan again**. They stay until you press **Done**, even if you visit another screen and
-   come back. If the library was busy with another job, nothing changes, the result names the
-   job, and **Back to the review** returns to it.
+3. **Standardise.** Progress shows each change; **Stop** stops between games, keeping what is done.
+   The results say what was renamed and anything left as it was, with **Undo this run** and a line
+   pointing at Fix up's scan button, which checks the renamed files on your drive. They stay until
+   you press **Done**, even if you visit another screen and come back. If the library was busy with
+   another job, nothing changes, the result names the job, and **Back to the review** returns to it.
 
 | Light                                              | Dark                                                     |
 | -------------------------------------------------- | -------------------------------------------------------- |

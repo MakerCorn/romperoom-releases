@@ -200,6 +200,14 @@ and to the unpacked files `verify:package` expects
 - Styling: `screens.css` and feature code use `@romperoom/ui` primitives and tokens only. The
   raw-value scan (`packages/ui/test/no-raw-values.test.ts`) covers every `.css`, `.tsx` and
   `.html` file here.
+- A list of suggestions the player accepts (setup's folders, Fix up's name matches, Make it fit's
+  games) uses `SelectionBar` and `useSelection` from `@romperoom/ui` (decision 63): give the hook
+  every item on every page (keyed by what a tick means: a name match is `fileId:gameId`), put
+  `selection.rowChange(key, shownKeys)` on each row's `Checkbox` (Shift-click and Shift+Space
+  range over the rows shown), act on `selection.selected` only when the bar's button is pressed,
+  and pass `frozen` (and `aria-disabled` plus the bar's "Accepting…" note id on each row) while
+  it runs. `setMany` adds ticks without clearing others. Its words come from the feature's copy (`UNMAPPED_COPY`, `REVIEW_COPY`,
+  `FIT_COPY`).
 - No Node code: the only engine import is `@romperoom/engine/format` (pure, via the package
   `exports`). `vite/renderer-bundle-guard.ts` fails `npm run build` if the renderer's module
   graph or chunks contain a Node builtin (Vite's `__vite-browser-external` stub), better-sqlite3,
@@ -394,7 +402,7 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
 - **The look can freeze the window on a hung share.** After the folder probe it reads each
   candidate copy's device and inode synchronously in the main process, as Duplicates does.
 - **A copy renamed while the tab looks reads as gone** (a tidy, Standardise or re-link run
-  renaming files at that moment), and its set may drop out until **Look again**.
+  renaming files at that moment), and its set may drop out until **Refresh list**.
 - **A pair hard-linked inside one library is one file,** so a copy of it in another library is
   not listed.
 - **A set-aside copy whose kept copy cannot be proven stays set aside.** Delete forever keeps it
@@ -421,7 +429,8 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   hash; Delete forever deletes an extra only when that recorded hash is its kept copy's hash and
   the file still holds it.
 - **Two copies in the kept library both stay** (Duplicates handles those).
-- **Only the newest look plans.** A plan asked with an older look's id is refused; look again.
+- **Only the newest look plans.** A plan asked with an older look's id is refused; refresh the
+  list.
 
 ### Art made smaller, BIOS and ScreenScraper
 

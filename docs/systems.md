@@ -243,9 +243,9 @@ No source lists extensions for these systems (most run on MAME, whose software l
 | `gametank` | GameTank | console |  | `.gtr` | batocera |
 | `gb` | Game Boy | handheld |  | `.7z` `.bs` `.cgb` `.dmg` `.gb` `.gbc` `.gbx` `.sfc` `.sgb` `.smc` `.zip` | es-de |
 | `gb2players` | Game Boy (2 players) | handheld |  | `.7z` `.bs` `.cgb` `.dmg` `.gb` `.gbc` `.gbx` `.sfc` `.sgb` `.smc` `.zip` | conservative |
-| `gba` | Game Boy Advance | handheld |  | `.7z` `.agb` `.bin` `.cgb` `.dmg` `.gb` `.gba` `.gbc` `.gbx` `.sgb` `.zip` | es-de |
+| `gba` | Game Boy Advance | handheld | `GBA ROMS` | `.7z` `.agb` `.bin` `.cgb` `.dmg` `.gb` `.gba` `.gbc` `.gbx` `.sgb` `.zip` | es-de |
 | `gba2players` | Game Boy Advance (2 players) | handheld |  | `.7z` `.agb` `.bin` `.cgb` `.dmg` `.gb` `.gba` `.gbc` `.gbx` `.sgb` `.zip` | conservative |
-| `gbc` | Game Boy Color | handheld |  | `.7z` `.bs` `.cgb` `.dmg` `.gb` `.gbc` `.gbx` `.sfc` `.sgb` `.smc` `.zip` | es-de |
+| `gbc` | Game Boy Color | handheld | `GBC ROMS` | `.7z` `.bs` `.cgb` `.dmg` `.gb` `.gbc` `.gbx` `.sfc` `.sgb` `.smc` `.zip` | es-de |
 | `gbc2players` | Game Boy Color (2 players) | handheld |  | `.7z` `.bs` `.cgb` `.dmg` `.gb` `.gbc` `.gbx` `.sfc` `.sgb` `.smc` `.zip` | conservative |
 | `gc` | Nintendo GameCube | console | `gamecube` `ngc` | `.7z` `.ciso` `.dff` `.dol` `.elf` `.gcm` `.gcz` `.iso` `.json` `.m3u` `.rvz` `.tgc` `.wad` `.wbfs` `.wia` `.zip` | es-de |
 | `gemrb` | GemRB Game Engine | engine |  | `.7z` `.zip` | conservative |
@@ -308,11 +308,11 @@ No source lists extensions for these systems (most run on MAME, whose software l
 | `naomi` | Sega NAOMI | arcade |  | `.7z` `.bin` `.dat` `.elf` `.lst` `.zip` | es-de |
 | `naomi2` | Sega NAOMI 2 | arcade |  | `.7z` `.bin` `.dat` `.elf` `.lst` `.zip` | es-de |
 | `naomigd` | Sega NAOMI GD-ROM | arcade |  | `.7z` `.bin` `.dat` `.elf` `.lst` `.zip` | es-de |
-| `nds` | Nintendo DS | handheld | `ds` | `.7z` `.app` `.bin` `.dsi` `.ids` `.nds` `.zip` | es-de |
+| `nds` | Nintendo DS | handheld | `ds` `NDS ROMS` | `.7z` `.app` `.bin` `.dsi` `.ids` `.nds` `.zip` | es-de |
 | `neogeo` | SNK Neo Geo | console |  | `.7z` `.neo` `.zip` | es-de |
 | `neogeo64` | SNK Hyper Neo Geo 64 | arcade |  | `.7z` `.zip` | conservative |
 | `neogeocd` | SNK Neo Geo CD | console | `neogeocdjp` `neocd` | `.chd` `.cue` | es-de |
-| `nes` | Nintendo Entertainment System | console | `famicom` `fc` `Nintendo Family Computer` | `.7z` `.fds` `.nes` `.unf` `.unif` `.zip` | es-de |
+| `nes` | Nintendo Entertainment System | console | `famicom` `fc` `Nintendo Family Computer` `NES ROMS` | `.7z` `.fds` `.nes` `.unf` `.unif` `.zip` | es-de |
 | `nes3d` | NES in 3D (3dSen) | other |  | `.3dsen` `.7z` `.nes` `.zip` | conservative |
 | `ngage` | Nokia N-Gage | handheld |  | `.ngage` `.zip` | es-de |
 | `ngp` | SNK Neo Geo Pocket | handheld | `Neo-Geo Pocket` | `.7z` `.ngc` `.ngp` `.ngpc` `.npc` `.zip` | es-de |

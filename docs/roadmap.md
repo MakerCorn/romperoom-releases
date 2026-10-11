@@ -51,7 +51,8 @@ the UI reorganisation).
   and works with keyboard and gamepad.
 - An engine for journaled, undoable file operations (quarantine and moves). Fix up's tidying
   (Milestone 3) runs on it; the card writer keeps its own manifest (see Milestone 4).
-- Four device profiles as data (Batocera, ES-DE, muOS and Onion).
+- Four device profiles as data (Batocera, ES-DE, muOS and Onion); the R4xMP and DSpico DS
+  flashcarts came later (Milestone 4).
 - Packaging and a release pipeline: unsigned beta installers for macOS (Apple silicon) and
   Windows (x64) and Linux (x64), checked on every CI run of main and of ready pull requests,
   drafted by a release workflow ([release.md](release.md)). Every release is published on the
@@ -220,7 +221,8 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 
 **Still planned:**
 
-- **Device profiles** checked on real devices (all four are `community` today), and more of them.
+- **Device profiles** checked on real devices (all six are `community` today, the R4xMP's from
+  one seller's page and the DSpico's from third-party guides only), and more of them.
 - **JPEG art made smaller,** and screenshots and title screens (no profile asks yet).
 - **Art checksums for pictures never copied:** the scan does not read art, so a picture carries a
   checksum only once the writer or the leftover-artwork check has read it.
@@ -243,6 +245,11 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 4. **Cover art the scanner doesn't read yet:** linking that tolerates suffixes
    (`Game-thumb.png`); reading `gamelist.xml`, muOS and LaunchBox art; an art folder per library;
    following symbolic links to art folders (spec 2026-10-10 "Not in this release").
+5. **Accepting a name match as the game shown:** the host accepts a match by file id, so if an
+   identify run in another window re-matches a file between the screen's last read and the press,
+   Accept selected can keep a game the player did not see. The screen narrows this (ticks are
+   keyed by match; it re-reads on any outside change). Closing it needs an engine and IPC change
+   (accept a file only as that game); see decision 63.
 
 ## Must-fix before later milestones
 
