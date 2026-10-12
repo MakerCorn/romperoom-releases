@@ -168,7 +168,7 @@ and to the unpacked files `verify:package` expects
 `apps/desktop/src/renderer` is a React app over `window.romperoom`, with hash routes
 (`lib/useHashRoute.ts`): `#/setup` (first-run wizard), `#/home` (Home; `#/home/<console>` or
 `#/home/all` is a games page), `#/fixup` (Fix up; `#/fixup/<task>` selects `names`,
-`duplicates`, `artwork`, `databases` or `history`) and `#/deploy` (SD card; `#/deploy/copy`,
+`duplicates`, `artwork`, `junk`, `databases` or `history`) and `#/deploy` (SD card; `#/deploy/copy`,
 `sync` or `packages`). `#/` goes to Home when a library exists, else to setup; the 0.11 hashes
 (`#/library`, `#/health`, `#/tidy`) redirect, rewriting the address (see
 [architecture.md](architecture.md#the-renderers-screens-and-routes)).
@@ -438,6 +438,16 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   PNG); the window may answer a little slower meanwhile. A picture whose smaller copy would be
   bigger is copied as it is; JPEG pictures are copied at full size. The plan counts art at full
   size.
+- **JPEG and GIF art is converted to PNG** for a device that shows only PNG, in a worker thread
+  at write time (`image/picture-worker.ts`, `deploy/convert.ts`, decision 67); the plan checks
+  picture structure only. The engine's tests run the compiled worker
+  (`dist/src/image/picture-worker.js`): build the engine first (`npm run typecheck` does, as CI
+  does), or the conversion tests stop with a message saying so. `--self-check` starts the same
+  worker at the app's computed path (`src/main/picture-probe.ts`). jpeg-js
+  0.4.4 is a dependency of the engine (pure JavaScript, no install script); omggif 1.0.10 is a
+  devDependency that only makes the tests' GIFs. Test pictures are made in the tests, plus seven
+  tiny files in `packages/engine/test/fixtures/pictures` made once with libjpeg-turbo's `cjpeg`
+  (progressive, arithmetic, lossless, 12-bit, grey, baseline) and Pillow (CMYK).
 - **BIOS:** only files directly in a BIOS folder are read, up to 64 MiB each; a "missing" line
   means libretro's list names files for that console and none was found.
 - **ScreenScraper** cannot be used until the maintainer registers Romperoom. For a local run, put
@@ -472,6 +482,20 @@ it. Adding an engine method touches several pinned lists on purpose; the steps a
   (`MAX_STORED`). Every change reads the list again before writing, but two windows could still
   race (the app opens one). The **Loaded** mark is not stored: it lasts the wizard's visit and
   clears on a device change, on deleting that package and on **Start over**.
+- **Unzipping on copy** (R4xMP, DSpico: `extractArchives`,
+  [decision 64](decisions.md#64-zipped-games-are-unzipped-on-copy-for-devices-that-need-plain-roms))
+  takes only a `.zip` holding exactly one game of its console; a multi-game pack, `.7z` and `.rar`
+  stay off the card with their reasons. Plans for such a device read each zip's directory on the
+  main process (the last 22 bytes, then the directory; only the verdict is kept for the session
+  while its size and time are unchanged), at most about 2 s a plan: on a large zipped library on
+  a slow drive the first plans list the zips they did not reach as "not checked yet", and each
+  later plan checks more. A zip that changed since the scan is left out until it is scanned again.
+  Comparing an unzipped game with a card file of its size unzips it whole (Cancel stops it, the
+  meter shows no bytes for it). When the catalog's hash is not of the game (a zip whose largest file is not the game),
+  an unchanged zip's game is known by the zip's time and the game's size, as a plain file is
+  known by its own: a zip rewritten with the same time and an entry of the same size is
+  not noticed (as for any file). Whether the R4 kernels and Pico Launcher read the unzipped files
+  is not confirmed on a real card.
 
 ### Card sync
 

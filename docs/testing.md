@@ -31,6 +31,9 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Live batch 3 run](#live-batch-3-run)
 - [Live UI reorganisation run](#live-ui-reorganisation-run)
 - [Live accept selected run](#live-accept-selected-run)
+- [Junk files](#junk-files)
+- [Live merge picture folders run](#live-merge-picture-folders-run)
+- [Live picture conversion run](#live-picture-conversion-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -46,7 +49,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 | Docs             | Vitest                      | `apps/desktop/test/docs*.test.ts`     | Links, diagrams, screenshots, and docs that must agree with the code       |
 | Workflows        | Vitest                      | `apps/desktop/test/workflows.test.ts` | Every third-party action is pinned to a commit SHA                         |
 | End to end       | Playwright for Electron     | `apps/desktop/e2e`                    | The built app: real windows, real IPC, real files, security probes, axe    |
-| Packaged app     | Playwright, plain processes | `apps/desktop/e2e/packaged.spec.ts`   | `--self-check`, refused launch switches, development seams ignored         |
+| Packaged app     | Playwright, plain processes | `apps/desktop/e2e/packaged.spec.ts`   | `--self-check` (picture worker too), refused switches, seams ignored       |
 
 The engine tests use real files and a real catalog. Only the hash pool's failure modes use a
 fake pool. The desktop unit tests never load the real `electron` module. The renderer tests
@@ -142,6 +145,7 @@ support, so run `npm run build` first. There is no browser to install.
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                                                                                                       |
 | `fixup.spec.ts`        | Fix up: the old hashes land on Home and Fix up, a Needs attention line opens its task with focus on its tab, an arrow key and Enter to the next task, every task (once loaded) at 320 px and 200% zoom                                                                                                                    |
+| `junk.spec.ts` | Fix up › Junk files on the fixture: find (read only), what is left alone and why, the list at 320 px and 200% zoom, the confirmation in place of the list, the removal byte for byte (games and a look-alike stay), and History's row |
 | `home.spec.ts`         | Home over 32 real consoles: the bounded console grid, keyboard to a console and a game and back, 320 px at 200% zoom, All games a bounded scroller at 320 px in List and Grid                                                                                                                                             |
 | `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                           |
 | `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, R4xMP folders at the card root beside a kernel left byte-identical, DSpico's opt-in consoles unticked and its launcher left byte-identical, a refusal with no path, hostile IPC, zoom, gamepad                                                       |
@@ -152,6 +156,7 @@ support, so run `npm run build` first. There is no browser to install.
 | `dat-download.spec.ts` | Game database downloads over the fixture transport (no GitHub): nothing requested without a press, two DATs with their labels, stop, exact URLs for the official pages, the BIOS checksums and a BIOS file renamed on a card                                                                                              |
 | `standardise.spec.ts`  | Standardise on its own scratch library: review, run and Undo through the bridge and the screens, files and the game list on disk, refusals, axe light and dark                                                                                                                                                            |
 | `relink.spec.ts`       | Re-link on its own scratch library: review, run and Undo through the bridge and by keyboard, files and the game list on disk, refusals, axe light and dark, no request                                                                                                                                                    |
+| `merge-art.spec.ts`    | Merge picture folders on its own scratch library: a look, a run and Undo through the bridge (files and hashes on disk, `Imgs` removed and made again), then by keyboard with axe light and dark and at 320 px, no request |
 | `identify.spec.ts`     | A game database imported through the host's picker, identify through the bridge and from Fix up › Names, a scan that identifies by itself, a file that is not a DAT refused                                                                                                                                               |
 | `cover-art.spec.ts`    | Cover art over the fixture transport (no GitHub): nothing requested before Get cover art, a verified download linked without a rescan, the day's listing cache, Stop, art from a card and Remove downloaded art, hostile IPC, the Artwork card, ScreenScraper not set up, and a reviewed lookup against a stand-in server |
 | `sync.spec.ts`         | Sync a card on a folder posing as a Batocera card: a new game and a save imported, then taken back by Undo this sync; paths and foreign ids refused; no request                                                                                                                                                           |
@@ -301,6 +306,134 @@ has a test to fail.
 | An unticked game is kept (I4)            | deploy/steps.tsx      | `if (!selection.has(id)) p.fit.pin(id);` → `if (false)`                         | $F        |
 | What is still needed is said (I4)        | deploy/steps.tsx      | `{freed < fit.needBytes && (` → `{false && (`                                   | $F        |
 
+Unzipping on copy (decision 64; 37 rows after the review's and CI's fixes, each printed `KILLED`), with
+`Z='npx vitest run --root packages/engine test/deploy-unzip test/deploy-r4xmp test/deploy-dspico
+test/deploy-facade.test.ts test/deploy-db.test.ts'`, `Y='npx vitest run --root packages/engine
+test/sync-review'` and `D='npx vitest run --root apps/desktop test/renderer/deploy.test.tsx'`.
+Two first survived and were fixed before the first commit: turning yauzl's `validateEntrySizes`
+off (its own byte count caught the same zips; the test now says which check speaks first), and a
+profile-summary mutation (`!== undefined`) that no shipped profile could tell apart from the
+original (`!== false` is the one that means something).
+
+| Guard | File | `MUT_OLD` → `MUT_NEW` | `MUT_CMD` |
+| --- | --- | --- | --- |
+| The name never comes from the entry | `deploy/plan.ts` | the zip's stem plus `u.ext` → the zip's own name | $Z |
+| Its own count past the declared size | `deploy/unzip.ts` | `if (n > want.bytes) throw …` → `if (false) throw …` | $Z |
+| The CRC-32 at the end | `deploy/unzip.ts` | `if (crc >>> 0 !== want.crc32 >>> 0)` → `if (false)` | $Z |
+| The entry is the planned one | `deploy/unzip.ts` | `e.uncompressedSize !== want.bytes` → `false` | $Z |
+| yauzl checks the sizes | `deploy/unzip.ts` | `validateEntrySizes: true` → `false` | $Z |
+| The writer finds the entry by its offset | `deploy/unzip.ts` | the `relativeOffsetOfLocalHeader === offset` test → every entry | $Z |
+| FAT32 limit on the unzipped size (plan) | `deploy/plan.ts` | `(chosen.get(f)?.bytes ?? f.bytes) > maxFile` → `f.bytes > maxFile` | $Z |
+| FAT32 limit on the unzipped size (writer) | `deploy/writer.ts` | `srcSize.set(f, f.unzip ? f.sourceBytes : st.size)` → `st.size` | $Z |
+| Exactly one ROM | `deploy/unzip.ts` | `if (roms.length > 1) return …` → `if (false) return …` | $Z |
+| A ratio deflate cannot reach | `deploy/unzip.ts` | the `MAX_UNZIP_RATIO` test → `false` | $Z |
+| Room by the unzipped size (card bytes) | `deploy/plan.ts` | `sizeOnCard(u?.bytes ?? f.bytes, …)` → `sizeOnCard(f.bytes, …)` | $Z |
+| Room by the unzipped size (source bytes) | `deploy/plan.ts` | `sourceBytes: u?.bytes ?? f.bytes` → `f.bytes` | $Z |
+| The catalog hash only of its entry | `deploy/unzip.ts` | `hashed: hashedEntry(…) === e` → `hashed: true` | $Z |
+| The zip checked by the zip's size | `deploy/writer.ts` | `st.size !== (f.unzip?.archiveBytes ?? f.sourceBytes)` → `st.size !== f.sourceBytes` | $Z |
+| Other devices unchanged | `deploy/plan.ts` | `sys.extractArchives === true` → `!== false` | $Z |
+| Finder's entries ignored | `deploy/unzip.ts` | `!junkEntry(e.name) &&` → removed | $Z |
+| `__MACOSX` is junk | `deploy/unzip.ts` | `segs.includes('__MACOSX') \|\|` → removed | $Z |
+| `._` is junk | `deploy/unzip.ts` | `base.startsWith('._') \|\|` → removed | $Z |
+| The last 22 bytes read first | `deploy/unzip.ts` | `const bare = …` → `const bare = false` | $Z |
+| A time budget per plan | `deploy/unzip.ts` | `if (spent >= budget) return …not-checked` → `if (false)` | $Z |
+| The time spent is counted | `deploy/unzip.ts` | `spent += t1 - t0` → `spent += 0` | $Z |
+| A failure is remembered only briefly | `deploy/unzip.ts` | `until: failed ? t1 + ZIP_FAILURE_TTL_MS : null` → `until: null` | $Z |
+| Verdicts are remembered | `deploy/unzip.ts` | the remembered-verdict return → `if (false)` | $Z |
+| The memory has a cap | `deploy/unzip.ts` | `if (verdicts.size >= MAX_ZIP_VERDICTS) verdicts.clear()` → `if (false)` | $Z |
+| A changed zip is its own reason | `deploy/unzip.ts` | `reason: 'changed'` → `'unreadable'` | $Z |
+| The note names the library to scan | `deploy/plan.ts` | `` `Scan ${named[0]} again` `` → `'Scan your library again'` | $Z |
+| Sync's entry match only when unzipping | `sync/review.ts` | `extractArchives === true` → `true` | $Y |
+| Sync's entry match when unzipping | `sync/review.ts` | `extractArchives === true` → `false` | $Y |
+| The summary in whole clusters | `deploy/api.ts` | `unzip.bytes += f.bytes` → `f.sourceBytes` | $Z |
+| The schema refuses any archive extension | `packages/profiles/src/schema.ts` | `ARCHIVE_EXTENSIONS.has(e)` → `.zip` or `.7z` only | `npx vitest run --root packages/profiles test/schema.test.ts` |
+| Cancel stops the compare unzip | `deploy/writer.ts` | the abort check in `entrySha1` → removed | $Z |
+| A Stop ends the check | `deploy/writer.ts` | `if (e instanceof Stop) return finish(e.outcome);` → removed | $Z |
+| The summary counts games | `deploy/api.ts` | `games: unzippedGames.size` → `games: 0` | $Z |
+| The profile names its unzipping systems | `deploy/api.ts` | `extractArchives === true` → `!== false` | $Z |
+| The device step says so | `renderer/deploy/steps.tsx` | `{chosen && chosen.unzipsSystemIds.length > 0 && (` → `{chosen && false && (` | $D |
+| The Check step counts them | `renderer/deploy/DeployWizard.tsx` | `{plan.unzip.games > 0 && (` → `{false && (` | $D |
+| A folder or device is unreadable, not damaged | `deploy/unzip.ts` | `if (!st.isFile()) return …unreadable` → `if (false)` (Windows opens a folder and reads nothing) | $Z |
+Merge picture folders' rows (decision 66; 22 rows, each printed `KILLED` by `scripts/mutate.mjs`
+on the branch before its first commit, then 13 more for the review's fixes and one for the
+before-a-scan line, and the first 22 run again after them, all `KILLED`; then 12 more for the
+second review's fixes, and every earlier row run again on its current line, all `KILLED`), with
+`E='cd packages/engine && npx vitest run test/merge-art.test.ts test/merge-art-review.test.ts
+test/undo-relink.test.ts'`, `R='cd apps/desktop && npx vitest run --project renderer
+test/renderer/merge-art.test.tsx'` and `H='cd apps/desktop && npx vitest run --project main
+test/tidy-host.test.ts'`. Files are `packages/engine/src/tidy/merge-art.ts` unless named. Two
+first survived and were fixed: a link in `Imgs` was caught twice (by its directory entry and again
+by `lstat`), so only the `lstat` check is kept; and the keeper of a set-aside `Imgs` copy had no test
+until one removes the `images` copy between two steps. The re-read before `rmdir` is killed through
+a seam that writes into `Imgs` on that read; on a real disk `rmdir` itself also refuses a folder
+that is not empty.
+
+| Guard                                   | File                      | `MUT_OLD` → `MUT_NEW`                                                        | `MUT_CMD` |
+| --------------------------------------- | ------------------------- | ---------------------------------------------------------------------------- | --------- |
+| The larger stays                        | merge-art.ts              | `if (imgsBytes > imagesBytes)` → `<`                                         | $E        |
+| A tie keeps the one in images           | merge-art.ts              | `if (imgsBytes > imagesBytes)` → `>=`                                        | $E        |
+| The same bytes set the Imgs copy aside  | merge-art.ts              | `if (imgsSha1 !== null && imgsSha1 === imagesSha1)` → `if (false)`           | $E        |
+| Imgs removed only when nothing is left  | merge-art.ts              | `con.left === 0 && mine.length > 0` → `mine.length > 0`                      | $E        |
+| Imgs removed only when empty now        | merge-art.ts              | `if ((await fs.readdir(dir)).length > 0) return false;` → `if (false)`       | $E        |
+| What isn't a picture never moves        | merge-art.ts              | `if (!isMergePicture(e.name))` → `if (false)`                                | $E        |
+| A link in Imgs never moves              | merge-art.ts              | `if (st.kind !== 'file')` → `if (false)`                                     | $E        |
+| A hard link never moves                 | merge-art.ts              | `if (st.nlink > 1)` → `if (false)`                                           | $E        |
+| A linked Imgs (or parent) is left alone | merge-art.ts              | `if (m.isSymbolicLink() \|\| !(await linkFree(imgsDir, …)))` → `if (false)`  | $E        |
+| A linked images is left alone           | merge-art.ts              | `if (i.isSymbolicLink() \|\| !(await linkFree(imagesDir, …)))` → `if (false)` | $E        |
+| The run takes the library's lock        | merge-art.ts              | `acquireLibraryLock(root, 'op')` → no lock                                   | $E        |
+| The run compares what was shown         | merge-art.ts              | `fresh.status !== 'ok' \|\| shown(…) !== shown(…)` → `fresh.status !== 'ok'` | $E        |
+| The run compares the hashes looked at   | merge-art.ts              | the hash comparison's `throw` → `void 0`                                     | $E        |
+| The kept copy guards a set-aside        | merge-art.ts              | the quarantine step's `keeper` → none                                        | $E        |
+| The catalog row follows the picture     | merge-art.ts              | the move step's `...media(i.mediaId)` → none                                 | $E        |
+| Undo makes a removed Imgs again         | `ops/journal.ts`          | `await ops.mkdir(dirname(from));` in `undoStep` → `void 0`                   | $E        |
+| Nothing runs before the confirm         | `renderer/tidy/MergeArt.tsx` | `if (work) setConfirming(true);` → `if (work) onRun();`                  | $R        |
+| Unavailable with nothing to do          | `renderer/tidy/MergeArt.tsx` | `aria-disabled={!work}` → `false`                                        | $R        |
+| The run is of the look shown            | `renderer/tidy/MergeArt.tsx` | `tidyMergeArtRun(look.planId)` → `tidyMergeArtRun('x')`                  | $R        |
+| The result says what the merge did      | `renderer/tidy/Tidy.tsx`  | `(r.merge` → `(false && r.merge`                                             | $R        |
+| A look runs once                        | `main/tidy-host.ts`       | `held.delete(k);` → `void k;`                                                | $H        |
+| The drive decides a collision (I1)      | merge-art.ts              | `lstatOrAbsent(join(imagesDir, e.name))` → the `images` name `foldName` matches | $E     |
+| The counterpart has the same inode (I1) | merge-art.ts              | `nodes.get(`dev:ino`)` → the first entry of `images`                         | $E        |
+| Another drive keeps the later name (I1) | merge-art.ts              | `if (taken.has(key))` → `if (false)`                                         | $E        |
+| Every list, any letter case (I2)        | merge-art.ts              | `isGameListName`'s test → `n === 'gamelist.xml'`                             | $E        |
+| An unreadable list fails closed (I2)    | merge-art.ts              | `if (text === null \|\| text.includes('\0'))` → `if (false)`                  | $E        |
+| A binary list fails closed (I2)         | merge-art.ts              | `text === null \|\| text.includes('\0')` → `text === null`                    | $E        |
+| Escaped separators count (I2)           | merge-art.ts              | the entity and URL-escape `replace`s → none                                  | $E        |
+| Junk written meanwhile is ignored (M4)  | merge-art.ts              | `.filter((i) => !isJunk(i.name))` → `.filter(() => true)`                    | $E        |
+| A broken pair is put back (M1)          | merge-art.ts              | `restoreBrokenPairs(…)` → `0`                                                | $E        |
+| Hidden files left are counted (M5)      | merge-art.ts              | `still.every(isJunk) ? still.length : 0` → `0`                               | $E        |
+| An Imgs of only junk is tried (M5)      | merge-art.ts              | `k.left !== k.hidden` → `k.left !== 0`                                       | $E        |
+| Undo links a picture again (M2)         | `tidy/operation.ts`       | `if (out.undone > 0) relinkMedia(…)` → `if (false)`                          | $E        |
+| The other file is named (M3)            | `renderer/tidy/merge-copy.ts` | `` `images (${o.name})` `` → `'images'`                                  | $R        |
+| Shown before a full scan (M9)           | `renderer/tidy/MergeArt.tsx` | the not-evaluated branch → `return null`                                  | $R        |
+| Hashes matched by name (2nd review I2)  | merge-art.ts              | `nowBy.get(key(was))` → `l.items[shownLook.items.indexOf(was)]`              | $E        |
+| Junk ignored on both sides (I2)         | merge-art.ts              | `if (isMergeJunk(was.name)) continue;` → `if (false)`                        | $E        |
+| Hit and folded name agree (I3)          | merge-art.ts              | `name === null \|\| foldName(name) !== foldName(e.name)` → `name === null`     | $E        |
+| A blocked put-back is said (I4a)        | merge-art.ts              | `out.blocked += u.blocked.length;` → `+= 0`                                  | $E        |
+| A failed put-back still returns (I4b)   | merge-art.ts              | the catch's `out.blocked += only.size;` → `throw e;`                         | $E        |
+| A pair stays in one journal (I4c)       | merge-art.ts              | `together: new Set(plan.pairs…)` → an empty set                              | $E        |
+| Journals never split a pair (I4c)       | `tidy/operation.ts`       | `chunkBounds`' `while (… together.has(end)) end--;` → `while (false)`        | $E        |
+| A relink failure isn't a failed Undo    | `tidy/operation.ts`       | `out.relinkLater = true;` → `throw e;`                                       | $E        |
+| Junk in any case, desktop.ini           | merge-art.ts              | `isMergeJunk` → `isJunk(name)` only                                          | $E        |
+| The other drive's own case rule         | merge-art.ts              | `imagesFolds = hit !== null && hit !== 'error';` → `true`                    | $E        |
+| Each reason a folder was kept (UI)      | `renderer/tidy/merge-copy.ts` | `const other = kept - keptHidden;` → `0`                                 | $R        |
+| A vanished entry is unreadable (Linux CI) | merge-art.ts            | `const vanished = (… ENOENT …) && (await rootThere());` → `false`           | $E        |
+| The library gone is still unreachable   | merge-art.ts              | `rootThere`'s `(await fs.lstat(root)).kind === 'dir'` → `true`               | $E        |
+| Undo says links follow at a scan (UI)   | `renderer/tidy/Tidy.tsx`  | `r.relinkLater ? … : ''` → `''`                                              | $R        |
+
+`merge-art-review.test.ts` keeps the review's probes: the pairs FAT32 and exFAT keep apart and APFS
+joins (`Straße`/`Strasse`, `ﬁle`/`file`, fullwidth letters, plus an ASCII case pair both join), on
+this volume (each expected value asked of the volume itself, so NTFS or a case-sensitive Linux
+volume gets its own answer), on seams that fold as FAT32 and as NTFS or exFAT do (every platform),
+with a seam for a Windows 8.3 alias, and on real FAT32 and exFAT images that `hdiutil` makes and
+mounts under a scratch folder (macOS only; elsewhere, or where `hdiutil` fails or takes over 30 s,
+the test skips and logs why; a detach that fails is logged, never a failure); real game lists
+(EmulationStation, `miyoogamelist.xml`, Pegasus, UTF-16, binary); junk written between the look
+and the run; a Mac's `._` companion moving with its picture; a pair whose larger picture changes;
+and Undo after a scan. Every merge test also ran on a case-sensitive APFS image (`TMPDIR` on it),
+as Linux CI's volume is: the one that first failed there listed, through a seam, a file the host
+didn't have and left the host to answer for it; the seam now answers for it itself, and the code
+now takes such a vanished entry as unreadable rather than the library gone.
+
 The tidy engine (duplicates, unused artwork, undo and the purge) was checked with a scripted
 run of more than 50 mutants, one guard each, over the full engine suite. Its tests follow the
 same patterns as the deploy tests:
@@ -327,6 +460,36 @@ machine it was captured on; recapture fixtures, then scrub them to the synthetic
 `00000000-0000-4000-8000-0000000000NN`. The game-list merge tests include a hostile list of
 200,000 unclosed `<game ` tags that must be refused quickly, which catches a scan that turns
 quadratic.
+
+**Art converted to PNG** (decision 67), checked with `scripts/mutate.mjs` against
+`image-convert.test.ts`, `deploy-convert.test.ts` and `deploy-convert-e2e.test.ts`, every row
+`KILLED`: the pre-decode size cap (the JPEG and the GIF header, each made `if (false)`); "a
+picture the device reads is copied as it is" (the accepted JPEG sent down the conversion path);
+"a PNG of the same picture wins" (the convertible picture preferred); the library-untouched guard
+on the write path (an export folder inside a library no longer refused); the decoder-exception
+containment (`convertToPng` rethrowing); the converted-size accounting in the plan (the JPEG's size
+counted) and in the writer (the source's size as the meter's and the card check's size); "never
+more bytes than counted" (the `maxBytes` check off); no adoption of the player's PNG (the
+`!f.convert` guard dropped); and the converted record never standing for a plain copy's source.
+The last three survived at first: the dry run's need was dominated by the manifest's share for a
+tiny picture, the player's file never had the plan's size, and the PNG never had the JPEG's size
+and time; each test was given a picture that reaches its guard (a larger JPEG, a copy of the JPEG
+at a plan whose bound is its size, a JPEG padded to its PNG's size beside a PNG of that size and
+time). The fuzz tests use a fixed seed (20261011); they include the 40-code LZW stream that hangs
+omggif 1.0.10.
+
+The review of that first version found a 2.3 KB progressive JPEG (100 refinement scans of 22
+bytes, no first scan) that kept jpeg-js busy for 1.1 s on the main process, and 66 KB of the same
+for 26 s; those "scan bombs" are now generated in `image-convert.test.ts` (`scanBomb`) and refused
+before decoding, with jpeg-js's `decode` watched by a spy that must never be called. The fix's
+guards, every row `KILLED`: the scan cap (a legal 127-scan JPEG, `bandedProgressive`, is refused
+only by it), the scan-order rule, the data-length rule, "no image data" (its own message), the
+segment cap, the worker's time limit, Cancel terminating the worker, the writer handing Cancel to
+the worker, and keeping a PNG converted earlier (the writer's keep, its `converted` condition, and
+the plan holding the name). The worker tests (`deploy-convert-worker.test.ts`) time against the
+same picture's own conversion time on the machine, never a fixed figure, and map results to a word
+before any matcher (a failed match once printed a 12 MB picture and ran the test process out of
+memory). The tests run the compiled worker, so the engine is built before them (CI's order).
 
 ## Flake policy
 
@@ -433,7 +596,12 @@ the tick are both refused by the writer and the folder stays empty, and the wiza
 **Next** and copies once ticked. One test saves a package on the What step, relaunches the app on
 the same data folder (the page's localStorage lives there), loads it, loads a package written
 into localStorage that names a console the library lacks, renames and deletes, copies with the
-loaded package (no SNES game on the card), and reads the note for a damaged list.
+loaded package (no SNES game on the card), and reads the note for a damaged list. The R4xMP test
+adds two zipped GBA games to its library: the device step says games are unzipped, the Check step
+counts one unzipped and lists the two-game zip under **Left out**, the card gets
+`GBA ROMS/Golden Sun (USA).gba` with the zipped game's exact bytes, the library's zip is
+unchanged, and a second copy writes nothing. The DSpico test unzips a zipped game of a ticked
+opt-in console the same way.
 
 To run the same wizard against a FAT32 disk image by hand, attach an image as in the
 [real-card run](#real-card-run) and start the built app with
@@ -481,8 +649,9 @@ passing, plus `security` and, for pull requests, `commitlint`.
   locked Electron version. After `npm ci` the job runs `node node_modules/electron/install.js`
   explicitly. With a warm cache it unzips from the cache; with a cold one it downloads.
 - The `package` job packages the unpacked app (no installers) and checks it as a release build
-  is checked: fuses, asar integrity and contents, `--self-check`, the refused launch switches
-  and a launch of the packaged app ([release.md](release.md#what-packaging-guarantees)). The
+  is checked: fuses, asar integrity and contents, `--self-check` (which converts a tiny JPEG
+  through the unpacked picture worker; a copy with that worker removed must fail and name its
+  path), the refused launch switches and a launch of the packaged app ([release.md](release.md#what-packaging-guarantees)). The
   packaged app refuses the switches Playwright attaches through, so these tests run it as a
   plain process and read its exit code, output, files and ports. It caches Electron as `e2e`
   does, and runs Linux's launch under `xvfb-run`.
@@ -1943,6 +2112,238 @@ three sandboxes. 39 cells observed, 0 failed, 3 not evaluated:
 the first folder's box ticked by Space, Shift+Space on the third ticked all three (the keyboard's
 click carries Shift), so the user guide names it beside Shift-click.
 
+## Live unzip run
+
+CI unzips onto folders posing as cards (`deploy-unzip-copy.test.ts`, the R4xMP and DSpico suites,
+and `e2e/deploy.spec.ts`). This run writes the same plans onto a real FAT32 file system. Run it
+before a release that changes `deploy/unzip.ts` or the writer's unzip path.
+
+1. Make and attach a FAT32 image as in the [real-card run](#real-card-run), named `RRUNZIP`,
+   under a scratch mount root (never a real card).
+2. A throwaway Vitest file in `packages/engine/test` (deleted before committing) builds a scratch
+   library: a zip of a 3 MiB `.nds` and a readme, a zip of a 1 MiB `.GBA` whose zip name holds a
+   colon, a zip of two `.nds`, and a `.7z`. It plans R4xMP, then DSpico (with the switch confirmed),
+   through `zipListingOf` and the real `deploy`, with a `Volume` built by hand for the mount (no
+   OS volume listing runs), hashes each card file independently and copies each plan again.
+3. Detach only that image's device.
+
+What it cannot observe: a real R4 kernel or Pico Launcher reading the files, a real SD card,
+Windows and Linux.
+
+**Last run: 2026-10-11,** macOS (Darwin 27), a 256 MiB image (512-byte clusters), the working
+tree of `feat/unzip-on-copy` before its first commit. 8 cells observed, 0 failed, 3 not evaluated:
+
+- the plan: **observed**; R4xMP: `GBA ROMS/Golden Sun_ The Lost Age (USA).gba` (the colon
+  replaced) and `NDS ROMS/Mario Kart DS (USA).nds`; the two-game zip `archive-several-games`, the
+  `.7z` `archive-type-not-unzipped`. DSpico: the same under `roms/gba` and `roms/nds`.
+- the room: **observed**; `sourceBytes` 4,194,324 (the two games unzipped), `bytesOnCard`
+  4,196,352; the writer needed 4,222,976 (AppleDouble files counted).
+- the copy: **observed**; `complete`, 2 written and 2 verified for each profile, in 117 ms and
+  101 ms; each card file 1,048,579 and 3,145,745 bytes, SHA-1 equal to the game inside its zip.
+- again: **observed**; `complete`, 0 written, 2 skipped as identical, for each profile.
+- the other profile's files: **observed**; the DSpico copy released the R4xMP's 2 files (left in
+  place, outside its folders).
+- macOS's `._` files: **observed**; one beside every written file and folder, as for any copy.
+- a real kernel, a real card, Windows and Linux: **not evaluated** (above).
+
+**Rerun after the review, 2026-10-11:** the same run on a fresh image with the verdict cache and
+budget (`zipVerdictsFor`), plus a zip made by `ditto -c -k --sequesterRsrc --keepParent` of a
+`.nds` carrying an extended attribute (as Finder's Compress makes it, with
+`__MACOSX/<folder>/._<name>`). Both profiles: **observed**; 3 written and verified each (the
+Finder zip as `Kirby (USA).nds`, byte-identical to the game), the same two left out, and a second
+copy skipped all 3.
+
+## Junk files
+
+The junk files feature (decision 65) is tested at three levels:
+
+- **Engine, unit and facade:** `junk.test.ts` (names and contents, including a name-only match
+  refused; the look over a library and a card; every check right before removal: a folder swapped
+  for a link, a real path outside the root, a hard link, a file changed since the list, content
+  that is no longer metadata; `EROFS`, `EACCES` and `EPERM` stopping with nothing changed and no
+  retry), `junk-api.test.ts` (the library lock, History's row, an empty or missing library, a
+  card's profile folders, an export folder that must be an earlier export, a swapped card, the
+  card slot against a copy, stop and progress, History's words) and `deploy-junk.test.ts` (the
+  copy's own clean-up, with `junk-fixture.ts`'s `macLikeFs` doing what macOS does on FAT: a `._`
+  file beside each new file and folder, taken along by a rename (replacing the target's, as xnu
+  does: measured on a FAT32 image) and removed with its file; with `carry: false`, a system that
+  leaves an older `._X` beside a replaced file, which the time rule leaves too).
+  `junk-safety.test.ts` keeps the review's probes: a folder swapped for a link to outside the
+  library right after the content read (probe p1: nothing outside is touched and nothing is
+  counted as removed), a swap to a link back inside, a file replaced or its name taken in the
+  middle of a removal (put back, or left under its aside name), an 896 KiB resource fork, the
+  `.DS_Store` and `Thumbs.db` structure, stopping a look and a removal part way, a drive mounted
+  inside, and Linux trash.
+- **End to end, `junk-e2e.test.ts`:** a library holding `._Game (USA).gba`, `.DS_Store`,
+  `Thumbs.db`, `._Game (USA).cue`, a folder game with `._track01.bin` and a game named
+  `._notmetadata.nes` with ROM-like bytes is scanned, planned and copied to a folder card: no junk
+  is planned or copied, the library keeps every file byte for byte, and the user's file on the
+  card survives. On macOS the same copy goes to a real FAT32 disk image the test makes, attaches
+  (under its own temp folder, never `/Volumes`) and detaches with `hdiutil`, detaching only a
+  device `hdiutil info` says is attached from that image. macOS's own `._` files for the copy are
+  removed; the user's earlier `._` files and the manifest's stay; then **Clean up this card**'s
+  look and removal take the rest inside the device's folders. Elsewhere that part is skipped, and
+  says why in its name. On macOS it first probes, on a throwaway image of its own, that hdiutil
+  can make and attach an image here and that macOS writes a `._` file for a file this process
+  writes (it does only when the file has extended attributes to keep, which a CI runner's daemon
+  context may not give: PR 59). When either fails, the suite is skipped with that reason in its
+  name instead of failing.
+- **Desktop:** `junk-host.test.ts` (ids only, looks bound to a window, path-free errors, Stop and
+  progress per window, a look kept when the engine refuses to start removing),
+  `deploy-host.test.ts` (the macOS flag on a destination, `keepMacMetadata`, the card of a copy
+  remembered per window), the IPC contract tests, and `test/renderer/junk.test.tsx` (the task,
+  paging, the confirmation in place of the list, focus, the result, the Done screen's count and
+  clean-up, the Check step's option, Stop and progress, axe).
+
+Mutation rows (each printed `KILLED` when it landed), with
+`F='npx vitest run test/junk.test.ts test/junk-api.test.ts test/deploy-junk.test.ts'` run in
+`packages/engine`, and `E` the same plus `test/junk-e2e.test.ts`:
+
+| Guard                                                | File               | Mutation                                                                    | Command |
+| ---------------------------------------------------- | ------------------ | --------------------------------------------------------------------------- | ------- |
+| A name-only match is refused                         | junk/check.ts      | `contentProblem(kind, head, st.size)` → `(null as string \| null)`          | $F      |
+| Every folder on the way is a real folder             | junk/check.ts      | `st.kind !== 'dir'` → `st.kind === 'other'`                                 | $F      |
+| The folder's real path is inside the root            | junk/check.ts      | `!sameOrInside(realRoot, parentReal)` → `parentReal === ""`                 | $F      |
+| A hard-linked file stays                             | junk/check.ts      | `st.nlink > 1` → `st.nlink > 99`                                            | $F      |
+| A file changed since the list stays                  | junk/check.ts      | `if (expect && ` → `if (expect && false && `                                | $F      |
+| The opened file is the one checked                   | junk/check.ts      | the `readHead` identity check → `false`                                     | $F      |
+| A library's removal takes its lock                   | junk/api.ts        | `acquireLibraryLock(k.path, 'junk')` → `(() => undefined)`                  | $F      |
+| A look refuses a busy library                        | junk/api.ts        | `holder !== null` → `holder === "never"`                                    | $F      |
+| A card look walks only the profile's folders         | junk/look.ts       | `scope.kind === 'library'` → `true`                                         | $F      |
+| A card removal acts only inside them                 | junk/api.ts        | `` k.startsWith(`${m}/`) `` → `true` in `cardAllows`                        | $F      |
+| The copy's clean-up stays in the profile's folders   | junk/card.ts       | `if (managed(c)) ` removed                                                  | $F      |
+| The copy's clean-up takes only folders it made       | deploy/writer.ts   | every folder on the way counted as made (`createdDirs.push(d)`)             | $E      |
+
+The review's fixes added these rows (all `KILLED`); `F` now also runs `test/junk-safety.test.ts`,
+and `H='npx vitest run test/junk-host.test.ts'` runs in `apps/desktop`. After them the first
+twelve rows were run again: all `KILLED`. The last one first `SURVIVED`, because the time rule
+now also kept the end-to-end test's older `._ROMs`; a test with a fresh `._` beside a folder that
+was there before isolates it, and it is `KILLED` again.
+
+| Guard                                                  | File             | Mutation                                                       | Command |
+| ------------------------------------------------------ | ---------------- | -------------------------------------------------------------- | ------- |
+| Only the checked file, in a real chain, is unlinked    | junk/unlink.ts   | `if (same && inside) {` → `if (true) {`                        | $F      |
+| The folder chain is checked again after the rename     | junk/unlink.ts   | the chain's `lstat` → `chain = true`                           | $F      |
+| The copy's clean-up removes by rename and verify       | junk/card.ts     | `removeVerified(…)` → a plain `unlink`                          | $F      |
+| A failed unlink puts the file back                     | junk/unlink.ts   | `await putBack(fs, tmp, abs);` → `void 0;`                     | $F      |
+| A data fork is refused                                 | junk/content.ts  | `if (id === AD_DATA_FORK)` → `if (false)`                      | $F      |
+| A resource fork over 286 bytes is refused              | junk/content.ts  | `> EMPTY_RESOURCE_FORK_BYTES` → `> 1e12`                       | $F      |
+| Another large entry is refused                         | junk/content.ts  | the large-entry arm → `if (false)`                             | $F      |
+| `.DS_Store`'s root block must agree and fit            | junk/content.ts  | the root block test → always true                              | $F      |
+| `Thumbs.db`'s byte order must be `FE FF`               | junk/content.ts  | `le16(head, 28) === 0xfffe` → always true                      | $F      |
+| Only `._` files made or changed during the run         | junk/card.ts     | the `mtimeMs < since - FAT_TIME_SLACK_MS` arm removed          | $F      |
+| A look stops on its signal                             | junk/look.ts     | `if (opts.signal?.aborted)` → `if (false)`                     | $F      |
+| A removal stops on its signal                          | junk/remove.ts   | `if (opts.signal?.aborted) {` → `if (false) {`                 | $F      |
+| The host stops the window's job                        | main/junk-host.ts | `ac.abort();` → `void ac;`                                    | $H      |
+| The host keeps a look the engine refused               | main/junk-host.ts | the look dropped before the engine call                       | $H      |
+| `cardAllows` refuses `..` and empty segments           | junk/api.ts      | the segment test removed                                       | $F      |
+| A drive mounted inside is never walked                 | junk/look.ts     | the device test → `return false;`                              | $F      |
+| A Linux trash is a system folder                       | junk/check.ts    | `LINUX_TRASH.test(name) \|\|` → `false \|\|`                    | $F      |
+
+The platform audit (Windows, case-insensitive volumes) added these rows, all `KILLED`, with
+`F='npx vitest run test/junk.test.ts test/junk-safety.test.ts'`:
+
+| Guard                                         | File            | Mutation                                             |
+| --------------------------------------------- | --------------- | ---------------------------------------------------- |
+| A busy file is tried again                    | junk/fs.ts      | the busy test → `false`                              |
+| `EPERM` counts as busy on Windows only        | junk/fs.ts      | the platform test dropped (`EPERM` busy everywhere)  |
+| `EPERM` is busy on Windows                    | junk/fs.ts      | the `EPERM` arm dropped                              |
+| The tries are bounded                         | junk/fs.ts      | `attempt >= BUSY_ATTEMPTS` → `attempt >= 99`         |
+| `Thumbs.db` and `.DS_Store` match in any case | junk/content.ts | `name.toLowerCase()` → `name`                        |
+
+After unzipping on copy (decision 64) landed, `deploy-unzip-copy.test.ts` also checks the copy's
+clean-up after an unzipped R4xMP copy from a Mac: the `._` files macOS made for the unzipped game
+and for the folder the copy made go, and the kernel's (`__rpg/`, `_DS_MENU.DAT`, `_DSMENU.DAT`)
+and the manifest's stay. The writer's and the clean-up's rows were run again over it (all
+`KILLED`), with one more: dropping `placed.push(rel)` (an unzipped game counts as written this
+run) is `KILLED` too.
+
+Tests that stand for macOS on another host never fake the writer's `platform`: it also sets the
+path rules, and on CI's Windows runner a fake `darwin` refused every copy for its `C:\` card root
+(PR 59, now pinned by a test on every platform). They use the writer's `appleDoubles` seam instead
+(`macMetadataApplies('darwin', target)`); its row (`true &&` in its place) is `KILLED`.
+
+Tests that need symbolic links run where the `canSymlink` probe says links can be made (CI's
+elevated Windows runners included) and are skipped elsewhere; each says so in its name
+("[skipped where symlinks cannot be made]"), as do the chmod tests and the FAT32 image test
+("macOS only: hdiutil…").
+
+### Live junk files run
+
+Not run yet: it needs a real SD card and the NAS, which this work could not use. Run it before
+a release that changes `packages/engine/src/junk/`, the writer's clean-up or the screens.
+
+1. **A library on a read-write drive:** a copy of a few console folders (never the real NAS)
+   with Finder's and Windows' files in it. **Fix up › Junk files**, **Find junk files in** it:
+   record the count, the kinds, the "Not removed" and system folder lists. Remove: record the
+   result and History's row; check every game file by hash before and after.
+2. **A read-only share:** mount a copy read-only (`mount_smbfs -o rdonly`), find and remove:
+   expected "The drive is read-only…" or "not allowed", and nothing changed.
+3. **A real SD card (FAT32 and exFAT) from a Mac:** copy a package with **Remove the ._ files
+   macOS adds** ticked, then unticked; record the Done screen's count and free space, and the `._`
+   files left (`find` on the card for `._*`). Then **Clean up this card**.
+4. **The same card in the device:** record that the games and game lists still load.
+
+What it cannot observe here: the NAS's own metadata (`@eaDir`, `.AppleDouble` folders of
+netatalk), Windows and Linux (they write no `._` files), and a card in each device.
+## Live merge picture folders run
+
+CI runs Merge picture folders (decision 66) over scratch libraries in the engine
+(`merge-art.test.ts`: the rules, a library with both folders in several consoles, a linked `Imgs`, a
+case variant, junk and a nested folder, then the scanner's own linking, Undo byte for byte and a
+second run that finds nothing), in jsdom (`merge-art.test.tsx`) and in the built app
+(`merge-art.spec.ts`). This run checks a library shaped like a real one by hand. Run it before a
+release that changes `tidy/merge-art.ts` or `tidy/MergeArt.tsx`. Use a **copy** of a library, never
+the library itself (see [Running against a real library safely](#running-against-a-real-library-safely)),
+and launch with `testVolume` at a scratch card folder.
+
+1. **Look:** copy a few console folders that have both `images` and `Imgs` (an Onion OS card's
+   `Imgs` beside a gamelist tool's `images`) into a scratch library. Scan it, open Fix up ›
+   Artwork, and record the console lines, the pictures with one name in both and which is kept,
+   and **Left in Imgs**. Check a few by hand: `ls -l` both folders, `shasum` pairs of one size.
+2. **Run:** press **Merge picture folders**, record the drawer's sentence, confirm. Record the
+   result. Check on disk that each kept picture is the larger (or the `images` copy on a tie), that
+   each set-aside one is in `.romperoom-quarantine/<date>/<console>/…` with its bytes, that nothing
+   but pictures left `Imgs`, and which `Imgs` folders were removed.
+3. **The games:** open Home and check that the games of a merged console show the same art as
+   before, with no scan; then press the scan button and check again.
+4. **Undo:** **Undo all**, then compare every file of the scratch library (`shasum -r`) with a list
+   taken before step 2: expected identical, and every removed `Imgs` back.
+5. **Again:** **Refresh list** after the run (before Undo): expected nothing left to move.
+
+What it cannot observe: a real frontend reading the merged folders (Onion OS, ES-DE), a NAS or a
+FAT/exFAT card used as a library, Windows and Linux.
+
+**Not run yet:** this branch was proven on scratch libraries only (the engine, jsdom and built-app
+suites above); the owner's real library was never read.
+
+## Live picture conversion run
+
+CI converts pictures made in the tests (`image-convert.test.ts`, `deploy-convert.test.ts`,
+`deploy-convert-worker.test.ts`), runs a
+scratch library with JPEG, GIF, WebP, CMYK and PNG art through scan, plan and copy for muOS
+(`deploy-convert-e2e.test.ts`, every platform; on macOS also onto a real FAT32 disk image for Onion,
+skipped by name where hdiutil cannot attach), and copies a JPEG box art for Onion in the built app
+(`deploy.spec.ts`). This run checks real scraped art by hand. Run it before a release that changes
+`image/convert.ts`, `deploy/convert.ts` or how the writer handles pictures. Use a **copy** of a
+library (see [Running against a real library safely](#running-against-a-real-library-safely)), and
+launch with `testVolume` at a scratch card folder.
+
+1. **The plan:** a scratch library with a few consoles of real scraped art: JPEG box art, a GIF, a
+   WebP, a game with both a PNG and a JPEG. Copy to muOS, then to Onion: record the check step's
+   notes (converted, PNG wins, each reason left out) and the size shown, and time the step.
+2. **The copy:** record the card's pictures (all `.png`, `file` says PNG), open a few beside their
+   sources (the same picture; Onion's 250 pixels wide), and the run's failures.
+3. **The library:** `shasum -r` of the scratch library before and after: expected identical.
+4. **Again:** copy again: expected nothing written.
+5. **A device:** put the card in a muOS or Onion device and record whether the box art shows.
+
+What it cannot observe here: a real device's frontend, a library on a NAS (the header reads' time
+budget), Windows and Linux.
+
+**Not run yet:** this branch was proven on pictures made in the tests and a scratch library only;
+no real device and no real library art were used.
+
 ## Screenshots
 
 `docs/screenshots/` is generated, never edited by hand:
@@ -1970,7 +2371,13 @@ buttons). It captures in Console Shelf, light and dark:
   Show row has two causes and no other shot changes. The across libraries shot scans two small
   libraries of its own ("roms" and "more", the second added on Home's Libraries), sharing two
   games, in a window 900 pixels tall so both sets show whole;
-- Standardise's review and results, and the re-link review and results.
+- Standardise's review and results, and the re-link review and results;
+- Fix up › Junk files (what was found and left alone, the confirmation and the result) and the SD
+  card's Clean up this card, with junk files the capture writes into its own copy of the library
+  and onto its card folder. The Check step's macOS option is not shot: the capture's card folder
+  is not a FAT volume, so the option does not show.
+- Merge picture folders' look, its lists, the confirm drawer and the result, over its own small
+  library (two consoles with both an `images` and an `Imgs` folder, `e2e/merge-art-fixtures.ts`).
 
 It also captures Home in CRT Neon and Clean Modern (dark). It writes `manifest.json`,
 which records for each file the surface, theme, mode, viewport, command and app commit. The

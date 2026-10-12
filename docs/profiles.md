@@ -59,11 +59,12 @@ table lists every key of the schema.
 | `systems.<id>.folder`          | one path segment                                                            | The device's folder name for the system. `<id>` is an id from the systems catalog.                                    |
 | `systems.<id>.extensions`      | `.ext` in lower case, at least one, optional                                | The extensions the device accepts. Leave it out when the device takes any file in the folder (muOS).                  |
 | `systems.<id>.acceptsArchives` | true or false, optional                                                     | Whether the device runs the system's games from `.zip` or `.7z`. Left out means not documented, treated as no.        |
+| `systems.<id>.extractArchives` | true or false, optional | Zipped games are copied unzipped: a `.zip` holding exactly one of the system's ROMs (by `extensions`, which it then needs) is copied as that ROM, named after the zip; any other zip, and `.7z` and `.rar`, is left out with its reason. Refused beside `acceptsArchives: true` or an archive in `extensions`. For devices that read only plain ROMs (R4xMP, DSpico). |
 | `systems.<id>.mediaFolder`     | one path segment, optional                                                  | The system's name in media folders, for `{mediaFolder}` (muOS's catalogue name).                                      |
 | `systems.<id>.optIn` | true or false, optional | Supported, but copied only when the player ticks it: the wizard offers it unticked, and a package that names no consoles leaves it out. For consoles that need extra software on the card (DSpico's emulator programs). |
 | `optInNote` | text, optional | Why the opt-in consoles are unticked, shown beside them. Required when a system is `optIn`, refused otherwise; at least one system must stay chosen by default. |
 | `media.<kind>.folder`          | relative path template                                                      | Where that kind of media goes (see [Templates](#templates)).                                                         |
-| `media.<kind>.format`          | `png`, `jpg`, `mp4` or `pdf`, or a list of them                             | The file formats the device reads. `jpg` also covers `.jpeg`.                                                         |
+| `media.<kind>.format`          | `png`, `jpg`, `mp4` or `pdf`, or a list of them                             | The file formats the device reads. `jpg` also covers `.jpeg`. With `png` listed, a JPEG or GIF picture the device does not read is converted to PNG on the card (decision 67).
 | `media.<kind>.suffix`          | text, optional                                                              | Added to the ROM's stem to name the media file (Batocera's `-image`).                                                 |
 | `media.<kind>.maxWidth`        | whole number, optional                                                      | The widest image the device shows well.                                                                               |
 | `saves.root`                   | relative path                                                               | Where the device keeps in-game saves. Leave `saves` out when no source says (see [Saves](#saves)).                    |
@@ -154,8 +155,8 @@ ever sees files the catalog classified.
 | `batocera` | `roms/<folder>`, `bios`, art in `roms/<folder>/images/<stem>-image`, `-thumb` and `-marquee`, `videos/<stem>-video.mp4`, `manuals/<stem>-manual.pdf`, and `roms/<folder>/gamelist.xml`. Genesis is `megadrive`.       | `es_systems.yml` (folder = system key, `FORMATS.md`), the bundled `roms/` tree, batocera-emulationstation `Scraper.cpp` (`getSaveAsPath`), `MetaData.cpp` (tags), `Settings.cpp` (defaults), and wiki.batocera.org system pages (formats).       |
 | `es-de`    | `ROMs/<folder>`, art in `ES-DE/downloaded_media/<folder>/covers`, `screenshots`, `marquees`, `videos`, `manuals` and `titlescreens`, and `ES-DE/gamelists/<folder>/gamelist.xml`. No BIOS folder of its own.          | The ES-DE user guide (media folders, game list location, the `./` path rule) and `es_systems.xml` (folders and extensions).                                                                                                                       |
 | `onion`    | `Roms/<FOLDER>` (upper case, such as `FC` and `SFC`), `BIOS`, box art in `Roms/<FOLDER>/Imgs/<stem>.png` at most 250 wide. FAT32 only. No game list written.                                                          | Onion's docs (rom folders, BIOS in the root `/BIOS`, the scraping guide, FAT32 install) and each emulator's `config.json` (`rompath`, `imgpath`, `extlist`).                                                                                      |
-| `dspico` | `roms/<folder>` (`nds`, `gba`, `gbc`, `nes`) beside Pico Launcher at the card root (`_picoboot.nds`, `_pico/`), which Romperoom never touches. DS (`.nds`) is chosen by default; GBA, GBC and NES are `optIn` (each needs an emulator program on the card; `.gba`, `.gb`/`.gbc`, `.nes` unconfirmed). No archives, BIOS, art, saves or game list. FAT32 assumed. | Third-party guides, seen in search results and not fetched: `https://sanrax.github.io/flashcart-guides/cart-guides/dspico/` (launcher files, card setup), `https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/` (emulator programs for other consoles), `https://github.com/LNH-team/pico-loader` and `https://github.com/uvsq22104773/dspico_sd_card` (the `_pico` folder's files). The official manual was not read. `roms` is the owner's choice, since the launcher browses any folder. |
-| `r4xmp` | `NDS ROMS`, `GBA ROMS`, `GBC ROMS` and `NES ROMS` at the card root (`root.roms` is `.`), beside the kernel the player installs (`__rpg/`, `_DS_MENU.DAT`, `_DSMENU.DAT`), which Romperoom never touches. `.nds`, `.gba`, `.gb`/`.gbc` and `.nes` only, no archives. No BIOS, art, saves or game list. FAT32, 32 GB or smaller. | One seller page, `http://www.hawktec.shop/r4xmp/` (folder names, file types, kernel files, card limits). The card's own GBAtemp wiki page could not be read. |
+| `dspico` | `roms/<folder>` (`nds`, `gba`, `gbc`, `nes`) beside Pico Launcher at the card root (`_picoboot.nds`, `_pico/`), which Romperoom never touches. DS (`.nds`) is chosen by default; GBA, GBC and NES are `optIn` (each needs an emulator program on the card; `.gba`, `.gb`/`.gbc`, `.nes` unconfirmed). Zipped games are unzipped on copy (`extractArchives`, every system). No BIOS, art, saves or game list. FAT32 assumed. | Third-party guides, seen in search results and not fetched: `https://sanrax.github.io/flashcart-guides/cart-guides/dspico/` (launcher files, card setup), `https://sanrax.github.io/flashcart-guides/tutorials/emulators-pico/` (emulator programs for other consoles), `https://github.com/LNH-team/pico-loader` and `https://github.com/uvsq22104773/dspico_sd_card` (the `_pico` folder's files). The official manual was not read. `roms` is the owner's choice, since the launcher browses any folder. |
+| `r4xmp` | `NDS ROMS`, `GBA ROMS`, `GBC ROMS` and `NES ROMS` at the card root (`root.roms` is `.`), beside the kernel the player installs (`__rpg/`, `_DS_MENU.DAT`, `_DSMENU.DAT`), which Romperoom never touches. `.nds`, `.gba`, `.gb`/`.gbc` and `.nes` only; zipped games are unzipped on copy (`extractArchives`, every system). No BIOS, art, saves or game list. FAT32, 32 GB or smaller. | One seller page, `http://www.hawktec.shop/r4xmp/` (folder names, file types, kernel files, card limits). The card's own GBAtemp wiki page could not be read. |
 
 Known judgement calls, all reasons the profiles stay `community`:
 
@@ -172,8 +173,7 @@ Known judgement calls, all reasons the profiles stay `community`:
   `./Imgs/<stem>.png` images, but the profile names no game list, so none is written and
   Standardise does not change one.
 - R4xMP: the seller names the folders, file types and kernel files, nothing more, so these
-  stay unconfirmed and conservative: archives are not accepted (`acceptsArchives: false`), only
-  the file types named are listed, the name limit is FAT32's 255 characters, there is no Game
+  stay unconfirmed and conservative: only the file types named are listed, the name limit is FAT32's 255 characters, there is no Game
   Boy folder (its games are reported as not playable on this device), and no saves, art or game
   list are written. Its catalog aliases (`NDS ROMS`, `GBA ROMS`, `GBC ROMS`, `NES ROMS`) let a
   library standardised to it, or a card's folder imported by Sync, still be read as the right
@@ -185,13 +185,16 @@ Known judgement calls, all reasons the profiles stay `community`:
   flashcart's own files or the writer's (`CARD_ROOT_TAKEN`: `__rpg`, `_DS_MENU.DAT`,
   `_DSMENU.DAT`, `_pico`, `_picoboot.nds`, `.romperoom-removed`, `romperoom-manifest.json`,
   in any case). The profile's
-  `notes` carry the same points.
+  `notes` carry the same points. Archives are unzipped on copy because the R4 kernels need plain
+  ROMs (owner): every system has `extractArchives` (and `acceptsArchives: false`, since the kernel
+  does not open a zip itself).
 - DSpico: only `.nds` for DS games is confirmed. The other three consoles run through emulator
   programs the player installs, so they are `optIn` with `optInNote`, and their extensions,
-  archives (`acceptsArchives: false`), the file system (FAT32 assumed: `fileSystemAssumed`, so
+  whether Pico Launcher opens archives, the file system (FAT32 assumed: `fileSystemAssumed`, so
   another one is a warning, not a refusal), the 255-character name
   limit, saves and the covers in `_pico/covers` are unconfirmed; no saves, art or game list are
-  written.
+  written. At the owner's request its games are unzipped on copy as the R4xMP's are
+  (`extractArchives` on every system, the opt-in ones too, with `acceptsArchives: false`).
 - **Standardise** and **re-link** read the game list of the formats the shipped profiles name
   (`gamelist.xml`: Batocera's, and ES-DE's when it reads lists from the ROM folders) in each
   console folder of a library: its `<game>` and `<folder>` entries' `<path>`, relative to the

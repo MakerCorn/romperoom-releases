@@ -69,6 +69,10 @@ design history.
 61. [A profile may offer consoles unticked](#61-a-profile-may-offer-consoles-unticked)
 62. [Scan reads drives and names its scope; Refresh list re-reads the catalog](#62-scan-reads-drives-and-names-its-scope-refresh-list-re-reads-the-catalog)
 63. [Suggestions are accepted with one shared select-and-accept bar](#63-suggestions-are-accepted-with-one-shared-select-and-accept-bar)
+64. [Zipped games are unzipped on copy for devices that need plain ROMs](#64-zipped-games-are-unzipped-on-copy-for-devices-that-need-plain-roms)
+65. [Junk files are removed by content, after a preview](#65-junk-files-are-removed-by-content-after-a-preview)
+66. [Merge picture folders: Imgs into images, the larger stays](#66-merge-picture-folders-imgs-into-images-the-larger-stays)
+67. [JPEG and GIF art is converted to PNG on the card only](#67-jpeg-and-gif-art-is-converted-to-png-on-the-card-only)
 
 ## 1. One repository, four workspaces
 
@@ -1095,3 +1099,222 @@ Superseded by ADR 51 for setting copies aside; the report itself is unchanged.
   games lists as a single Accept does. The Make it fit games not listed can only be ticked or
   unticked together. There is no bulk Undo: each folder is under Recently assigned with its own
   Undo, and accepted name matches have none (as before).
+
+## 64. Zipped games are unzipped on copy for devices that need plain ROMs
+
+- **Decision:** a profile's system may set `extractArchives`. For such a system a `.zip` holding
+  exactly one of the system's ROMs (by `extensions`) is copied as that ROM, named after the zip
+  (`<zip stem>.<ROM extension>`, then the card's name rules); its other entries stay behind. A zip
+  of several games or none, one that is locked, packed other than stored or deflated, or whose
+  sizes cannot be true, and `.7z` and `.rar`, are left out with their own skip reasons. The
+  R4xMP and the DSpico set it on every system; every other device copies zips as before. The
+  room, the meter, the file-size limit and Make it fit count the unzipped size. The writer
+  streams the one entry into the usual part file, checks its size and CRC-32 (and the catalog's
+  SHA-1 when that is of the entry), and fails that one file when the zip lies.
+- **Why:** the owner: the R4 card needs every game unzipped on the SD card, and the R4 and the
+  DSpico should copy games unzipped. Most libraries keep cartridge games zipped, so leaving zips
+  out (as both profiles did) left most of a library off these cards.
+- **Detail:** the planner stays pure: the catalog reader decides each zip from its central
+  directory (`zipVerdict`, synchronous on the main process: the last 22 bytes, up to 64 KiB more
+  for a zip with a comment, then the directory, a few hundred bytes for a one-game zip), because
+  the catalog keeps entry names only for zips of 2 to 64 files. Only the verdict is remembered
+  (a few numbers per zip, never its entries), and each plan spends at most about 2 s reading zips
+  it has not seen; the rest are "not checked yet" and the next plan carries on. Entries a computer
+  adds (Finder's `__MACOSX/` and `._` files, `.DS_Store`, `Thumbs.db`) are never a game. The name never comes from inside the
+  zip, so no entry can choose where its bytes land. The manifest needs no new field: it records
+  the card file's size and SHA-1 and the zip's time, so an unchanged zip is skipped and a changed
+  one copied again. Sync matches an unzipped card game to its zip by the zip's game hash, or, for
+  these devices only, by its entries when the game is not the zip's largest file.
+- **Cost:** a zip of several games (a multi-game pack) is not split up, and 7z and rar are not
+  unzipped (roadmap). On a large zipped library on a slow drive, the first few plans for such a
+  device leave some zips "not checked yet" until the remembered verdicts cover them. Whether the R4 kernels and
+  Pico Launcher accept the unzipped files is as unconfirmed on a real card as the rest of those
+  profiles.
+
+## 65. Junk files are removed by content, after a preview
+
+- **Decision:** Romperoom removes three kinds of junk file, and only these: `._` AppleDouble
+  files, `.DS_Store` and `Thumbs.db` (the last two in any case: on Windows, FAT and macOS
+  `thumbs.db` is the same name). A name is never enough: each file's contents must be
+  metadata of its kind. An AppleDouble file needs its magic `0x00051607`, version 2 or 1 and a
+  sane entry list, and must hold only metadata: no data fork, a resource fork no longer than the
+  286-byte empty one macOS writes, and no other large entry. A `._` file with a real resource fork
+  is someone's data (on FAT, exFAT and SMB it is the only copy of a classic Mac program's or
+  font's resources) and is listed as "it holds a resource fork". `.DS_Store` needs `00 00 00 01
+  Bud1` and a root block whose two offsets agree and lie inside the file. `Thumbs.db` needs the OLE
+  signature with a known version, byte order and sector size. Each must be no larger than that
+  kind of metadata is (1 MiB, 16 MiB, 64 MiB). Only a regular file with one name is removed,
+  through real folders inside the place being cleaned (checked with `lstat` folder by folder and by
+  real path), never inside Romperoom's own `.romperoom*` folders, a system folder, or another drive
+  mounted inside. Removal is permanent (they are only metadata: no set-aside copy), after a list
+  and one confirmation. Each file is checked again (its device, inode, size and time from the
+  list, and its contents) and then removed by rename and verify: renamed to a unique name in its
+  folder, confirmed to be that very file, and only then unlinked; anything else goes back.
+- **What that guarantees:** on FAT and exFAT (cards), which cannot hold links, no removal can be
+  led outside the place. Elsewhere (APFS, a NAS) the rename and verify step catches a folder
+  swapped for a link between the check and the removal; what remains is the instant between the
+  last look at the unique name and its unlink, which a swap could only use with a file of that
+  same random name. On SMB, `nlink` is not reliable, so a hard link may not be recognised; removing
+  it removes only that one name.
+- **Where:** Fix up › **Junk files** works on the library chosen above the tabs (it holds the
+  library's lock, all or none, and records one History row, shown as Deleted forever). The SD
+  card's Done screen offers **Clean up this card**, which reads only the folders the device uses
+  (and the `._` beside each of them), never the card's other files. After a copy from a Mac to a
+  FAT or exFAT card, the copy itself removes the `._` files macOS made for it: `._X` beside a file
+  X the copy wrote or replaced, and `._D` beside a folder D the copy made, inside the device's
+  folders, and only when the `._` file was made or changed during the copy (modified at or after
+  the copy's start, read on the card's own clock). An older `._X` beside a file the copy replaced
+  is left; on a Mac's FAT card the system itself replaces it with the new file's on the rename,
+  measured. That is on by default and can be turned off on the Check step (**Remove the ._ files
+  macOS adds**, remembered for next time). Anything else needs the manual list.
+- **Stop and progress:** a look says how many entries it has looked at, a removal how many files of
+  how many it has done; **Stop** ends either. A stopped look removes nothing; a stopped removal
+  keeps what it removed (the file in hand is removed or put back first), releases the library and
+  says so.
+- **Words:** the button that reads the folders names them (**Find junk files in** the library, **on**
+  the card), as decision 62 asks; it is never **Refresh list**, which promises not to read a
+  drive.
+- **Left alone, and why:** macOS's system folders (`.Spotlight-V100`, `.Trashes`, `.fseventsd`
+  and the like, in any case), a Linux `.Trash-<uid>`, and a NAS's or Windows' housekeeping folders
+  (`@eaDir`, `#recycle`, `$RECYCLE.BIN`, `System Volume Information`, `lost+found`) are listed as
+  left alone, never opened: they belong to the system, and removing them can upset it. So is a
+  drive mounted inside a library. The card manifest's own `._` file sits at the card root, outside
+  the device's folders, and stays.
+- **Why:** the owner found these files in the game folders and asked for them to go, and for the
+  cards not to get them. The scanner already ignored them (they never reach the catalog, so a
+  copy never carries one from the library); what was missing was a way to remove them, and
+  macOS writing its own beside every file it copies to a FAT card. Checking the contents keeps a
+  game that happens to be called `._x.nes`.
+- **Cost:** a look reads every folder of a library (like a scan, but no hashing), so it takes a
+  while on a big NAS (it can be stopped). One look keeps at most 50,000 files; past that it says
+  so, and the player removes those and looks again. History records the count, not each file, and
+  only once the removal has ended: a crash part way leaves no row. A read-only drive (a NAS mounted
+  read-only) refuses the first removal: nothing changes and the result says so, with no retries.
+  A busy file (a virus scanner or an indexer holding it, common on Windows) is tried up to three
+  times, then reported.
+  The SD card option applies only to a Mac copying to a FAT or exFAT card; an export folder on such
+  a stick is cleaned with **Clean up this card**. Sync a card's own writes to a card (a save, the
+  card's id file) are not cleaned after the sync yet (roadmap); their `._` files are left on the
+  card.
+## 66. Merge picture folders: Imgs into images, the larger stays
+
+- **Decision:** Fix up › Artwork has a **Merge picture folders** section. In each console folder
+  with both an `images` and an `Imgs` folder directly inside it (folder names compared without
+  letter case), the pictures in `Imgs` move into `images`. Two pictures have one name when the drive
+  says so: the `Imgs` picture's name, looked up in `images` (lstat), reaches a file there, the entry
+  with the same device and inode, and only when the two names are also one once folded
+  (`foldName`): a lookup that reaches a file by another name (a Windows 8.3 alias) is never taken.
+  A string fold alone never decides it: FAT32, exFAT and NTFS fold less
+  than full Unicode case folding (`Straße` and `Strasse`, `ﬁle` and `file` are two files there).
+  Of two pictures with one name, the same bytes keep the one in `images` and set the `Imgs` copy
+  aside; otherwise the larger stays in `images` and the smaller is set aside, and on a tie of size
+  the one in `images` stays. Set aside is the library's `.romperoom-quarantine`, never a deletion.
+  Only pictures move: regular files with one name (no hard link) of the scanner's picture types
+  (png, jpg, jpeg, webp, gif), not junk or hidden files; anything else, a folder inside `Imgs` and
+  a link stay where they are and are listed. `Imgs` is removed only when the run emptied it of
+  pictures and holds nothing else, after reading it again (and `rmdir` refuses a folder that is not
+  empty).
+- **Why:** the owner's library has both folders in many consoles, written by different tools
+  (Onion OS uses `Imgs`; gamelist.xml tools use `images`); Romperoom never makes either (its own
+  art is in `.romperoom/media`) and already reads both, so one folder per console is the owner's
+  wish, not the app's need. The larger picture is usually the better scrape; keeping it (and
+  setting the other aside, not deleting it) loses nothing.
+- **How it runs:** the look reads only and is held for the window that asked (`tidy:mergeArt`).
+  The run (`tidy:mergeArtRun`) takes the library's `op` lock, reads both folders again with every
+  content hash and refuses if anything shown differs or the catalog changed (junk files written
+  meanwhile, `.DS_Store`, `Thumbs.db` or `._` files, are left out of that comparison: they never
+  move), then runs one Tidy up operation: a journal of `move` and `quarantine` steps, each
+  re-hashing its file against that read and refusing a link on its way just before it moves, never
+  overwriting. A set-aside `Imgs` copy is guarded by the copy kept in `images`. When a smaller
+  picture was set aside to make room and the larger then fails to move, the set-aside is undone at
+  once under the same lock (a put-back that is blocked, or fails because the drive went, is counted
+  and said, and Undo retries it). Both steps of such a pair are always in one journal (`together`:
+  a journal boundary never falls between them), so a cancel or a lost drive between journals never
+  splits them; a run stopped inside a journal leaves the pair to Recovery. The catalog's media row follows each picture in the step's own
+  transaction, so a game shows the same art with no scan. History, Recovery and Undo are Tidy up's
+  own; Undo puts every file back, makes a removed `Imgs` again on the way, and links the pictures
+  it put back by the scanner's own rule (any Tidy up undo that moved a picture), so a scan in
+  between no longer leaves them unlinked. That link is the whole library's (`linkMediaForRoot`, as
+  a scan's link phase): measured on a synthetic 50,000-picture catalog on a Mac, about 0.4 s when
+  every row changes and 0.07 s when none does. If it fails, Undo still reports the files put back
+  and says the links follow at the next scan. Undoing a set-aside ROM does not relink its game's
+  pictures (a scan does).
+- **Left alone (and listed):** a console whose `Imgs` or `images` is a link (or reached through
+  one), one with two folders spelled `images` (or `Imgs`) in different letter case (possible only
+  where case counts), one where both names are one folder, and one where a game list names a path
+  inside `Imgs` (moving those pictures would break its entries; Romperoom does not rewrite game
+  lists for this). Every list a frontend keeps in a console folder counts, in any letter case
+  (`gamelist.xml`, `miyoogamelist.xml`, any `*gamelist*.xml` or `.json`, Pegasus's metadata
+  files); one that can't be read as UTF-8 text (UTF-16, binary, over 16 MB) fails closed and the
+  console is left alone. On a volume that ignores letter case, `Images` and `images` are one
+  folder: the pictures go into it as it is spelled, and nothing is merged into itself.
+- **Cost:** an `Imgs` that was empty before is never removed, nor one a stopped run emptied (the
+  next merge leaves it too), nor one that still holds junk (`._` files on a Mac-written FAT card):
+  the result says how many hidden files stay, and the owner deletes those by hand. ES-DE's own
+  lists outside the library, a list in another console folder or one folder up, and Onion OS's
+  caches and `config.json` `imgpath` aren't checked. On Onion OS `Imgs` is the box-art folder: the
+  owner chose `images`, so Onion reading the library directly loses that art (a card written with
+  the Onion profile gets it in `Imgs` again). A frontend reading `Imgs` straight from the library
+  folder (not a card Romperoom wrote) no longer finds the pictures. The run reads every picture it
+  moves twice (the run's own read hashes it, and each step hashes it again just before it moves),
+  and the copy kept in `images` once more for a set-aside, so a big `Imgs` on a NAS takes as long
+  as reading it two or three times. A hard link is never moved: the journal's per-step check reads
+  no link count, so the run's read under the lock is the last point a hard link is caught.
+
+## 67. JPEG and GIF art is converted to PNG on the card only
+
+- **Decision:** a device profile whose media format list has `png` but not a picture's own format
+  gets a PNG of that picture: JPEG and GIF for muOS and Onion, GIF for ES-DE and Batocera. Only the
+  card gets it, as `<rom stem>.png`; the library's file is only ever read (the owner: "one extension
+  for all images", on devices only). A game's PNG of the same kind wins over its JPEG or GIF, and
+  the plan says so. JPEG is read by **jpeg-js 0.4.4** (BSD-3-Clause, pure JavaScript, no install
+  script), a dependency of the engine only; a GIF's first frame by Romperoom's own reader. The plan
+  checks each picture's structure (a JPEG's every segment and scan, never its pixels), with a time
+  budget (as zips), and counts the PNG at the largest it can be (`pngBound`); the writer has each
+  picture converted in a worker thread, one at a time under a time limit, made at most `maxWidth`
+  wide with the existing resizer, and never writes more bytes than the plan counted. The manifest
+  records `converted: { from, maxWidth?, v }`.
+- **A PNG made earlier is kept when its picture cannot be checked:** a picture that is unreadable,
+  changed since the last scan, or not checked yet this time does not remove the PNG Romperoom made
+  of it on an earlier copy: the plan holds its card name (`DeployPlan.keep`), and the writer keeps
+  the file and its record, says so, and decides about it on a later copy. Only art the player no
+  longer copies (the game or the kind left out, the picture gone from the catalog) is moved aside,
+  as any file. Verdicts are remembered in memory only, so after a restart pictures past the time
+  budget are "not checked yet" again; with the PNG kept that costs a step back and on, never art.
+- **Left out, said why:** WebP (no decoder chosen yet), CMYK JPEGs (jpeg-js reads Adobe CMYK, but
+  without the picture's colour profile its colours are a guess; refusing is plainer than showing
+  wrong colours), 12-bit, lossless and arithmetic-coded JPEGs (jpeg-js cannot read them), JPEGs
+  whose decoding cannot be bounded (more than 100 scans, a scan order the standard forbids, less
+  than a bit of data per block), pictures of more than 2048 × 2048 pixels (4,194,304, any shape) or
+  16 MiB, and damaged ones. EXIF orientation is ignored, as most handheld
+  frontends ignore it; a GIF's background colour is not painted (transparent, as browsers show it).
+- **Why not omggif:** the owner approved omggif 1.0.10 for GIF. A seeded fuzz of its reader found a
+  damaged LZW stream that makes it loop for ever (its code table gets a cycle), on the main process.
+  Guarding it would mean running an LZW decoder first anyway, so Romperoom reads GIF itself (about
+  120 lines, strict, bounded by the file's bytes) and keeps omggif as a devDependency that makes the
+  tests' GIFs and gives a second opinion on them.
+- **Why a worker thread, with a time limit and a scan check:** the first version decoded on the
+  main process, trusting the pixel cap to bound the work. The review showed it does not: jpeg-js
+  decodes every scan over every block, so a 66 KB progressive JPEG of 3,000 tiny refinement scans
+  froze the whole app for 26 s and ignored Cancel, and a legal 2048 × 2048 picture still blocks for
+  about 1.2 s (7 to 8 s on a machine seven times slower). Now the JPEG's structure is checked first
+  (more than 100 scans, an illegal scan order or too little data is refused before decoding, so
+  the bomb costs well under a millisecond), and decoding, resizing and PNG encoding run in
+  `image/picture-worker.ts` (a worker thread of the app's process) with a 10 s limit per picture:
+  past it the worker is terminated and only that picture fails; Cancel terminates it at once.
+  The worker ships unpacked with its imports (the engine's `dist/src/image` and jpeg-js), as the
+  hash worker does, and `verify:package` checks that closure. `--self-check` starts it for real
+  at the path the app computes and converts an embedded 13 × 7 JPEG (`picture-worker`), so the
+  packaged smoke on every platform fails if the worker cannot start there. The limit is the backstop for what
+  the checks cannot foresee; the pixel cap stays at 2048 × 2048 because box art needs far less
+  and the worst legal picture fits the limit even on a slow machine.
+- **Cost:** a PNG of a JPEG is several times larger, and the plan counts each at its largest (every
+  row raw), so a PNG-only card keeps more room than it shows: about 1.1 MB counted for a 512 × 720
+  box art that ends at a few hundred KB. A picture that only fails at write time (damaged image data
+  behind a good header, or past the time limit) is a failure of that file, said with its reason,
+  and the run is `partial`. A picture at the cap holds about 390 MB while it converts (typed
+  arrays, outside the worker's heap limit). The plan reads each JPEG whole to check its scans,
+  which costs more of its time budget on a slow share than reading a header did.
+  An older Romperoom reading a card with a converted picture says the card was prepared by a newer
+  version (the manifest field it does not know), as any new manifest field does. Raising
+  `CONVERT_VERSION` converts every card's pictures again.

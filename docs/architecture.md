@@ -60,9 +60,9 @@ flowchart TB
   [security.md](security.md#main-process-requests)), and every session, the ones
   made later included, gets the same proxy and permission denials.
 - `window.romperoom` exposes exactly the channels in `apps/desktop/src/shared/ipc.ts`, plus
-  eight push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
-  `onIdentifyProgress`, `onDatsProgress`, `onArtProgress`, `onSyncProgress` and
-  `onStandardiseProgress`). The type check pins the channel list to the `RendererApi` type in
+  nine push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
+  `onIdentifyProgress`, `onDatsProgress`, `onArtProgress`, `onSyncProgress`,
+  `onStandardiseProgress` and `onJunkProgress`). The type check pins the channel list to the `RendererApi` type in
   both directions.
 - Every handler resolves to `{ ok, value }` or `{ ok: false, error: { name, message } }`. A stack
   never crosses the bridge. `contextBridge` keeps only an Error's message, so the preload writes
@@ -842,14 +842,15 @@ release is idempotent and runs in `finally`. A refused request throws `LibraryBu
 (`code: 'LIBRARY_BUSY'`), which names the kind of job that holds the library, and starts
 nothing: a refused scan records no scan result.
 
-| Held \ requested | scan    | op      | deploy  | identify | art     | sync    |
-| ---------------- | ------- | ------- | ------- | -------- | ------- | ------- |
-| scan             | refused | refused | refused | refused  | refused | refused |
-| op               | refused | refused | refused | refused  | refused | refused |
-| deploy           | refused | refused | shared  | refused  | refused | refused |
-| identify         | refused | refused | refused | refused  | refused | refused |
-| art              | refused | refused | refused | refused  | refused | refused |
-| sync             | refused | refused | refused | refused  | refused | refused |
+| Held \ requested | scan    | op      | deploy  | identify | art     | sync    | junk    |
+| ---------------- | ------- | ------- | ------- | -------- | ------- | ------- | ------- |
+| scan             | refused | refused | refused | refused  | refused | refused | refused |
+| op               | refused | refused | refused | refused  | refused | refused | refused |
+| deploy           | refused | refused | shared  | refused  | refused | refused | refused |
+| identify         | refused | refused | refused | refused  | refused | refused | refused |
+| art              | refused | refused | refused | refused  | refused | refused | refused |
+| sync             | refused | refused | refused | refused  | refused | refused | refused |
+| junk             | refused | refused | refused | refused  | refused | refused | refused |
 
 - `scan`: a scan of the library. `op`: applying, finishing, rolling back or undoing a journal, a
   purge, removing a library, and a standardise or re-link run or its undo (see
@@ -858,8 +859,68 @@ nothing: a refused scan records no scan result.
   holds the library it is identifying; replacing or removing a DAT takes every library's
   `identify` lock for its transaction (see [Identification](#identification)). `art`: a cover art
   session or Remove downloaded art (see [Cover art writer](#cover-art-writer)). `sync`: a card
-  sync's run or undo; its journal runs under that lock (see [Card sync](#card-sync)).
+  sync's run or undo; its journal runs under that lock (see [Card sync](#card-sync)). `junk`:
+  removing a library's junk files (see [Junk files](#junk-files)); a look at them is refused while
+  any other kind holds the library, but takes no lock itself.
 - Only reads share: two deploys may read one library, nothing may change it while one does.
+
+## Junk files
+
+`packages/engine/src/junk/` finds and removes Finder and Windows metadata: `._` AppleDouble files,
+`.DS_Store` and `Thumbs.db` (decision 65). The scanner has ignored them all along (`isJunk`, and
+every dot-folder is skipped), so they are never catalogued and a copy never carries one from a
+library.
+
+- `content.ts`: the name rule (`junkKindOfName`) and the content rule (`contentProblem`): the
+  first 1024 bytes and the size against each kind's structure and limit. An AppleDouble file must
+  hold only metadata (no data fork, a resource fork of at most 286 bytes, no other large entry);
+  `.DS_Store`'s root block offsets must agree; `Thumbs.db`'s OLE header must be well formed.
+- `check.ts`: `checkJunkFile`, every rule for one file now: the name, no own or system folder on
+  the way, each folder on the way a real folder (`lstat`), the folder's real path inside the
+  root, a regular file with one name, optionally the identity the list saw, and the contents read
+  through `O_NOFOLLOW` from the very file checked. A storage error (`EIO`, `ETIMEDOUT`…) is
+  thrown; anything else is a reason.
+- `look.ts`: `lookForJunk(fs, root, scope)`, read only. A library is walked whole, dot-folders
+  too, except `.romperoom*` and system folders (`MAC_SYSTEM_DIRS`, the scanner's `IGNORED_DIRS`),
+  which are listed and never opened; links are never followed. A card is walked only inside the
+  profile's folders (`managedRootsOf`), plus the `._` beside each folder on the way to them. At
+  most 50,000 files are kept (`more` says there are others); "not removed" files are listed with
+  their reasons (the first 1,000). A folder on another device than the root (a drive mounted
+  inside) is listed and never walked. It reports progress (entries looked at) and stops on its
+  signal with `JunkCancelledError`.
+- `unlink.ts`: `removeVerified`, rename and verify: the file goes to `.romperoom-junk-<uuid>` in
+  its folder (onto an exclusive reservation), the entry there must be the checked file in a real
+  folder chain inside the root, and only then is that name unlinked; otherwise it goes back (see
+  [security.md](security.md#junk-files) for what that guarantees per file system).
+- `remove.ts`: `removeJunk(fs, look, { allowed, signal, onProgress })` checks the root is still
+  the folder the look read (real path, device, inode), then each file again with the look's
+  identity, and removes it with `removeVerified`. Stop takes effect between two files.
+  `EROFS`, or `EACCES`/`EPERM` before anything was removed, stops the run (nothing changed);
+  nothing is retried.
+- `card.ts`: the copy's own clean-up. `causedAppleDoubles` names `._X` beside each file the run
+  placed and `._D` beside each folder it made, inside the profile's folders;
+  `removeCausedAppleDoubles` removes those modified at or after the run's start (the manifest's
+  first write, on the card's own clock, less 2 s for FAT) that pass `checkJunkFile`, through
+  `removeVerified`, then reads the free space.
+  The writer calls it after its final manifest write when `removeMacMetadata` is not false and
+  `macMetadataApplies` (macOS, a FAT or exFAT volume), and reports `macMetadata` (removed, kept
+  with reasons, stopped, free bytes after). The room estimate (`appleDoubleNames`) still counts
+  every `._` file: they exist while the copy runs.
+- `api.ts`: `engine.junk`. `lookLibrary(rootId)` (refused while another job holds the library, or
+  when its folder is missing or empty), `lookCard(target, profileId)` (through the deploy
+  facade's `junkTarget`: a listed volume that passes the safe-target rules without confirmations,
+  or an earlier export folder holding the manifest), `page`, `remove` and `discard`. Looks are
+  kept (at most 4, 30 minutes) under a random id and used up by `remove`. A library's removal
+  holds its `junk` lock and writes one `purge` operation row, complete or partial, in one
+  transaction at the end (History shows it as Deleted forever; it is never `running`, so Recovery
+  never sees it). A card's removal runs in the deploy facade's card slot (`withCardSlot`).
+
+The desktop side is `apps/desktop/src/main/junk-host.ts` (`junk:look`, `junk:page`,
+`junk:remove`, `junk:cancel`, and the `junk:progress` push; one look or removal at a time per
+window) and the renderer's `fixup/JunkFiles.tsx`, used by Fix up's
+`JunkTask` and by the SD card's Done screen (`CleanUpCard`). The deploy host remembers, per window,
+the card of each copy it started (`junkCard`), so the page names a card only by that copy's plan
+id.
 
 ## Tidying the library
 
@@ -1084,6 +1145,57 @@ DAT game, the sheets and playlist a file-name game of their own), so its picture
 never offered. A picture whose game already has art of that kind is in the re-link section,
 unticked, and in the leftover list too, so it can still be set aside.
 
+### Merge picture folders
+
+`lookMergeArt` (`packages/engine/src/tidy/merge-art.ts`) reads only, and only once the library can
+be judged (`orphanEvaluationProblem`, as for leftover artwork). For each top-level folder
+`listSystemFolders` lists (an ignored one skipped), it looks for an entry named `images` and one
+named `imgs`, compared NFC and lower case. Two of either is `case-twice`; a link, or a folder whose
+`realpath` is not itself under the library's real folder, is `imgs-link` or `images-link`; the two
+being one folder (same device and inode) is `same-folder`. Every game list in the console folder
+(`isGameListName`: any `*gamelist*.xml` or `.json` in any letter case, `metadata.txt`,
+`metadata.pegasus.txt`) is read: one that names a path inside `Imgs` (`listNamesImgs`, also through
+XML character references and URL escapes) is `list-names-imgs`; one that can't be read as UTF-8
+text, holds a NUL, or is over the size cap is `list-unreadable` (fail closed). Each entry of `Imgs`,
+in name order, is a picture that may move only when it is not a folder, has a picture type of the
+scanner's (`MEDIA_EXTENSIONS.box`), is not junk or hidden (`isMergePicture`), and its `lstat` is a
+regular file with one link. Its counterpart is the file system's answer, never a string fold:
+`lstat(images/<name>)`; absent is `move`; present, the entry of `images` with the same device and
+inode is the counterpart, accepted only when its name and the picture's are equal under
+`foldName` (an 8.3 alias reaching another file is not; an inode of 0 accepts only the exact name;
+no match is `other-unclear`;
+not a regular file with one link is `other-not-a-file`), and `mergeDecision` decides: same bytes
+`duplicate`, larger in `Imgs` `keep-imgs`, otherwise `keep-images`. Same-size pairs are hashed. Two
+entries of one `Imgs` are two names the drive keeps apart, so on one device they never collide;
+only when `images` is on another device than `Imgs` does `foldName` leave the later of two folding
+names as `name-twice` (that device's own case rule, asked of an entry of `images` spelled in the
+other case, or folding when it has none). Junk entries are counted per console
+(`hidden`). Every read that fails is `unreadable` for that entry or console (an entry gone between
+its folder's listing and its read, ENOENT with the library folder still there, too, as in the
+scanner's walk), and an unreachable library throws `LibraryUnavailableError` rather than looking
+empty.
+
+`runMergeArt` takes the library's `op` lock, refuses a look older than the catalog's generation,
+reads again with every hash (`hashAll`) and refuses (`MergeArtChangedError`, named `TidyPlanError`)
+if anything shown or any hash differs, junk entries (`isMergeJunk`) left out and hashes matched
+by console and name, never by position. `mergeArtPlan` makes the steps in
+console and name order: a `move` to `images/<name>` with `expectSha1`; for `keep-imgs` a
+`quarantine` of the `images` copy just before it (the pair is recorded); for `duplicate` and
+`keep-images` a `quarantine` of the `Imgs` copy with the `images` copy as its `keeper`. Each step
+names the picture's media row, which follows it in the step's transaction (`syncCatalog`), so its
+game keeps its art; a set-aside row becomes `quarantined` and the cover rule skips it. The plan runs
+through `applyOperation` with `held: true` (the run holds the lock; every journal checks it) and
+`together` (each pair's move index: `chunkBounds` never ends a journal between a pair's steps). A
+pair whose set-aside is `done` and whose move `failed` in a closed journal has its set-aside undone
+at once (`undoJournal` with `only`, `held`); a blocked put-back or a thrown undo is counted
+(`pairsBlocked`, and `fatal`) rather than lost. Afterwards each console whose `Imgs` held only pictures
+and junk is read again and removed with `rmdir` only when empty, a real folder and link-free; the
+result counts `movedIn`, `setAside`, `foldersRemoved`, `foldersKept`, `hiddenLeft` (junk still in
+the kept folders) and `pairsRestored`. Undo is `undoOperation`: steps go back newest first, the
+journal's `mkdir` of each original folder makes a removed `Imgs` again, and when a picture came
+back `linkMediaForRoot` links the library's media again (as a scan does; a failure there is logged
+and reported as `relinkLater`, never as a failed Undo).
+
 ### Emptying the quarantine
 
 `purgeQuarantinePreview` is a dry run: it lists every quarantined file of a library and, for
@@ -1139,7 +1251,8 @@ kind with `plan-kind`. Plans and purge previews are single use.
 
 Fix up (`#/fixup`, `apps/desktop/src/renderer/fixup`) runs Tidy's screens
 (`apps/desktop/src/renderer/tidy`) as tasks: its Needs attention holds the Overview, Duplicates has
-the choice **In one library** or **Across libraries**, Artwork holds leftover artwork and Re-link,
+the choice **In one library** or **Across libraries**, Artwork holds Merge picture folders
+(`tidy/MergeArt.tsx`, run as Tidy up's job with its result panel), leftover artwork and Re-link,
 History holds History, Set aside and the Recovery banner, and Standardise is the last section of
 Names. They replace Tidy up's seven tabs (Overview, Duplicates, Across libraries, Artwork,
 Standardise, History, Set aside). The Library choice ("Library to tidy", with a hint naming what it
@@ -1221,7 +1334,7 @@ flowchart LR
 Hash routes keep the app on the one page the app:// handler serves
 (`src/renderer/lib/useHashRoute.ts`): `#/home` (Home; `#/home/<console>` or `#/home/all` is a games
 page), `#/fixup` (Fix up; `#/fixup/<task>` selects a task: `names`, `duplicates`, `artwork`,
-`databases`, `history`), `#/deploy` (SD card; `#/deploy/copy`, `sync`, `packages`) and `#/setup`.
+`junk`, `databases`, `history`), `#/deploy` (SD card; `#/deploy/copy`, `sync`, `packages`) and `#/setup`.
 `REDIRECTS` maps the 0.11 hashes (`library` → Home, `health` and `tidy` → Fix up) and the address is
 rewritten with `replaceState`; `#/` goes to Home when a library exists, else to setup. A part a
 screen does not have (`#/fixup/bogus`, `#/deploy/bogus`, `#/setup/x`) is rewritten to the screen;
@@ -1820,8 +1933,42 @@ flowchart LR
   playlist (it names the older discs) and says so. A game that only exists unfinished is
   copied with a warning. Byte-identical files under one game keep the one with the shortest
   path (then the first by name).
-  A zipped game goes only where the profile says the system reads archives
-  (`acceptsArchives`, else the extension list); nothing is extracted.
+  A zipped game goes as it is only where the profile says the system reads archives
+  (`acceptsArchives`, else the extension list). For a system with `extractArchives` (R4xMP,
+  DSpico) it is unzipped instead (below).
+- **Unzipped on copy** (`deploy/unzip.ts`, [decision 64](decisions.md#64-zipped-games-are-unzipped-on-copy-for-devices-that-need-plain-roms)).
+  For a system with `extractArchives`, the catalog reader gives each zip's verdict
+  (`CatalogReader.zipVerdict`, `zipChecker`). To decide, it reads the zip's central directory
+  synchronously on the main process (`listZipSync`, never the data): the last 22 bytes first (the
+  end record of a zip with no comment), up to 64 KiB more only for a zip with a comment, the zip64
+  record when a field overflows, then the directory (a few hundred bytes for a one-game zip; at
+  most 10,000 entries and 16 MiB). Only the verdict is remembered, never the entries: the chosen
+  entry's extension, offset, sizes, CRC-32, method and whether the catalog's hash is of it, or the
+  refusal. Verdicts are kept per path, catalogued size and time and the extensions asked for (at
+  most `MAX_ZIP_VERDICTS`, 50,000), a zip that could not be read or changed since the scan for
+  `ZIP_FAILURE_TTL_MS` (60 s). Each plan (with its Make it fit plans) may spend
+  `ZIP_PLAN_BUDGET_MS` (2 s) reading zips not seen before; past it the rest are
+  `archive-not-checked` (not remembered), and the next plan carries on from what is remembered,
+  so the main process is never held much longer than that. A zip whose size is not the
+  catalogued one is `archive-changed`, and the plan's note names the library to scan with
+  decision 62's words (`CatalogReader.libraryNames`). Every region variant of a game is looked at
+  (archive rules run before regions, so a refused copy lets another region through).
+  `unzipChoice` ignores what a computer adds to a zip (`junkEntry`: anything under `__MACOSX/`,
+  `._` AppleDouble files, `.DS_Store`, `Thumbs.db`, `desktop.ini`) and takes the zip only when
+  exactly one other non-folder
+  entry has one of the system's extensions, stored or deflated, not locked, with sizes that can be
+  true (a stored entry's two sizes agree, its compressed bytes end inside the zip, at most
+  `MAX_UNZIP_RATIO` (1100) to 1, at most `MAX_UNZIP_BYTES` (8 GiB)); otherwise the game is left out
+  as `archive-no-game`, `archive-several-games` or `archive-cannot-unzip`, and a `.7z` or `.rar`
+  as `archive-type-not-unzipped`. The planned file keeps the zip as `fromAbs` and carries `unzip`
+  (where the entry's local header starts, compressed size, CRC-32, method and the zip's size); its
+  `sourceBytes` and `bytes` are the entry's uncompressed size, so the totals, the file-size limit,
+  the meter and **Make it fit** all weigh what the card gets. The card name is the zip's stem with
+  the entry's extension (lower case), through the usual name rules: no part of it comes from the
+  entry's path. The catalog's SHA-1 of a zip is of its largest entry (the scanner's game hash), so
+  it becomes `sourceSha1` only when the chosen entry is that one (`hashedEntry`). The summary sums
+  `unzip: { games, bytes, zippedBytes }` (`bytes` in whole clusters); `ProfileSummary.unzipsSystemIds`
+  names the systems.
 - **Copies that differ.** Copies of one file of a game (one path below the system folder,
   folded) whose bytes differ between two or more libraries, all with a SHA-1 and the same bytes
   within each library, are picked from before releases are ranked (`pickCopies`): the first of
@@ -1864,7 +2011,10 @@ flowchart LR
   the formats the profile reads (`.jpeg` is written as `.jpg`). A profile's media may set `maxWidth`
   (Onion's box art: 250): a PNG planned there carries `resize`, and the writer makes a smaller copy
   at write time (below). The plan counts art at full size and says so; a JPEG for such a profile is
-  copied at full size, with a warning. A medium carries its cached checksum (`media.checksum`, in
+  copied at full size, with a warning. A profile that reads `png` but not a picture's own format
+  (JPEG and GIF for muOS and Onion, GIF for ES-DE and Batocera) gets a PNG of it: the planned file
+  carries `convert` and its card name ends in `.png` (see [Art converted to PNG](#art-converted-to-png)).
+  WebP is left out with its own reason. A medium carries its cached checksum (`media.checksum`, in
   the writer's 40-digit form only) as `sourceSha1`, so the writer compares it with the card without
   hashing the file and checks the copied bytes against it, and its `mediaId`, so a checksum the
   writer learns is kept (see [Card writer](#card-writer)). The scan never reads art. ES-DE and
@@ -1909,6 +2059,51 @@ would take more bytes. The writer makes it from the source it checked, writes it
 part file, and records `resized: { maxWidth, v }` in the manifest with the source's size and time; a
 later copy compares those (`sameResized`, `RESIZE_VERSION` 1) instead of the bytes, and never adopts
 a card file as a made picture. A 512 × 720 picture takes about 15 ms in the main process.
+
+### Art converted to PNG
+
+`image/convert.ts` reads a JPEG (through jpeg-js 0.4.4) or the first frame of a GIF (Romperoom's
+own reader: header walk, a strict LZW decoder and the palette) into RGBA. `jpegCheck` walks a
+JPEG's whole structure before anything is decoded: every segment by its length (an EXIF block or
+colour profile is skipped, unread), every scan's header, and every scan's data to its end (linear,
+in 64 KiB chunks). It refuses a CMYK, 12-bit, lossless or arithmetic-coded JPEG, a picture of more
+than `MAX_CONVERT_PIXELS` (2048 × 2048) pixels, and (`too-complex`) more than `MAX_JPEG_SCANS`
+(100) scans, more than 1,024 segments or a scan order the standard forbids (libjpeg's progression
+rule, which caps each coefficient at 14 decoding passes); it refuses as damaged a file with no
+image data or less than a bit of data per MCU. `gifSize` reads a GIF's blocks up to its first
+picture. `image/to-png.ts` `convertToPng` decodes, makes the picture at most `maxWidth` wide
+(`resizeToWidth`), forces a JPEG's alpha opaque and encodes it (`encodePng`); every failure is a
+refusal, never a throw, and a PNG over `maxBytes` is refused (`larger`).
+
+The plan never decodes. The reader's `pictureVerdict` (`deploy/convert.ts` `pictureChecker`) runs
+the same checks on the files a 64 KiB window at a time, with a time budget per plan
+(`PICTURE_PLAN_BUDGET_MS`, as zips have), remembered by path, size, time and format for the session;
+past the budget a picture is `not-checked` and the next plan carries on. The planned file's
+`convert` holds the source format, the profile's `maxWidth` and `maxBytes`, the most bytes the PNG
+can take (`pngBound`: every row raw, as zlib stores incompressible data, plus the PNG chunks).
+`bytes`, the plan's totals, the size meter and Make it fit all count that bound. A game's PNG of the
+same kind is found first and wins; its JPEG or GIF is counted and said. A picture refused as
+`unreadable`, `changed` or `not-checked` has its card name held in `DeployPlan.keep`: the writer
+keeps an owned file there whose record says `converted` (not removed, not converted again, still
+recorded) and says how many it kept.
+
+The writer converts one picture at a time (`makeConverted`): it reads the source whole (at most
+`MAX_ART_BYTES`, opened read-only) and checks it against the catalog, then hands the bytes to the
+run's `PictureConverter`, which keeps one worker thread (`image/picture-worker.ts`, compiled to
+`dist/src/image/picture-worker.js`; `WriterDeps.pictureWorkerPath`, passed down from
+`createEngine({ pictureWorkerPath })`) and gives each picture `PICTURE_TIMEOUT_MS` (10 s). Past it
+the worker is terminated and the picture fails `slow`; a dead worker fails its picture `failed`;
+Cancel terminates the worker and stops the run. The worker is started on the run's first picture
+and terminated when the run ends. A refused picture is a failure of that file (`not converted to
+PNG: ...`, `took too long: not converted to PNG`): nothing is written, and the meter's total drops
+by its bound so it still ends at its total. A converted PNG goes through the usual part file,
+rename and read-back, and is recorded as `converted: { from, maxWidth?, v }` with the source's size
+and time (`sameConverted`, `CONVERT_VERSION` 1); it is never adopted, and its facts never stand for
+a plain copy's source. A 2048 × 2048 picture takes about 1.2 s in the worker on an M-series Mac
+(decode about half, PNG encode the other half) and about 390 MB at its peak; box art takes tens of
+milliseconds. The desktop app passes the worker's unpacked path; electron-builder unpacks it with
+the engine's `dist/src/image` and jpeg-js, and `verify:package` (`picture-worker`) checks that
+closure.
 
 ## Card writer
 
@@ -2040,9 +2235,20 @@ flowchart TB
   name only if the manifest's `reserved` list names it (with its device and inode when known).
   `EBUSY` and `EPERM` are retried three times with backoff, then reported for that file only.
   After the first write, any other error ends the run as `card-error` with the report so far.
-- **FAT32.** The 4 GiB - 1 byte limit is checked again against each source's real size. On macOS
-  every written file and folder gets a 4096-byte AppleDouble `._` file beside it; the room
-  estimate counts them.
+- **Unzipped games.** For a planned file with `unzip`, the source checked before writing is the
+  zip (its size and time); the card file's size is the entry's. `DeployFs.readZipEntry`
+  (`readZipEntry`, yauzl with `validateEntrySizes`, no names decoded) finds the entry by where its
+  local header starts and refuses one that is gone, listed twice, locked, or whose sizes, CRC-32
+  or method differ from the plan; it streams the bytes into the usual part file, cuts off past the declared size (yauzl
+  and its own count), and checks the CRC-32 at the end, before anything is renamed. A failure
+  there (`ZipEntryError`) fails that file only ("its source zip is damaged: …"); a read error
+  with a code is the library's, as for a copy. When the card already has a file of that size to
+  compare, the entry is unzipped to hash it (only when the catalog's hash is not of it): the
+  meter shows the file as being checked, without bytes, and Cancel stops it between chunks. The manifest records the card file's size and SHA-1
+  and the zip's modification time, so an unchanged zip is skipped and a changed one copied again.
+- **FAT32.** The 4 GiB - 1 byte limit is checked again against each source's real size (an
+  unzipped game's unzipped size). On macOS every written file and folder gets a 4096-byte
+  AppleDouble `._` file beside it; the room estimate counts them.
 
 ### The manifest
 

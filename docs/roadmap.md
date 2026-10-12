@@ -122,6 +122,12 @@ a journal that knows its library.
 - **Tidying, smaller things:** leftover artwork shown one cause at a time, a picture beside each set
   of duplicates and beside a copy of another game, and Delete forever limited to what was set aside
   more than 30 or 90 days ago ([user guide](user-guide.md#duplicates-leftover-artwork-and-history)).
+- **Junk files:** Fix up › Junk files finds the `._` files, `.DS_Store` and `Thumbs.db` beside
+  your games, checks each by its contents, and removes them for good after a list and one
+  confirmation; a copy from a Mac to a FAT or exFAT card removes the `._` files macOS made for it,
+  and **Clean up this card** finds the rest in the device's folders
+  ([user guide](user-guide.md#junk-files), [decision 65](decisions.md#65-junk-files-are-removed-by-content-after-a-preview)).
+  Not yet run on a real SD card or the NAS ([testing.md](testing.md#live-junk-files-run)).
 - **Standardise:** console folders renamed and merged to one device profile's names, and
   identified games renamed to their DAT names with their art, saves, cue sheets, playlists and
   game list entries ([user guide](user-guide.md#standardise-your-library),
@@ -139,6 +145,12 @@ a journal that knows its library.
   with its game list entries, and game list entries without a game listed or re-pointed
   ([user guide](user-guide.md#duplicates-leftover-artwork-and-history),
   [architecture.md](architecture.md#re-link-artwork)), undoable.
+- **Merge picture folders:** in each console folder with both an `images` and an `Imgs` folder,
+  the pictures in `Imgs` moved into `images`; of two with one name the larger stays and the other
+  is set aside; anything that isn't a picture stays, and `Imgs` goes only once it is empty
+  ([user guide](user-guide.md#merge-picture-folders),
+  [decision 66](decisions.md#66-merge-picture-folders-imgs-into-images-the-larger-stays)),
+  undoable. Run end to end on scratch libraries only, not on a real library.
 
 Proven end to end on the fixture library on macOS, and with the fixture's Windows shape
 simulated; Standardise and Re-link artwork were also run live on scratch libraries on
@@ -161,6 +173,11 @@ drive or a NAS.
   ([decision 43](decisions.md#43-standardise-renames-folders-and-games-and-edits-two-kinds-of-files-other-programs-own)).
 - **A re-link of game list entries only that crashed before its journal was recorded** stays
   "Interrupted" in History and can't be undone. Nothing was written, so there is nothing to undo.
+- **Merge picture folders and game lists:** a console whose game list names pictures inside
+  `Imgs` is left alone (ES-DE's lists outside the library can't be seen at all); rewriting those entries to `images` (as Re-link rewrites lists) would let
+  it merge too. An `Imgs` that was empty before a merge, or emptied by a run that stopped part way,
+  is left for the owner to delete
+  ([decision 66](decisions.md#66-merge-picture-folders-imgs-into-images-the-larger-stays)).
 - **Pictures of a removed game read "Game removed" after a scan.** A scan unlinks a picture whose
   game's files are gone, so the Artwork tab lists it under "No game in your library" and the Game
   removed choice rarely shows
@@ -187,6 +204,9 @@ Put a playable selection on a handheld's SD card.
   ([decision 53](decisions.md#53-bios-files-are-recognised-by-libretros-list)).
 - **Art made smaller:** box art copied no wider than the device shows it (Onion), by Romperoom's
   own PNG code ([decision 52](decisions.md#52-card-art-is-made-smaller-by-romperooms-own-png-code)).
+- **Art converted to PNG:** JPEG and GIF pictures become PNG on the card for a device that shows
+  only PNG; the library keeps its own files
+  ([decision 67](decisions.md#67-jpeg-and-gif-art-is-converted-to-png-on-the-card-only)).
 - **Network export folders and read-only Linux cards:** an export folder on a network drive (or
   one Romperoom cannot check) asks first, and a Linux card mounted read-only is refused up front
   ([ADR 47](decisions.md#47-an-export-folder-on-a-network-drive-asks-first)). The Linux side is
@@ -214,6 +234,10 @@ Put a playable selection on a handheld's SD card.
   [ADR 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
   Save layouts are measured from each system's source for muOS, Onion and Batocera; ES-DE syncs
   games only.
+- **Zipped games unzipped on copy** for the R4xMP and the DSpico, whose kernels need plain ROMs:
+  a zip of one game goes as that game, named after the zip, checked as it is unzipped
+  ([user guide](user-guide.md#zipped-games-on-a-flashcart),
+  [decision 64](decisions.md#64-zipped-games-are-unzipped-on-copy-for-devices-that-need-plain-roms)).
 
 Proven on a FAT32 disk image on macOS and, end to end, on a test folder posing as a card.
 Windows and Linux listing is tested from recorded output only, the wizard has not been run
@@ -223,13 +247,20 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 
 - **Device profiles** checked on real devices (all six are `community` today, the R4xMP's from
   one seller's page and the DSpico's from third-party guides only), and more of them.
-- **JPEG art made smaller,** and screenshots and title screens (no profile asks yet).
+- **JPEG art made smaller** for a device that reads JPEG, and screenshots and title screens (no
+  profile asks yet). JPEG art for a PNG-only device is made smaller as it is converted.
+- **WebP art converted to PNG:** WebP pictures are left out of a PNG-only card, with their reason,
+  until a WebP decoder Romperoom can trust with untrusted files is chosen. CMYK JPEGs are left out
+  too.
 - **Art checksums for pictures never copied:** the scan does not read art, so a picture carries a
   checksum only once the writer or the leftover-artwork check has read it.
 - **A multi-file game whose files differ between two libraries** is left off the card as a name
   clash. Picking a whole set from one library is not built.
 - **Two different copies of a game file in one library** (two of its folders) leave the game off
   the card as a name clash; only copies in different libraries are chosen between.
+- **7z and rar games unzipped on copy:** for the R4xMP and the DSpico, `.7z` and `.rar` games are
+  left out ("not unzipped yet"); only `.zip` is unzipped. A zip holding several games (a
+  multi-game pack) is not split into them either.
 - **Code signing, notarization, automatic updates and Intel Macs** (see
   [release.md](release.md#not-in-this-release)).
 
@@ -250,6 +281,10 @@ against a real card on Windows, and exFAT is not tested on a real file system.
    Accept selected can keep a game the player did not see. The screen narrows this (ticks are
    keyed by match; it re-reads on any outside change). Closing it needs an engine and IPC change
    (accept a file only as that game); see decision 63.
+
+6. **Sync a card's `._` files:** a sync from a Mac to a FAT or exFAT card writes saves and the
+   card's id file, and macOS adds a `._` file beside each; unlike a copy, the sync does not remove
+   them yet (decision 65). The sync would need the card's file system from its volume listing.
 
 ## Must-fix before later milestones
 

@@ -438,11 +438,13 @@ was shown to fail on a broken build (mutation evidence in
   executable's resources) equals the hash of the `app.asar` header that ships.
 - **Contents:** `app.asar` holds `out/` and the production dependencies only; no source maps,
   TypeScript, tests, the smoke chunk or other platforms' native binaries. The unpacked files are
-  exactly the hash worker, its dependencies (yauzl and pend) and this platform's SQLite binary.
+  exactly the hash worker and its dependencies (yauzl and pend), the picture worker with the
+  engine's image folder and jpeg-js, and this platform's SQLite binary.
 - **The packaged app works:** `--self-check`
   ([configuration.md](configuration.md#command-line-switches)) opens a fresh catalogue with the
   shipped SQLite, hashes a bundled file through the worker pool, identifies that file against a
-  DAT written for it, serves the page through `app://`
+  DAT written for it, converts an embedded JPEG to PNG through the unpacked picture worker, serves
+  the page through `app://`
   from inside `app.asar`, and confirms the fuses and that DevTools and reload are off.
   `e2e:packaged` then launches the app for real with every development seam and both
   fuse-guarded variables set, and checks the catalogue is created, the app does not exit on the

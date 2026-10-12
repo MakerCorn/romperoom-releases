@@ -33,6 +33,8 @@ show a placeholder.
 - [Put games on an SD card](#put-games-on-an-sd-card)
 - [Sync a card](#sync-a-card)
 - [Duplicates, leftover artwork and History](#duplicates-leftover-artwork-and-history)
+- [Merge picture folders](#merge-picture-folders)
+- [Junk files](#junk-files)
 - [Standardise your library](#standardise-your-library)
 - [Keyboard](#keyboard)
 - [Gamepad](#gamepad)
@@ -231,8 +233,8 @@ files. It waits, saying why, while a tidy runs. A tab that needs a scan says why
 button rather than showing its own; only **Duplicates** keeps a scan of the one library it shows,
 when you have several. **Refresh list**, where you see it, only asks Romperoom again for what it
 already knows: it never reads your drives. With more than one library, **Library to tidy** in Fix
-up's header says which library Duplicates, Standardise (in Names), leftover artwork and Re-link, and
-Set aside work on; it is not shown on Needs attention and Game databases, which cover every library.
+up's header says which library Duplicates, Standardise (in Names), Merge picture folders, leftover
+artwork and Re-link, Junk files and Set aside work on; it is not shown on Needs attention and Game databases, which cover every library.
 The tabs:
 
 - **Names**: identify your games and check name matches, the unidentified games, the folders
@@ -242,6 +244,10 @@ The tabs:
   [Duplicates, leftover artwork and History](#duplicates-leftover-artwork-and-history)).
 - **Artwork**: [Cover art](#cover-art), [why a game shows no picture](#why-a-game-shows-no-picture)
   and leftover artwork.
+- **Junk files**: the `._` files, `.DS_Store` and `Thumbs.db` that Finder and Windows leave
+  beside your games, found and removed after you have seen them (see [Junk files](#junk-files)).
+- **Artwork**: [Cover art](#cover-art), [why a game shows no picture](#why-a-game-shows-no-picture),
+  [Merge picture folders](#merge-picture-folders) and leftover artwork.
 - **Game databases**: see [Getting game databases](#getting-game-databases).
 - **History**: what Fix up did, with Undo, what is set aside, and work that stopped part way.
 
@@ -609,10 +615,11 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    install yourself: the `__rpg` folder, `_DS_MENU.DAT` and `_DSMENU.DAT` at the card's root.
    Romperoom never writes, moves or removes those. Like every card it copies to, the root also
    gets Romperoom's own `romperoom-manifest.json` (what it copied) and, once a later copy leaves
-   a game out, a `.romperoom-removed` folder holding it. The layout comes from one seller's page and is
-   **unconfirmed** on a real card, as are these: whether zipped games work (Romperoom copies none),
-   how long a file name may be (Romperoom uses FAT32's 255 characters), and any other console or
-   file type.
+   a game out, a `.romperoom-removed` folder holding it. The R4xMP's kernel needs every game as a
+   plain file, so Romperoom **unzips zipped games as it copies them** (see
+   [Zipped games on a flashcart](#zipped-games-on-a-flashcart)). The layout comes from one seller's
+   page and is **unconfirmed** on a real card, as are these: how long a file name may be
+   (Romperoom uses FAT32's 255 characters), and any other console or file type.
 
    **DSpico** (a Nintendo DS flashcart that boots Pico Launcher) gets your DS games in `roms/nds`
    on the card. Game Boy Advance, Game Boy Color and NES are offered too, in `roms/gba`, `roms/gbc`
@@ -624,8 +631,13 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    it, Pico Launcher too. The card must hold Pico Launcher, which you install: `_picoboot.nds` and
    the `_pico` folder at the card's root. Romperoom never writes, moves or removes those (its own
    `romperoom-manifest.json` and `.romperoom-removed` go at the root too). Only `.nds` for DS games is confirmed,
-   from third-party guides rather than the official manual; zipped games, file name limits,
-   saves and covers are unconfirmed, so no archives, saves, art or game lists are copied.
+   from third-party guides rather than the official manual; file name limits, saves and covers
+   are unconfirmed, so no saves, art or game lists are copied. As for the R4xMP, zipped games
+   are **unzipped as they are copied**, for every console it takes (see
+   [Zipped games on a flashcart](#zipped-games-on-a-flashcart)).
+
+   For either card, choosing it says so under the choices: zipped games are unzipped as they are
+   copied, and your zip files stay as they are.
 
    | Light                                            | Dark                                           |
    | ------------------------------------------------ | ---------------------------------------------- |
@@ -642,7 +654,9 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    under each name the device looks for, whatever it is called in your folder; the check step
    names any console whose BIOS files were not found. For a device that shows box art at a fixed
    width (Onion), Romperoom copies a smaller box art picture, never wider than the device shows
-   it; your own picture is not changed. Only PNG pictures are made smaller. A size estimate
+   it; your own picture is not changed. Only PNG pictures are made smaller. A device that shows
+   only PNG pictures (muOS, Onion) gets a PNG of each JPEG or GIF picture, and ES-DE and Batocera
+   get one of each GIF: see [Pictures converted to PNG](#pictures-converted-to-png). A size estimate
    updates as you choose.
    Romperoom remembers these choices for next time. To keep more than one set for a device, save
    it under a name: see [Saved packages](#saved-packages).
@@ -660,7 +674,9 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    ![Choosing the card, with its space][deploy-where-lt]
 
 4. **Check.** A summary of the games, consoles and space, what was left out and why, and
-   anything that stops the copy. When a game file is in two of your libraries with different
+   anything that stops the copy. For a card whose games are unzipped (R4xMP, DSpico), it also says
+   how many zipped games are unzipped and the space they take on the card, and how much more
+   that is than their zips; the space shown everywhere is the unzipped size. When a game file is in two of your libraries with different
    contents (the same name, other bytes), one copy goes to the card and **Copies that differ**
    names the library it comes from: the copy that matches your game database, else the one in
    the shorter folder name, else the one Romperoom found first (to send the other copy, see
@@ -668,7 +684,10 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    **Preview the changes** works out what would happen without writing anything. **Write … to
    …** asks once more, with what Romperoom promises: it only writes to this card, it keeps files
    it didn't put there, and anything it removes goes to the `.romperoom-removed` folder on the
-   card.
+   card. On a Mac copying to a FAT or exFAT card, **Remove the ._ files macOS adds** is ticked:
+   macOS writes a small `._` file beside every file and folder it copies to such a card, and the
+   copy removes the ones it made (only those, and only in the device's folders). Untick it to keep
+   them; Romperoom remembers your choice.
 
    | Light                                    | Dark                                   |
    | ---------------------------------------- | -------------------------------------- |
@@ -681,8 +700,12 @@ nothing is written. Put the card in your computer first. Cover art from a card i
    **Details** for the reasons). Details name your card, libraries and folders by their names,
    never their full paths; a detail that would name any other folder on your computer reads "A
    detail is left out here because it names a folder on this computer." Eject the card before
-   you take it out. **Copy more** goes back to the consoles with the same device; **Start over**
-   forgets the choices.
+   you take it out. After a copy from a Mac to a FAT or exFAT card it also says how many macOS
+   metadata files it removed and the free space left afterwards. **Clean up this card** finds the
+   other junk files in the device's folders on the card (a `.DS_Store` Finder left, `._` files
+   from earlier copies) and shows them before anything is removed, as in
+   [Junk files](#junk-files); it never touches the card's other files. **Copy more** goes back to
+   the consoles with the same device; **Start over** forgets the choices.
 
    ![The report after a copy][deploy-done-lt]
 
@@ -709,6 +732,52 @@ once you are sure. Files you put on the card yourself are never replaced or move
 - **Identified games.** Once a game is identified, its name on the card comes from the game
   database, not the file name; two revisions of one identified game still count as one game for
   **One version of each game**.
+
+### Zipped games on a flashcart
+
+The R4xMP's and the DSpico's kernels read only plain game files, so for those cards Romperoom
+unzips zipped games as it copies them. Your zip files are only read, never changed.
+
+- **What is unzipped.** A `.zip` holding exactly one game for its console (a `.nds` for DS, a
+  `.gba` for Game Boy Advance, and so on) is copied as that game. It is named after the zip, not
+  the file inside it: `Mario Kart DS (USA).zip` becomes `Mario Kart DS (USA).nds`, then the card's
+  usual name rules apply (characters a card refuses, the length limit). Anything else in the zip
+  (a readme, a save, a picture) is left behind. So is what a computer adds when it makes a zip:
+  the `__MACOSX` folder and `._` files that Finder's **Compress** puts in (a hidden copy of each
+  file's details, which would otherwise look like a second game), and `.DS_Store`, `Thumbs.db`
+  and `desktop.ini`.
+- **What is left out, and why.** The **Check** step lists each under **Left out**: a zip with more
+  than one game inside, a zip with no game for its console, a zip Romperoom can't unzip (locked
+  with a password, damaged or unreadable, packed with bzip2, LZMA, Deflate64 or zstd as 7-Zip and
+  WinZip can, claiming sizes that can't be true, or over 8 GiB unzipped), and `.7z` and `.rar`
+  files (not unzipped yet). A game too big for a FAT32 card once unzipped (4 GB or more) is left
+  out as too large, like any other. A zip that changed since your library was last scanned is
+  left out too, and a note names the button to press: **Scan** and the library's name (or **Scan
+  all libraries**), then copy.
+- **Looking inside zips takes a moment.** Romperoom reads each zip's list of files once, then
+  remembers it while the zip is unchanged. So the app never stalls on a big library on a slow
+  drive, each measurement spends at most about two seconds reading zips it hasn't seen yet. Zips
+  it didn't reach are listed under **Left out** as "Not checked yet: plan again to continue":
+  every time the wizard measures again (going back a step and on, or changing a choice), it
+  checks more, until none are left.
+- **Space.** Every size the wizard shows (the estimate, the meter, **Make it fit**, the Check
+  step) is the unzipped size, since that is what the card needs. The Check step says how many
+  games are unzipped, the room they take on the card (in the card's whole blocks) and how much
+  more that is than their zips.
+- **Checked as it copies.** Each game is unzipped into a temporary file on the card, checked
+  against the size and checksum the zip records (and against your game database when it knows
+  the game), and only then given its name. A zip that fails the check fails that one game, never
+  the whole copy; the report lists it.
+- **Copying again.** A game already on the card is left alone, so copying again only adds what
+  changed. A zip that changed in your library is unzipped again. A game you leave out of a later
+  copy has its unzipped file moved to `.romperoom-removed` on the card, as any other. When the
+  card already holds a file of the same size that Romperoom didn't record, it unzips the game to
+  compare the two before anything is written; that shows as checking the card, and **Cancel**
+  stops it.
+- **Sync.** **Sync a card** matches an unzipped game on the card with its zip in your library by
+  its contents, so it isn't offered for import again. It may offer an unzipped game again when its
+  game is not the largest file in its zip and Romperoom has no record of the zip's other files
+  (zips of more than 64 files, or ones scanned before Romperoom kept that record).
 
 ### Make it fit
 
@@ -741,6 +810,51 @@ The list is for this card and these choices only: changing any choice (or loadin
 package), choosing another card, **Copy more** and **Start over** forget it, and it is never
 saved. Because it starts with the biggest games, it may leave out a big game when only a little
 is over; **Keep this one** asks for another choice.
+
+
+### Pictures converted to PNG
+
+Some devices show only PNG pictures. When you copy to one of them, Romperoom converts your JPEG and
+GIF pictures to PNG **on the card only**: your library keeps its own `.jpg`, `.jpeg` and `.gif`
+files exactly as they are, and the card gets `<game name>.png`.
+
+- **What is converted:** JPEG pictures (ordinary and progressive) and the first picture of a GIF
+  (an animated GIF gives its first frame) for muOS and Onion; GIF pictures for ES-DE and Batocera,
+  which show JPEG as it is. A GIF's see-through parts stay see-through. Onion's box art is also made
+  at most 250 pixels wide. The pixels are copied as they are: no quality is lost beyond what the
+  JPEG had already lost. The way a phone or camera turned a photo (its EXIF rotation) is ignored,
+  as most devices do.
+- **A PNG wins:** when a game has both a PNG and a JPEG of the same picture, the PNG is copied and
+  the JPEG isn't converted. The check step says how many.
+- **What isn't converted, and why:** the check step lists each reason with a count, and those
+  pictures are left off the card:
+  - **WebP** pictures: Romperoom doesn't convert WebP yet;
+  - JPEGs in **CMYK** (print) colours, and rare kinds of JPEG Romperoom can't read (12-bit,
+    lossless or arithmetic-coded);
+  - JPEGs built so that reading them would take too long (more than 100 passes over the picture,
+    or passes in an order the JPEG standard doesn't allow);
+  - pictures of more than about 4.2 million pixels (2048 × 2048, or any other shape with as many
+    pixels), or over 16 MB;
+  - damaged pictures, or files whose contents aren't the JPEG or GIF their names say.
+- **Space:** a PNG is usually larger than the JPEG it comes from, and its exact size is only known
+  once it is made. The space shown counts each converted picture at the largest it can be, so the
+  card keeps more room than it shows, and **Make it fit** counts it that way too. The progress bar
+  ends at what was really written.
+- **Time:** while it measures, Romperoom checks how each picture is built without drawing it (a
+  few seconds at most each time; if there are many, the check step asks you to go back a step and
+  on again to check more). It converts each picture while it copies, one at a time, away from the
+  window, so the app keeps answering and **Cancel** stops at once. Box art takes a fraction of a
+  second; the largest picture it converts takes about a second on a recent Mac (several seconds
+  on a slower computer). A picture that takes longer than 10 seconds is stopped, listed as "took
+  too long", and the copy goes on.
+- **Art converted earlier stays:** if a picture can't be checked this time (its file can't be
+  read, it changed since Romperoom last scanned, or it wasn't checked yet), the PNG Romperoom put on
+  the card on an earlier copy is kept as it is, and the check step says so. Copying removes a
+  converted picture only when you no longer copy it (you leave out the game or that kind of art,
+  or the picture is gone from your library).
+- **Your own files on the card:** a PNG already on the card that Romperoom didn't write is never
+  replaced; it is listed as left as it is. A picture that turns out to be damaged while it is
+  copied is listed with its reason, and nothing is written for it.
 
 ### Saved packages
 
@@ -1047,6 +1161,123 @@ A game on several discs that Romperoom recognises disc by disc is never offered;
 If Fix up says Romperoom is busy, the library folder isn't available, or your library changed
 since you looked, see [troubleshooting](troubleshooting.md#fix-up-says-romperoom-is-busy).
 
+## Merge picture folders
+
+Frontends and tools keep box art in a folder inside each console folder, under different names:
+tools that write `gamelist.xml` use `images`, and Onion OS uses `Imgs`. A console folder can end up
+with both, each holding some of its pictures. Romperoom itself never makes either folder (the art
+it downloads lives in `.romperoom/media`), and it reads the pictures in both.
+
+**Merge picture folders**, on **Fix up › Artwork** under the cover art cards, lists every console
+folder that has both an `images` and an `Imgs` folder directly inside it, and what merging does:
+the pictures in `Imgs` move into `images`, so each console has one picture folder. Nothing moves
+until you press **Merge picture folders** and confirm. With no console folder that has both, it
+says so in one line. Romperoom can only tell after a full scan, like the leftover artwork below it:
+until then the section says "Romperoom can merge picture folders after a full scan." and points at
+the scan button by its name ("Press Scan roms above.").
+
+- **A picture only in `Imgs`** moves into `images` with its name.
+- **A picture with the same name in both**: Romperoom asks the drive whether the name of the `Imgs`
+  picture already reaches a file in `images`, so the drive's own rules decide what "the same name"
+  means. On a Mac's own drive `Mario.png` and `mario.png` are one name, and so are `Straße.png`
+  and `Strasse.png`; on an SD card formatted FAT32 or exFAT only letter case is ignored, so those
+  two are two pictures and both end up in `images`. When the file in `images` is spelled otherwise,
+  the list names it ("The one in images (mario.png) is larger…"). The drive's answer counts only
+  when the two names are also the same once letter case is ignored: a drive that reaches a file by
+  a short 8.3 name (`SUPERM~1.PNG` for `Super Mario Bros.png`, on Windows) never makes them one,
+  and the picture stays in `Imgs` ("images has a file this name reaches, but Romperoom can't tell
+  which one"). If both have exactly the same bytes, the `Imgs` copy is set aside. Otherwise the larger one stays
+  in `images` and the smaller is set aside; when both are the same size, the one already in
+  `images` stays. Set aside means the library's own set-aside folder (`.romperoom-quarantine`), as
+  everywhere in Fix up: nothing is deleted.
+- **Anything in `Imgs` that isn't a picture** (`Thumbs.db`, the `._` files a Mac leaves on other
+  drives, other kinds of files), a folder inside `Imgs`, a link or a file that also has another
+  name (a hard link) stays where it is, listed under **Left in Imgs**. Pictures are png, jpg,
+  jpeg, webp and gif: the kinds the scanner reads as art.
+- **`Imgs` itself** is removed only when the merge emptied it: Romperoom looks again after the
+  moves, and keeps it if anything is still in it. An `Imgs` that was empty before is left alone.
+  On a FAT32 or exFAT card a Mac writes a hidden `._` file beside every picture. Those often move
+  with their pictures, and then `Imgs` goes; when some stay, the result says "Imgs still holds 3
+  hidden files…" and keeps it. Romperoom never deletes those files here: remove them with
+  [Fix up › Junk files](#junk-files), then remove the empty folder.
+- Romperoom never touches your other art folders (`covers`, `boxart`, `screenshots`, `snaps`,
+  `wheel`, `marquees`, `downloaded_media`), its own `.romperoom` folders or the set-aside folder.
+
+A console is left alone, and says why, when its `Imgs` or `images` folder is a link to another
+folder (Romperoom never follows links), when it has two folders spelled `images` (or `Imgs`) in
+different letter case (only possible on a drive where case counts), or when a game list in it names
+pictures inside `Imgs`: moving them would break those entries. Every game list a frontend keeps in a
+console folder counts, in any letter case: `gamelist.xml` (EmulationStation, ES-DE, Batocera),
+`miyoogamelist.xml` (Onion OS and other Miyoo firmware), any other `…gamelist….xml` or `.json`, and
+Pegasus's `metadata.pegasus.txt` or `metadata.txt`. A list Romperoom can't read as plain text
+(saved as UTF-16, binary, or over 16 MB) leaves the console alone too, since it might name `Imgs`.
+Some lists aren't checked: ES-DE's own lists outside the library (in its `ES-DE/gamelists`
+folder), a list in another console folder or one folder up that points into this console's `Imgs`,
+and Onion OS's own files (its `…_cache6.db` caches and an emulator's `config.json` `imgpath`).
+Check those yourself if they read `Imgs` from this library.
+
+On Onion OS, `Imgs` is where the box art lives: after a merge, Onion reading this folder directly
+shows no box art for those games. Putting games on a card with the Onion profile writes the art into
+`Imgs` on the card again, wherever it sits in the library; if you copy the folder to the card
+yourself, merge after copying, or skip the console. On a drive that ignores
+letter case, `Images` and `images` are one folder: the pictures go into it as it is spelled.
+
+The section shows a line per console (how many pictures move, how many have the same name in both,
+and whether `Imgs` is removed or stays), then **Pictures with the same name in both** (which one
+stays and why), **Left in Imgs** and **Pictures that move**. Each list shows its first 50 and says
+how many there are in all.
+
+| Light                                   | Dark                                          |
+| --------------------------------------- | --------------------------------------------- |
+| ![Merge picture folders][merge-look-lt] | ![Merge picture folders, dark][merge-look-dk] |
+| ![What happens to each picture][merge-prev-lt] | ![What happens to each picture, dark][merge-prev-dk] |
+
+Press **Merge picture folders**. The drawer asks plainly, for example "Move 214 pictures from Imgs
+into images in 9 consoles? 3 with the same name are set aside: the larger stays. Nothing is deleted
+and you can undo this." **Cancel** has the focus. The other button names the count, such as **Move
+214 pictures**.
+
+| Light                                       | Dark                                              |
+| ------------------------------------------- | ------------------------------------------------- |
+| ![The merge's question][merge-confirm-lt] | ![The merge's question, dark][merge-confirm-dk] |
+
+Just before anything moves, Romperoom reads both folders again, and refuses if anything differs from
+what you saw ("Your library changed since you looked"): **Refresh list** shows what is there now. A
+hidden file a system writes meanwhile (`.DS_Store`, `Thumbs.db` or `THUMBS.DB`, `desktop.ini`, a
+`._` file) is never moved, so it doesn't count as a change.
+Each picture is checked once more right before it moves (its bytes, and that no link is on its way),
+and nothing is ever overwritten. When a larger picture in `Imgs` replaces a smaller one, the smaller
+is set aside first; if the larger then can't move (it changed, or another program held it open),
+the smaller one is put straight back in `images`, and the result says so; if even that can't
+happen (another file took its place, or the drive went away), the result says the smaller picture
+is still set aside and **Undo all** puts it back. The two steps are always in one part of the run,
+so stopping between parts never separates them. While it runs you see the progress, and **Cancel** stops between
+files. The result says how many pictures moved into `images`, how many were set aside, and which
+`Imgs` folders were removed, with **Undo all** to put every file back where it was (an `Imgs` folder
+that was removed comes back with its pictures). Its run is in **History**, where **Undo** does the
+same, and a run that stopped part way offers **Finish or undo…** like any other tidy.
+
+| Light                                  | Dark                                         |
+| -------------------------------------- | -------------------------------------------- |
+| ![The merge's result][merge-res-lt] | ![The merge's result, dark][merge-res-dk] |
+
+The library's game list for each picture follows it: your games show the same art straight away,
+with no scan needed. **Undo** links each picture it puts back to its game at once, also when you
+scanned in between (on a big library this takes a moment: about a tenth of a second for 50,000
+pictures on a Mac). If that link can't be made, the files are still back and Undo says "The
+pictures put back will link to their games at the next scan.", pointing at the scan button.
+Undoing a set-aside game (Duplicates) doesn't link that game's pictures again: a scan does. A frontend that reads `Imgs` in this very folder (Onion OS reading the library
+directly) no longer finds the pictures there; putting games on a card writes the art where the
+card's frontend expects it, whatever folder it came from.
+
+[merge-look-lt]: screenshots/merge-look-console-shelf-light.png
+[merge-look-dk]: screenshots/merge-look-console-shelf-dark.png
+[merge-prev-lt]: screenshots/merge-preview-console-shelf-light.png
+[merge-prev-dk]: screenshots/merge-preview-console-shelf-dark.png
+[merge-confirm-lt]: screenshots/merge-confirm-console-shelf-light.png
+[merge-confirm-dk]: screenshots/merge-confirm-console-shelf-dark.png
+[merge-res-lt]: screenshots/merge-result-console-shelf-light.png
+[merge-res-dk]: screenshots/merge-result-console-shelf-dark.png
 [fixup-duplicates-lt]: screenshots/fixup-duplicates-console-shelf-light.png
 [fixup-duplicates-dk]: screenshots/fixup-duplicates-console-shelf-dark.png
 [fixup-across-lt]: screenshots/fixup-across-console-shelf-light.png
@@ -1059,6 +1290,50 @@ since you looked, see [troubleshooting](troubleshooting.md#fix-up-says-romperoom
 [relink-rev-dk]: screenshots/relink-review-console-shelf-dark.png
 [relink-res-lt]: screenshots/relink-results-console-shelf-light.png
 [relink-res-dk]: screenshots/relink-results-console-shelf-dark.png
+
+## Junk files
+
+Finder (on a Mac) and Windows leave small files beside your games: `._` files (AppleDouble: a
+Mac's icons and labels on drives that can't hold them, such as a NAS share, FAT and exFAT), a
+`.DS_Store` in folders Finder opened, and `Thumbs.db` where Windows made picture thumbnails. They
+only hold metadata, never a game. Romperoom never counts them as games and never copies them from
+your library to a card.
+
+To clean them out of a library, open **Fix up › Junk files** (with several libraries, pick the
+library under **Library to tidy** first) and press **Find junk files in** and the library's name.
+It reads the library's folders and changes nothing; it shows how many files it has looked at
+so far, and **Stop** ends it (nothing is removed). Then it shows how many it found and their
+size, by kind, a list of them (100 at a time), and what it leaves:
+
+- **Not removed:** a file with a junk file's name whose contents are not metadata (a game called
+  `._something` stays, and so does a `._` file holding a classic Mac file's resource fork), a
+  link, a file with a second name elsewhere (a hard link), or one that could not be read, each with
+  the reason.
+- **System folders left alone:** folders macOS, a NAS or Windows keep for themselves, such as
+  `.Spotlight-V100`, `.Trashes` and `.fseventsd`. Romperoom never looks inside them or removes
+  them. Romperoom's own folders (its art store, files set aside) are never touched either, nor is
+  another drive mounted inside the library (listed as **Other drives inside, left alone**).
+
+**Remove** (with the count and size) asks once: "They are only Finder and Windows metadata. This
+can't be undone." Each file is checked again just before it goes; one that changed since the list
+was made stays. While it removes, it shows how many of the files are done; **Stop** ends it after
+the file in hand, and the result says how many were removed. The result says how many were removed, and lists any that were left and why.
+History lists the removal as deleted forever. If the drive is read-only (a NAS share mounted
+read-only, for example), nothing is removed and the result says so.
+
+| Light                                                                  | Dark                                                                        |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| ![Junk files found](screenshots/fixup-junk-console-shelf-light.png)     | ![Junk files found, dark](screenshots/fixup-junk-console-shelf-dark.png)     |
+| ![Remove junk files?](screenshots/fixup-junk-confirm-console-shelf-light.png) | ![Remove junk files?, dark](screenshots/fixup-junk-confirm-console-shelf-dark.png) |
+| ![Junk files removed](screenshots/fixup-junk-result-console-shelf-light.png) | ![Junk files removed, dark](screenshots/fixup-junk-result-console-shelf-dark.png) |
+
+On an SD card, see steps 4 and 6 of [Put games on an SD card](#put-games-on-an-sd-card): a copy
+from a Mac to a FAT or exFAT card removes the `._` files macOS made for it, and **Clean up this
+card** on the Done screen finds the rest in the device's folders.
+
+| Light                                                                     | Dark                                                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| ![Clean up this card](screenshots/deploy-cleanup-console-shelf-light.png) | ![Clean up this card, dark](screenshots/deploy-cleanup-console-shelf-dark.png) |
 
 ## Standardise your library
 

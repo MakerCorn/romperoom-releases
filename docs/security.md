@@ -33,6 +33,7 @@ The short version:
 - [Emptying the quarantine](#emptying-the-quarantine)
 - [Deploy containment](#deploy-containment)
 - [Tidying up](#tidying-up)
+- [Junk files](#junk-files)
 - [What a compromised renderer can and cannot do](#what-a-compromised-renderer-can-and-cannot-do)
 - [Gaps](#gaps)
 - [Packaging checklist](#packaging-checklist)
@@ -233,9 +234,9 @@ both handlers.
 ## IPC channels
 
 The page reaches the host only through `window.romperoom`. That object has one function per
-channel in the `IPC` table (`src/shared/ipc.ts`), plus eight push listeners (`onScanProgress`,
+channel in the `IPC` table (`src/shared/ipc.ts`), plus nine push listeners (`onScanProgress`,
 `onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress`,
-`onArtProgress`, `onSyncProgress` and `onStandardiseProgress`). Raw
+`onArtProgress`, `onSyncProgress`, `onStandardiseProgress` and `onJunkProgress`). Raw
 `ipcRenderer` and IPC event objects never cross the bridge. `IPC_MATCHES_API` makes the type
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
@@ -292,6 +293,8 @@ test checks that this table lists exactly the channels in `IPC`.
 | `tidy:recoverList`          | page → host | Tidy runs and deletions a crash interrupted, by library name                                                                                                                                            | no                                                                                                                                               |
 | `tidy:resolveJournal`       | page → host | Finishes or undoes one interrupted run or deletion, or discards the rest of a Tidy up run (catalog only)                                                                                                | the library                                                                                                                                      |
 | `tidy:reconnectLibrary`     | page → host | After "Is this still your library?": re-points a library's runs at the folder now at its path (`{ confirm: true }`; the engine refuses an empty or different folder)                                    | no (reads the library folder)                                                                                                                    |
+| `tidy:mergeArt`             | page → host | Merge picture folders: what moving each console's `Imgs` pictures into `images` would do, names only (a library id and a page; held under a window-bound id)                                            | no (reads the library)                                                                                                                           |
+| `tidy:mergeArtRun`          | page → host | Runs that look once as a tidy job: the engine reads both folders again and refuses on any change, then moves and sets aside under the library's lock (Undo is `tidy:undo`)                              | the library                                                                                                                                      |
 | `tidy:progress`             | host → page | Tidy progress, then the result, to the window that started it                                                                                                                                           | no                                                                                                                                               |
 | `identify:importDat`        | page → host | Opens the host's file picker and imports the picked game database (DAT); no path from the page                                                                                                          | catalog only (reads the picked file)                                                                                                             |
 | `identify:listDats`         | page → host | The imported game databases                                                                                                                                                                             | no                                                                                                                                               |
@@ -338,6 +341,11 @@ test checks that this table lists exactly the channels in `IPC`.
 | `standardise:relinkReview`  | page → host | Reads a re-link review of a library: leftover pictures one game clearly matches, and game list entries whose game file is gone; a library id only                                                       | catalog only (checksums)                                                                                                                         |
 | `standardise:relinkRun`     | page → host | Renames the chosen pictures after their game and updates the game lists that name them, and re-points the chosen entries; the re-link review's plan id and its item ids only                            | library (pictures, game lists, `.romperoom/lists-backup`, `.romperoom/tmp`) and catalog                                                          |
 | `standardise:progress`      | host → page | Standardise progress, then the result, to the window that started it                                                                                                                                    | no                                                                                                                                               |
+| `junk:look`                 | page → host | Reads a library (its id) or the card a copy of this window wrote to (the copy's plan id) for junk files (Finder and Windows metadata, each checked by content); never a path                            | no                                                                                                                                               |
+| `junk:page`                 | page → host | Another page of a look's files; the look's id only (bound to the window that made it)                                                                                                                   | no                                                                                                                                               |
+| `junk:remove`               | page → host | Removes a look's files for good, each checked again first; the look's id only; a library's removal holds its lock and is listed in History                                                              | library or card (junk files only), catalog (History)                                                                                             |
+| `junk:cancel`               | page → host | Stops this window's look or removal (a removal finishes or puts back the file in hand first)                                                                                                            | no                                                                                                                                               |
+| `junk:progress`             | host → page | How far this window's look (entries looked at) or removal (files done of all) is                                                                                                                        | no                                                                                                                                               |
 
 `engine:gameLetters`, like `engine:listGames`, takes no path: only a console id (checked by the
 engine's `systemIdArg`) and a search string of bounded length, under the same filter
@@ -370,6 +378,12 @@ every argument before the engine checks it again. `identify:importDat` takes no 
 page: the host opens its own file picker and passes the file it returns to the engine. A run's
 progress and result go only to the window that started it, and after a complete scan the host
 identifies that library by itself when a game database is imported.
+
+The `junk:` channels are handled by the junk host (`src/main/junk-host.ts`). They take a
+library id, a plan id of a copy this window started (the deploy host remembers where that copy
+wrote), and a look id bound to the window that made it; never a path. Every message goes back
+through `pageText`, so a card or folder is named, never shown by its path. What a removal may
+touch is the engine's rule: [Junk files](#junk-files).
 
 The `dats:` channels are handled by the dats host (`src/main/dats-host.ts`). `dats:download`
 and `dats:openLink` take no URL or path from the page. `dats:openLink` takes a key of the closed
@@ -999,6 +1013,78 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
   changed keeps its text; the plan's missing `<game>` entries are added before its last
   `</gameList>`. The card's text is read with a 64 MiB cap, as strict UTF-8, in one pass. A file
   that is not a game list it can read stays a conflict.
+- **Zipped games unzipped on copy are untrusted input** (`deploy/unzip.ts`, for a system with
+  `extractArchives`: R4xMP, DSpico). No name inside a zip is ever a path: the card file is named
+  after the zip itself (its stem, plus the extension of the one ROM chosen, which is one of the
+  profile's `[a-z0-9]` extensions), then cleaned like any destination, so an entry named
+  `../../x.nds`, `/etc/x.nds` or `C:\x.nds` only tells which entry is the game (zip-slip cannot
+  happen). A name is decoded only to tell what an entry is (its extension, or that a computer
+  added it: `__MACOSX/`, `._`, `.DS_Store`), and is never kept; yauzl's own name checks are off
+  because nothing is extracted by name. The planner reads only the central directory (at most 10,000 entries and a
+  16 MiB directory; zip64 fields read with bounds checks; anything else malformed is "damaged")
+  and refuses an entry that is locked, not stored or deflated, stored with two different sizes,
+  whose compressed bytes end past the zip, that claims more than 1,100 bytes per compressed byte
+  (more than deflate can reach: a size that lies, as in a zip bomb), or more than 8 GiB, and
+  the card's file limit (FAT32's 4 GiB - 1 byte) is weighed against the unzipped size. The writer
+  never trusts the plan's listing either: it finds the entry again by where its local header
+  starts (refusing one that is gone, listed twice, locked, or with other sizes, CRC-32 or
+  method), streams it with
+  yauzl's size validation and its own byte count, stops past the declared size, checks the
+  CRC-32 at the end, and only then renames the part file into place; the SHA-1 is checked
+  against the catalog when the catalog's hash is of that entry, and the file is read back as any
+  copy is. A zip that fails fails that one file. At most one entry is ever unzipped, and only into
+  the card's part file: nothing is unzipped into memory or into the library, and the library's
+  zip is only read. Memory and time are bounded too: only a fixed-size verdict per zip is
+  remembered (at most 50,000), never a zip's entries, so a hostile pack with huge directories
+  costs one directory read at a time, and each plan reads zips for at most about 2 s on the main
+  process before leaving the rest "not checked yet".
+- **Pictures converted to PNG are untrusted input** (`image/convert.ts`, `image/to-png.ts`,
+  `deploy/convert.ts`, decision 67). A JPEG or GIF from the library (scraped, downloaded or copied
+  from anywhere) is decoded only to make the card's PNG, and only in the **picture worker**, a
+  worker thread, never on the main process. What is bounded, and how:
+  - **Size, before anything is allocated:** the pixel count from the header, at most 2048 × 2048
+    (4,194,304 pixels, any shape); a 20000 × 20000 header is refused without jpeg-js ever being
+    called (tested with a spy on it).
+  - **A JPEG's structure, before decoding:** the whole file is walked (each segment by its length,
+    each scan's data to its end: linear, nothing decoded). Refused: more than 100 scans or 1,024
+    segments, a scan order the standard forbids (libjpeg's rule: a progressive scan refines a
+    coefficient only one bit below its last scan, so no coefficient is decoded more than 14
+    times; a sequential scan covers its components once), no image data, or less than one bit of
+    data per block (a picture claiming 2048 × 2048 pixels in a few hundred bytes). This is what
+    stops the review's "scan bomb": 100 refinement scans of 22 bytes each, 2.3 KB, which made
+    jpeg-js work for 1.1 s (3,000 of them, 66 KB, froze the app for 26 s), is refused in well
+    under a millisecond. The plan does the same walk, so such a picture is listed as "left out"
+    with its reason before any copy. CMYK, 12-bit, lossless and arithmetic-coded JPEGs are refused
+    by their headers. jpeg-js also gets its own caps (`maxResolutionInMP` 4.19,
+    `maxMemoryUsageInMB` 160, tolerant decoding off).
+  - **Time, by a hard limit:** each picture has 10 s in the worker; past that the worker is
+    terminated and that picture fails ("took too long: not converted"; nothing written, the run
+    goes on with the next picture, which starts a new worker). Cancel terminates the worker at
+    once. The main process only sends bytes and waits: its event loop stays free while a picture
+    converts (tested: the loop's lag stays a fraction of the conversion's time). A worker that
+    dies fails its picture; three failures in a row with nothing converted (a worker that cannot
+    start) and no further worker is started in that run.
+  - **Cost of a legal picture at the cap:** about 1.2 s and about 390 MB of memory at its peak
+    (a 2048 × 2048 progressive JPEG of noise, 12 MB: decode 0.56 s, PNG encode 0.6 s, measured on
+    an M-series Mac); a runner or laptop about seven times slower takes 7 to 8 s, inside the
+    limit. The memory is the worker's, in the app's process: the heap limit of the worker (256 MB)
+    does not cover typed arrays, so the pixel cap and jpeg-js's memory cap are what bound it.
+  - **GIF** is read by Romperoom's own reader, not omggif: fuzzing found a damaged LZW stream that
+    makes omggif 1.0.10 loop for ever. Romperoom's LZW reader refuses any code that names no entry
+    yet, so every string ends within 4096 steps, and every code consumes at least three bits of
+    data, so the work is bounded by the file. Only the first frame is read.
+  - **Containment:** every failure of either decoder, whatever it throws, is a refusal of that
+    picture (`convertToPng` never throws), listed with its reason. The fuzz test (truncated,
+    overwritten and garbage-filled JPEGs and GIFs, a fixed seed) checks that each mutant either
+    decodes or throws an Error (never anything else, never a crash), that some of them do fail,
+    and that none takes a second; many damaged JPEGs still decode (to a damaged-looking picture).
+  - **The library and the card:** the source is read whole, at most 16 MiB, through a read-only
+    open; the card name is the ROM's stem plus `.png` (never anything from inside the picture); the
+    PNG goes through the usual part file, no-clobber rename, read-back and manifest, and is never
+    larger than the plan counted. A converted PNG is never adopted, so a file at its name the
+    player put there stays theirs. A PNG converted earlier is never removed because its picture
+    could not be checked this time (unreadable, changed since the scan, not checked yet): it is
+    kept and stays recorded.
 - **`ROMPEROOM_TEST_VOLUME`** lists a folder as the only volume, for tests. A packaged build
   ignores it ([configuration.md](configuration.md#environment-variables)).
 
@@ -1033,6 +1119,23 @@ follows the deploy host's pattern.
 - **Quitting.** While a tidy job runs, quitting asks first ("Stop tidying and quit?", or "Quit
   while files are being deleted?"); confirming cancels the run between files and waits up to 10
   seconds for it to stop.
+- **Merge picture folders** (decision 66). `tidy:mergeArt` reads only and returns names (a
+  console folder, a file name in `images` or `Imgs`), never a path; its look is held under a
+  window-bound id like a plan. `tidy:mergeArtRun` takes that id only. The engine takes the
+  library's `op` lock (all or none, never waiting), reads the folders again with every content
+  hash and refuses (`TidyPlanError`, nothing moved) if anything shown differs or the catalog
+  changed (junk files written meanwhile left out). Which name reaches which file is asked of the
+  file system (lstat, then device and inode), never decided by a string fold, so a FAT32 or exFAT
+  card never has another game's picture set aside for a name it keeps apart. Every game list in
+  the console folder is read and one that can't be read fails closed. Only regular files with one
+  name, of the scanner's picture types, move, and only from
+  `<console>/Imgs` to `<console>/images` or into the library's own `.romperoom-quarantine`; a
+  linked `Imgs` or `images`, a console folder reached through a link, a link, a folder, a hard link
+  or any other file is never moved or followed. Each step is a Tidy up journal step: it re-hashes
+  its file against the hash read under the lock and refuses a link on the way just before it
+  moves, never overwrites (`renameNoClobber`), and a set-aside of an `Imgs` copy is guarded by the
+  copy kept in `images` (the last-copy guard). `Imgs` is removed with `rmdir` (which refuses a
+  folder that is not empty) only after it is read again empty, and only when the run emptied it.
 - **Recovery.** A crash mid-run leaves its journal `running`. At startup the page shows what was
   interrupted (`tidy:recoverList`, names only) and offers to finish it or undo what was done
   (`tidy:resolveJournal`). Neither runs until the library's identity is proven again; a library
@@ -1040,6 +1143,61 @@ follows the deploy host's pattern.
   the page asks "Is this still your library?" and only a Yes calls `tidy:reconnectLibrary`
   (`{ confirm: true }`, a known library id; never a path). The engine still refuses an empty
   folder or another drive whatever the page says.
+
+## Junk files
+
+Fix up's **Junk files** and the SD card's **Clean up this card** remove Finder and Windows
+metadata for good (decision 65). The code is `packages/engine/src/junk/`. What may be removed:
+
+| Rule                                                | Checked how                                                                                                                                          |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only `._*`, `.DS_Store` and `Thumbs.db`             | The name (`junkKindOfName`; the last two in any case, as case-insensitive volumes see them); the manifest and every kernel or launcher file fail it  |
+| Only metadata, by its contents                      | AppleDouble: magic, version, a sane entry list, no data fork, a resource fork no longer than macOS's empty one (286 bytes), no other large entry     |
+|                                                     | `.DS_Store`: `00 00 00 01 Bud1` and a root block whose two offsets agree and lie inside the file; `Thumbs.db`: the OLE signature, version, byte order and sector size |
+| Never larger than that kind of metadata             | 1 MiB (AppleDouble), 16 MiB (`.DS_Store`), 64 MiB (`Thumbs.db`), before anything is read                                                            |
+| Only a regular file with one name                   | `lstat`: a link, a folder or a special file stays; `nlink > 1` (a hard link) stays (see below for SMB)                                               |
+| Never through a link, never outside the place       | Each folder on the way `lstat`ed as a real folder; the folder's real path inside the root's real path; then rename-and-verify (below)               |
+| Never Romperoom's own folders or a system folder    | No segment `.romperoom*`, macOS's (`.Spotlight-V100`, `.Trashes`, `.fseventsd`…), a Linux `.Trash-<uid>`, a NAS's or Windows' (`@eaDir`, `$RECYCLE.BIN`…) |
+| Never another drive mounted inside                  | A folder on another device than the root is listed and never walked                                                                                  |
+| Still the file the list showed                      | Device, inode, size and time from the list, read again right before; the opened file (`O_NOFOLLOW`) is that one                                      |
+| A card: only the device's folders                   | `cardAllows`: inside a folder the profile writes into, or the `._` beside one of those folders; no `..` or empty segment                            |
+| The copy's own clean-up: only what this copy caused | `causedAppleDoubles` (beside a file it wrote or a folder it made, in the profile's folders) and modified at or after the run's start on the card's clock |
+| A library's removal never overlaps other work on it | `acquireLibraryLock(path, 'junk')`, all or none, never waiting; a look is refused while another job holds it                                         |
+| A card's removal never overlaps a copy              | The deploy facade's card slot: no copy starts while it runs, and it refuses while one runs                                                          |
+
+**Platforms.** `O_NOFOLLOW` and `O_NONBLOCK` are used only where the system defines them: on
+Windows the open follows a final link and opens a folder, so the `fstat` of the opened file,
+compared with the `lstat` made just before (a regular file, the same device and inode), is the
+guard there, as everywhere. Real paths come from the native `realpath` on both sides of every
+comparison (no 8.3 short names; a junction is a link to `lstat`). Paths are joined and compared
+with `path`, never by '/' string tests; stored paths are '/'-separated and split before joining.
+
+**Rename and verify.** Node has no `unlinkat`, so a path checked and then unlinked could be led
+elsewhere by a folder on the way swapped for a link in between. So each file is first renamed to
+`.romperoom-junk-<random>` in its own folder (onto an exclusive empty reservation: nothing is
+replaced); the entry under that name must then be the very file checked (regular, one name, same
+device, inode, size and time) in a real folder chain inside the root; only then is that unique
+name unlinked. Anything else is renamed back (or, when its name was taken meanwhile, left under
+the unique name) and reported, never removed. What this guarantees, per file system:
+
+- **FAT and exFAT** (cards) cannot hold links, so the swap cannot happen there at all.
+- **APFS, HFS+, ext4, NTFS and SMB shares with links:** the swap is caught for the check-to-rename
+  window. What remains is the instant between the last look at the unique name and its unlink: a
+  swap there would have to bring a file of that same random name, which nothing can guess. A crash
+  in that instant leaves the verified junk file under its unique name (the scanner ignores it).
+- **SMB shares:** `nlink` is often reported as 1 whatever the truth, so a hard link there cannot
+  be told apart. Removing one name of a hard-linked file only removes that name: the data stays
+  under its other name.
+
+The root must still be the folder the list read (real path, device and inode) or nothing is
+removed. A read-only volume (`EROFS`), or one that refuses the first removal (`EACCES`, `EPERM`),
+stops the run with nothing changed, and is never tried again. A busy file (`EBUSY`, and `EPERM`
+on Windows, where a virus scanner or an indexer holding a file open shows as that) is renamed or
+unlinked up to three times with a short wait, then reported as not removed. A file that went away meanwhile is
+skipped. **Stop** (`junk:cancel`) takes effect between two files: the one in hand is removed or
+put back first, the library lock is released, and the result says `cancelled` with what was
+removed. The page names a library by id and a card by the plan id of a copy this window started;
+the host turns those into places and passes every message back through `pageText`.
 
 ## What a compromised renderer can and cannot do
 
@@ -1057,6 +1215,9 @@ somehow became markup.
   catalog rows, not files. A rescan or the player can redo them.
 - Open the native folder dialog.
 - Set aside duplicate copies and unused artwork of a library it has added, and put them back.
+- Merge a library's picture folders: move pictures from a console's `Imgs` into its `images` and
+  set aside the smaller (or an identical) one of two with one name, and put them back. Only
+  pictures inside that console's two folders move, never over anything.
   Only catalogued files of that library move, only into its `.romperoom-quarantine` folder. The
   same holds across libraries: each extra copy moves into its own library's set-aside folder,
   and only while the copy kept in the other library is proven.
@@ -1213,6 +1374,12 @@ example) are in [development.md](development.md#known-limitations).
   sandbox.
 - **`addLibrary` accepts any absolute directory from the page,** not only one the folder dialog
   returned. A compromised renderer can therefore scan any readable folder (above).
+- **Picture conversion's memory is the app's.** The picture worker is a thread of the app's
+  process: a picture at the cap holds about 390 MB at its peak while it converts (bounded by the
+  pixel cap and jpeg-js's memory cap, not by the worker's heap limit, which typed arrays escape).
+  The packaged app's self-check starts the picture worker and converts a tiny embedded JPEG
+  (verify-package checks that it and its imports are unpacked). A worker file left inside
+  `app.asar` still starts on Electron 44 (measured), so only `app-location` catches that.
 - **The builds are not code-signed or notarized**
   ([decisions.md](decisions.md#16-the-beta-ships-unsigned)). Players check downloads against
   `SHA256SUMS.txt`, which only helps if they fetch it from the releases page. Fuses and asar
@@ -1348,9 +1515,11 @@ silicon) they have also passed by hand, on Windows on CI only.
       `main/index.ts`), and the renderer guards are byte-identical to 0.4.0
       ([main-process requests](#main-process-requests)).
 - [x] **The packaged layout works:** `--self-check` opens a fresh catalogue with the shipped
-      SQLite, hashes a file through the unpacked worker, serves `index.html` through `app://`
+      SQLite, hashes a file through the unpacked worker, converts an embedded JPEG to PNG
+      through the unpacked picture worker, serves `index.html` through `app://`
       from inside `app.asar` with its CSP, and refuses a `..` escape with 403. Mutations: the
-      403 check and the DevTools check in `self-check.ts`.
+      403 check and the DevTools check in `self-check.ts`; the picture worker's path (a wrong
+      folder fails `picture-worker`, a path inside `app.asar` fails `app-location`).
 - [x] **Development seams ignored when packaged:** `ROMPEROOM_TEST_PICK_FOLDER`,
       `ROMPEROOM_TEST_SCAN_ONLY`, `ROMPEROOM_SMOKE_EXIT_MS`, `ROMPEROOM_TEST_UNGUARDED_WEBRTC`,
       `ROMPEROOM_TEST_LARGER_THAN_SCREEN`, the deploy seams (`ROMPEROOM_TEST_VOLUME`,

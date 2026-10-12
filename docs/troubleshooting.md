@@ -57,6 +57,10 @@ these problems can harm your collection.
 - [A picture wasn't offered for re-linking](#a-picture-wasnt-offered-for-re-linking)
 - [A game list entry wasn't re-pointed](#a-game-list-entry-wasnt-re-pointed)
 - [A frontend can't find a picture after a re-link was undone](#a-frontend-cant-find-a-picture-after-a-re-link-was-undone)
+- [A junk file wasn't removed](#a-junk-file-wasnt-removed)
+- [Junk files can't be removed from a drive](#junk-files-cant-be-removed-from-a-drive)
+- [The card still has macOS metadata files after copying](#the-card-still-has-macos-metadata-files-after-copying)
+- [Merge picture folders left something in Imgs](#merge-picture-folders-left-something-in-imgs)
 - [Windows and Linux](#windows-and-linux)
 - [For developers](#for-developers)
 
@@ -816,6 +820,101 @@ its own:
   back but that list keeps the text it has now, which names the new ones. Let your frontend rescan
   or re-scrape its game list; the list as it was before the re-link is in
   `.romperoom/lists-backup/<run>/` in your library.
+
+## A junk file wasn't removed
+
+**Fix up › Junk files** lists every file it leaves under **Not removed**, with the reason:
+
+- **doesn't look like metadata:** the file has a junk file's name (`._…`, `.DS_Store`,
+  `Thumbs.db`) but its contents are something else, so it may be yours (a game called
+  `._something`, say). Romperoom never removes it; check it, and delete it yourself if you are
+  sure.
+- **larger than metadata files are:** a junk name on a file bigger than that kind of metadata
+  ever is. It is left for the same reason.
+- **it holds a resource fork (real data, not only metadata)** or **it holds a file's data:** a
+  `._` file that carries a classic Mac file's resources (a program, a font). On a NAS, FAT or
+  exFAT drive that `._` file is their only copy, so Romperoom never removes it.
+- **it changed while it was being removed; it was put back:** the file, or a folder on the way to
+  it, changed in the instant Romperoom was removing it, so it was renamed back instead. If its
+  name was taken meanwhile, it is left as `.romperoom-junk-…` in the same folder, with the reason
+  saying so; that file is the junk file Romperoom checked, and you can delete it yourself.
+- **it is a link** or **it has another name elsewhere (a hard link):** removing it could affect
+  the other place it points to or is also stored as.
+- **it changed since the list was made:** the file was replaced or edited after the list. Press
+  **Find junk files in** the library again and remove the new list.
+
+Folders under **System folders left alone** (`.Spotlight-V100`, `.Trashes`, `.fseventsd`, a Linux
+`.Trash-1000`, a NAS's `@eaDir` or `#recycle`, Windows' `$RECYCLE.BIN`) belong to the system and
+are never opened. **Other drives inside, left alone** are drives mounted inside the library: clean
+them as a library of their own if you want to. Delete
+their contents from the system that made them if you need the space.
+
+## Junk files can't be removed from a drive
+
+"The drive is read-only, so nothing more could be removed" or "Romperoom is not allowed to remove
+files there" means the drive refused: a NAS share mounted read-only, a locked SD card, or a folder
+you can't write to. Nothing was changed, and Romperoom does not try again by itself. Mount the
+share read-write (or remove the files with the NAS's own file manager), unlock the card, then find
+the junk files again. "The library is busy" means a scan, a copy or a tidy is using that library:
+wait for it to finish. "It could not be removed (EBUSY)" (or EPERM on Windows) means another program
+held the file open, often a virus scanner or an indexer: Romperoom tried it a few times, then left
+it. Find the junk files again later.
+
+## The card still has macOS metadata files after copying
+
+A Mac writes a `._` file beside each file and folder it copies to a FAT or exFAT card. A copy
+removes the ones it made unless **Remove the ._ files macOS adds** was unticked on the Check step.
+It removes only `._` files made or changed during that copy, beside a file it wrote or replaced
+or a folder it made. It leaves the rest: `._` files that were on the card before (beside your own
+saves, or beside a game an older copy wrote and this one did not touch), the `._` beside folders
+that were already there, and the one beside `romperoom-manifest.json` at the card root. (When a
+copy replaces a game, macOS itself puts the new file's `._` in place of the old one, so that one is
+new, and removed.) Press **Clean up this card** on the Done screen to see
+and remove the ones in the device's folders. Windows and Linux never write these files.
+## Merge picture folders left something in Imgs
+
+**Merge picture folders** (Fix up › Artwork) moves only pictures: png, jpg, jpeg, webp and gif
+files. Everything else in `Imgs` stays, and so does the `Imgs` folder while anything is in it. The
+section lists each one under **Left in Imgs** with why:
+
+- **not a picture**: `Thumbs.db` (Windows), the `._` files a Mac leaves on drives that aren't its
+  own, `.DS_Store`, or any other kind of file. **Fix up › Junk files** removes the system's own
+  files (`._`, `.DS_Store`, `Thumbs.db`); anything else is yours to keep or delete. Once `Imgs` is
+  empty you can remove it.
+- **a folder**: nothing inside a folder in `Imgs` is moved.
+- **a link** or **a file that also has another name (a hard link)**: moving one could change what
+  another place shows, so it is never moved.
+- **images has a folder or link with this name**: the picture of that name in `images` isn't a
+  plain file, so Romperoom can't compare the two.
+- **images has a file this name reaches, but Romperoom can't tell which one**: the drive says the
+  name is taken in `images`, but no file listed there is that file (seen on some network shares),
+  or the file it reaches has another name (a Windows short 8.3 name, `SUPERM~1.PNG` reaching
+  `Super Mario Bros.png`). Nothing is guessed: the picture stays.
+- **images is on another drive, where another picture here would take its name**: `images` is a
+  different drive from `Imgs` (one mounted inside the other), whose letter-case rules may join two
+  names `Imgs` keeps apart. The first moves; the other stays and is never set aside.
+
+A FAT32 or exFAT card written by a Mac has a hidden `._` file beside every picture. When some of
+them stay after the merge, the result says "Imgs still holds N hidden files" and `Imgs` stays:
+Romperoom never deletes them here: **Fix up › Junk files** finds and removes them (by content, after a
+preview), then the
+empty `Imgs` can go.
+
+A whole console is left alone, and says why, when its `Imgs` or `images` folder is a link, when it
+has two folders spelled `images` (or `Imgs`) in different letter case, or when a game list in it
+(`gamelist.xml`, `miyoogamelist.xml`, Pegasus's `metadata.pegasus.txt`, in any letter case; not
+lists outside the console folder, or Onion OS's caches) names
+pictures inside `Imgs` (moving them would break those entries: let your frontend rewrite its list
+with `images` first, or move the pictures yourself). A list that can't be read as plain UTF-8 text
+(saved as UTF-16, binary, or over 16 MB) leaves the console alone too, as "couldn't be read". An `Imgs` that was already empty before a
+merge is never removed: delete it yourself.
+
+If a merge stopped part way (you pressed **Cancel**, or the drive went away), the files that
+already moved stay moved and `Imgs` is kept even if it is now empty: **Finish or undo…** finishes or
+puts them back, and **Merge picture folders** offers what is left the next time. If a picture
+couldn't be moved (it changed, or a file of that name appeared in `images` just before), the result
+lists it with the reason and it stays in `Imgs`; nothing is overwritten. If it was to replace a
+smaller picture in `images`, that one is put straight back, and the result says so.
 
 ## Windows and Linux
 

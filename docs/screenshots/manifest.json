@@ -12,7 +12,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "art-console-shelf-light.png",
@@ -25,7 +25,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "art-results-console-shelf-dark.png",
@@ -38,7 +38,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "art-results-console-shelf-light.png",
@@ -51,7 +51,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "art-review-console-shelf-dark.png",
@@ -64,7 +64,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "art-review-console-shelf-light.png",
@@ -77,7 +77,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "databases-console-shelf-dark.png",
@@ -90,7 +90,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "databases-console-shelf-light.png",
@@ -103,7 +103,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "databases-results-console-shelf-dark.png",
@@ -116,7 +116,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "databases-results-console-shelf-light.png",
@@ -129,7 +129,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "databases-review-console-shelf-dark.png",
@@ -142,7 +142,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "databases-review-console-shelf-light.png",
@@ -155,7 +155,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-check-console-shelf-dark.png",
@@ -168,7 +168,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-check-console-shelf-light.png",
@@ -181,7 +181,33 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "deploy-cleanup-console-shelf-dark.png",
+      "surface": "deploy-cleanup",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "deploy-cleanup-console-shelf-light.png",
+      "surface": "deploy-cleanup",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-device-console-shelf-dark.png",
@@ -194,7 +220,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "b39e815c2c23"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-device-console-shelf-light.png",
@@ -207,7 +233,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "b39e815c2c23"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-done-console-shelf-light.png",
@@ -220,7 +246,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-landing-console-shelf-dark.png",
@@ -233,7 +259,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-landing-console-shelf-light.png",
@@ -246,7 +272,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "deploy-where-console-shelf-light.png",
@@ -259,7 +285,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "drawer-console-shelf-dark.png",
@@ -272,7 +298,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "drawer-console-shelf-light.png",
@@ -285,7 +311,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-across-console-shelf-dark.png",
@@ -298,7 +324,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-across-console-shelf-light.png",
@@ -311,7 +337,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-artwork-console-shelf-dark.png",
@@ -324,7 +350,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "fixup-artwork-console-shelf-light.png",
@@ -337,7 +363,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "fixup-confirm-console-shelf-light.png",
@@ -350,7 +376,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-console-shelf-dark.png",
@@ -363,7 +389,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-console-shelf-light.png",
@@ -376,7 +402,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-duplicates-console-shelf-dark.png",
@@ -389,7 +415,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-duplicates-console-shelf-light.png",
@@ -402,7 +428,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "fixup-history-console-shelf-light.png",
@@ -415,7 +441,85 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-confirm-console-shelf-dark.png",
+      "surface": "fixup-junk-confirm",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-confirm-console-shelf-light.png",
+      "surface": "fixup-junk-confirm",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-console-shelf-dark.png",
+      "surface": "fixup-junk",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 1200,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-console-shelf-light.png",
+      "surface": "fixup-junk",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 1200,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-result-console-shelf-dark.png",
+      "surface": "fixup-junk-result",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "fixup-junk-result-console-shelf-light.png",
+      "surface": "fixup-junk-result",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "games-grid-console-shelf-dark.png",
@@ -428,7 +532,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "games-grid-console-shelf-light.png",
@@ -441,7 +545,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "games-list-console-shelf-dark.png",
@@ -454,7 +558,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "games-list-console-shelf-light.png",
@@ -467,7 +571,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "home-clean-modern-dark.png",
@@ -480,7 +584,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "home-console-shelf-dark.png",
@@ -493,7 +597,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "home-console-shelf-light.png",
@@ -506,7 +610,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "home-crt-neon-dark.png",
@@ -519,7 +623,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "identify-console-shelf-dark.png",
@@ -532,7 +636,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "identify-console-shelf-light.png",
@@ -545,7 +649,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "libraries-console-shelf-dark.png",
@@ -558,7 +662,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "libraries-console-shelf-light.png",
@@ -571,7 +675,111 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
+    },
+    {
+      "file": "merge-confirm-console-shelf-dark.png",
+      "surface": "merge-confirm",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-confirm-console-shelf-light.png",
+      "surface": "merge-confirm",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-look-console-shelf-dark.png",
+      "surface": "merge-look",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-look-console-shelf-light.png",
+      "surface": "merge-look",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-preview-console-shelf-dark.png",
+      "surface": "merge-preview",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-preview-console-shelf-light.png",
+      "surface": "merge-preview",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-result-console-shelf-dark.png",
+      "surface": "merge-result",
+      "theme": "console-shelf",
+      "mode": "dark",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
+    },
+    {
+      "file": "merge-result-console-shelf-light.png",
+      "surface": "merge-result",
+      "theme": "console-shelf",
+      "mode": "light",
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "deviceScaleFactor": 1
+      },
+      "command": "npm run build && npm run screenshots -w @romperoom/desktop",
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "network-console-shelf-dark.png",
@@ -584,7 +792,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "network-console-shelf-light.png",
@@ -597,7 +805,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "relink-results-console-shelf-dark.png",
@@ -610,7 +818,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "relink-results-console-shelf-light.png",
@@ -623,7 +831,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "relink-review-console-shelf-dark.png",
@@ -636,7 +844,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "relink-review-console-shelf-light.png",
@@ -649,7 +857,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "daa2d8a5751d"
     },
     {
       "file": "removal-console-shelf-dark.png",
@@ -662,7 +870,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "removal-console-shelf-light.png",
@@ -675,7 +883,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "review-console-shelf-dark.png",
@@ -688,7 +896,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "df80944020fe"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "review-console-shelf-light.png",
@@ -701,7 +909,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "df80944020fe"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "screenscraper-console-shelf-dark.png",
@@ -714,7 +922,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "screenscraper-console-shelf-light.png",
@@ -727,7 +935,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "settings-console-shelf-dark.png",
@@ -740,7 +948,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "settings-console-shelf-light.png",
@@ -753,7 +961,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "standardise-results-console-shelf-dark.png",
@@ -766,7 +974,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "standardise-results-console-shelf-light.png",
@@ -779,7 +987,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "standardise-review-console-shelf-dark.png",
@@ -792,7 +1000,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "standardise-review-console-shelf-light.png",
@@ -805,7 +1013,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "sync-results-console-shelf-dark.png",
@@ -818,7 +1026,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "sync-results-console-shelf-light.png",
@@ -831,7 +1039,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "sync-review-console-shelf-dark.png",
@@ -844,7 +1052,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "sync-review-console-shelf-light.png",
@@ -857,7 +1065,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "92df2b1961e0"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "unmapped-console-shelf-dark.png",
@@ -870,7 +1078,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "unmapped-console-shelf-light.png",
@@ -883,7 +1091,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "unreadable-console-shelf-dark.png",
@@ -896,7 +1104,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "unreadable-console-shelf-light.png",
@@ -909,7 +1117,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "wizard-console-shelf-dark.png",
@@ -922,7 +1130,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     },
     {
       "file": "wizard-console-shelf-light.png",
@@ -935,7 +1143,7 @@
         "deviceScaleFactor": 1
       },
       "command": "npm run build && npm run screenshots -w @romperoom/desktop",
-      "appCommit": "1488981dc9c4"
+      "appCommit": "0918e4b32c60"
     }
   ]
 }

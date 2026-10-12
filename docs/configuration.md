@@ -175,12 +175,19 @@ These look like variables but are not:
   data folder, then removes it. The player's catalogue is never opened.
 - `hash-worker`: hashes the bundled `self-check.bin` (1 KB) through the worker pool, so the
   unpacked worker and its dependencies load.
+- `picture-worker`: converts a 638-byte 13 × 7 JPEG embedded in the app to PNG through the
+  picture worker, started at the path the app gives the engine for a copy to a card, with a 30 s
+  limit, and checks the PNG's signature and that its width and height are the JPEG's. It passes
+  as `pictureWorker: ok, …`; otherwise it names the missing worker file and its path, the
+  worker's error (`worker failed: …`) or `timed out`. Bytes in, bytes out: no file, library,
+  card or network.
 - `identify`: writes a one-game DAT for `self-check.bin`, imports it, scans a temporary library
   holding that file (in a temporary sub-folder of the data folder, removed after) and identifies
   it: the check passes only when the run completes with exactly one game identified by hash.
 - `app-protocol`: loads `index.html` through `app://` from inside `app.asar`, checks the CSP it
   carries, and checks that a `..` escape is refused with 403.
-- `app-location`: the page is served from `app.asar`, not from a dev server.
+- `app-location`: the page is served from `app.asar`, not from a dev server, and both workers
+  are real files in `app.asar.unpacked`.
 - `fuses`: the fuse wire read from the running executable matches `src/main/fuse-policy.json`.
 - `dev-tools`: the window would be created with DevTools off and no DevTools menu entry.
 
