@@ -19,7 +19,7 @@ a person publishes it.
 - [Rolling back](#rolling-back)
 - [What packaging guarantees](#what-packaging-guarantees)
 - [Not in this release](#not-in-this-release)
-- [Updates (design only)](#updates-design-only)
+- [Signed checksums](#signed-checksums)
 - [Open items](#open-items)
 
 ## What a release contains
@@ -36,6 +36,7 @@ electron-builder 26 (`apps/desktop/electron-builder.yml`, the version pinned in
 | `Romperoom-X.Y.Z-linux-amd64.deb`       | Linux x64 package (Ubuntu, Debian); installs the sandbox helper    |
 | `Romperoom-X.Y.Z-linux-x86_64.AppImage` | The same app as an AppImage, for other distributions               |
 | `SHA256SUMS.txt`                        | SHA-256 of every file above, for `shasum -a 256 -c`                |
+| `SHA256SUMS.txt.sig`                    | Ed25519 signature of `SHA256SUMS.txt`, for the in-app updater      |
 
 - App id `app.romperoom.desktop`, product name `Romperoom`. The data folder is named after the
   product name ([configuration.md](configuration.md#data-folder)), so renaming the product would
@@ -169,7 +170,9 @@ Then two checks for identify, run on the packaged app
 4. **Watch the release workflow** (Actions, `release`). The tag push rebuilds and re-checks
    everything and drafts a release named `Romperoom X.Y.Z` in the private repository.
 5. **Check the draft by hand** before anyone else sees it:
-   - download each file and run `shasum -a 256 -c SHA256SUMS.txt` (Windows: `Get-FileHash`);
+   - download each file and run `shasum -a 256 -c SHA256SUMS.txt` (Windows: `Get-FileHash`),
+     and check the signature from a checkout of the tag:
+     `node apps/desktop/scripts/update-signature.mjs verify <folder>` prints `OK`;
    - install on a clean macOS account (Apple silicon) and on a Windows PC, open each the
      unsigned way ([the public README](../README.md)), run the wizard on
      a test library, and confirm the wall loads cover art;
@@ -203,7 +206,9 @@ storage has an account quota, and a full quota stopped the 0.7.0 release at its 
    tag has more than one release, or the releases cannot be listed. Creating the draft once,
    before the builds, keeps the three builds from racing to create it. On a run with
    **publish** ticked it checks whether the draft is already finished: notes set, no per-build
-   sums left, every build present, and every file listed in a `SHA256SUMS.txt` that verifies.
+   sums left, every build present, every file listed in a `SHA256SUMS.txt` that verifies, and a
+   `SHA256SUMS.txt.sig` that verifies against the app's keys (a draft without one is built and
+   signed again while the tag's app trusts a key, unless the run allows unsigned).
    If so the run is **publish only**: `build` and `release` are skipped and the checked files
    are published as they are. A draft that is missing or unfinished is built first. A draft
    that looks finished but holds unlisted files or fails its sums stops the run.
@@ -220,26 +225,56 @@ storage has an account quota, and a full quota stopped the 0.7.0 release at its 
    exactly one sums file per build (`mac-arm64`, `win-x64`, `linux-x64`: a missing platform
    fails the run), checks every build's sums against the files and merges them into one
    `SHA256SUMS.txt` (`checksums.mjs --merge`), and fails on any file on the draft that no build
-   listed. It writes the release notes, uploads `SHA256SUMS.txt`, sets the notes on a draft it
-   created (an edited draft keeps its notes), and removes the per-build sums files, leaving
-   the installers and `SHA256SUMS.txt`. It checks the release is still a draft before each
-   change, and stops without changing it once someone has published it.
-4. **publish-public**. Only on **Run workflow** with a tag and **publish** ticked (after
-   `release`, or straight after `prepare` on a publish-only run): it downloads the private
-   draft's files and notes, checks the sums again, syncs the documentation and
+   listed. It writes the release notes, uploads `SHA256SUMS.txt`, removes an earlier run's
+   `SHA256SUMS.txt.sig`, sets the notes on a draft it created (an edited draft keeps its notes),
+   and removes the per-build sums files, leaving the installers and `SHA256SUMS.txt`. It checks
+   the release is still a draft before each change, and stops without changing it once someone
+   has published it.
+4. **sign** (after `release`), on the self-hosted Linux runner (`LINUX_RUNNER_LABELS`, never the
+   Mac) in the `release-signing` environment ([below](#signed-checksums)): downloads `SHA256SUMS.txt` from the draft, requires it to be
+   exactly the list `release` checked (its SHA-256), signs it (`update-signature.mjs sign`, the
+   only step that sees the key), runs the positive and negative controls without the key,
+   attaches `SHA256SUMS.txt.sig` to the draft and verifies what the draft then holds. No key
+   while the app trusts one fails the run.
+5. **publish-public**. Only on **Run workflow** with a tag and **publish** ticked (after
+   `sign`, or straight after `prepare` on a publish-only run): it downloads the private
+   draft's files and notes, checks the sums and the signature again, syncs the documentation and
    drafts the release in the public repository, pushing the docs only after the draft exists.
    Otherwise it writes the manual steps to the run summary
    ([below](#publishing-to-the-public-repository)).
 
 **Releasing an existing tag from `main`.** A run builds the tag's code with the workflow of the
 ref it runs on. So when a tag's own workflow is broken (v0.7.0's used Actions artifacts), run
-the current one from `main` against the tag, without moving it:
+the current one from `main` against the tag, without moving it. The `sign` job cannot receive
+the key on a run from a branch (the environment admits tag refs only). So a run from a branch
+for a tag whose app trusts an update key stops in `prepare`, before any build, and says what to
+do instead; with **allow_unsigned** ticked it builds, skips `sign` and leaves the draft unsigned
+(the app will not install it). A tag older than signed checksums has no `update-signature.mjs`
+and trusts no key: a branch run builds it, and needs **allow_unsigned** too, or its `sign` job
+is refused and nothing is published (a finished draft of it publishes without). What works:
 
 ```sh
-gh workflow run release.yml --ref main -f tag=vX.Y.Z  # builds the private draft
-# check the draft by hand (step 5 above), then:
-gh workflow run release.yml --ref main -f tag=vX.Y.Z -f publish=true  # publishes those files
+# The tag's own run failed only at sign (or later): in its run page, Re-run failed jobs.
+# It runs on the tag ref, keeps the checked list, and signs it. Cheapest; nothing is rebuilt.
+# The tag's own workflow works: run on the tag ref, which can sign.
+gh workflow run release.yml --ref vX.Y.Z -f tag=vX.Y.Z
+# The tag's own workflow is broken and no key is available: build unsigned from main.
+gh workflow run release.yml --ref main -f tag=vX.Y.Z -f allow_unsigned=true
+# A finished (checked) draft, signed or not: publish exactly its files, from any ref.
+gh workflow run release.yml --ref main -f tag=vX.Y.Z -f publish=true
 ```
+
+How each run goes:
+
+| Run | prepare | build, release | sign | publish-public |
+| --- | --- | --- | --- | --- |
+| push of tag `vX` | makes the draft | run | signs (tag ref, the Linux runner) | summary only |
+| Re-run failed jobs of that run | (kept) | (kept) | signs again (tag ref) | as asked |
+| `--ref vX -f tag=vX -f publish=true`, draft unfinished | building | run | signs (tag ref) | publishes |
+| `--ref main -f tag=vX -f publish=true`, draft finished and signed | publish only | skipped | skipped | publishes (verifies the `.sig`) |
+| `--ref main -f tag=vX`, draft unfinished, app trusts a key | **stops here** (before any build) | skipped | skipped | skipped |
+| the same with `-f allow_unsigned=true` | building | run | skipped | publishes unsigned if asked |
+| `--ref main -f tag=<tag before signing>` | building | run | refused (branch ref); skipped with allow_unsigned | only with allow_unsigned: publishes unsigned if asked |
 
 The tag input is checked before use (exactly `vX.Y.Z`, an existing tag) and reaches the shell
 only as an environment variable. A run for the tag input queues behind a run for a push of the
@@ -253,6 +288,12 @@ draft's files. If the release job fails after it removed the per-build sums file
 jobs, not only the failed one: it needs every build's sums on the draft. Once the draft has
 been checked, never re-run a build: start a publish run, which builds nothing for a finished
 draft.
+
+**Recovering a failed sign job.** Fix the cause (the runner offline, the secret missing, a
+payment or spending limit that kept a job from starting), then open the tag's run and **Re-run
+failed jobs**: `sign` runs again on the tag ref with the list `release` checked, and nothing is
+rebuilt. A fix to the workflow itself needs a new tag (a patch version): a tag's run always uses
+the workflow at that tag, so re-running it, or running on that tag, repeats the old workflow.
 
 Every third-party action in `release.yml` and `ci.yml` is pinned to a full commit SHA with the
 release it names as a comment (`uses: actions/checkout@<sha> # v4.4.0`), so a moved tag cannot
@@ -297,11 +338,13 @@ checksum instructions; `SECURITY.md`). It holds no source.
    secret store and copied into the repository secret, never into a file or a chat.
 
 **Each release, automated:** once the tag push has built the private draft and you have checked
-it, **Run workflow** on the tag `vX.Y.Z` (or on `main` with the tag input `vX.Y.Z`) with
+it, **Run workflow** on the tag `vX.Y.Z` (on `main` with the tag input `vX.Y.Z` works too while
+the draft is finished and signed, as nothing is built or signed then) with
 **publish** ticked, while the private release is still a draft. The draft is finished, so the
 run builds nothing. The job downloads the private draft's files and notes, checks the sums
-again, then syncs the documentation: it clones the public repository's `main` with the token
-and runs `scripts/publish-docs.mjs` over the clone. If the sync finds a problem, the job stops
+and the signature again (a draft without `SHA256SUMS.txt.sig` stops it while the app trusts a
+key, unless the run allows unsigned), then syncs the documentation: it clones the public
+repository's `main` with the token and runs `scripts/publish-docs.mjs` over the clone. If the sync finds a problem, the job stops
 there and nothing reaches the public repository. Then it creates a
 **draft** in the public repository with the same files and notes; it stops if that repository
 already has the release. Only once the draft exists does it commit any documentation change as
@@ -325,9 +368,12 @@ git -C /tmp/rr-public commit -m "docs: sync documentation for vX.Y.Z"
 git -C /tmp/rr-public push origin main
 ```
 
-Then download the private draft's files (`gh release download vX.Y.Z --dir dist`), create the
-release `vX.Y.Z` in the public repository, attach every file in `dist/`, paste the private
-draft's notes, update the README table, publish.
+Then download the private draft's files (`gh release download vX.Y.Z --dir dist`), check them
+(`cd dist && shasum -a 256 --check --strict SHA256SUMS.txt`, then, from the checkout,
+`node apps/desktop/scripts/update-signature.mjs verify dist`), create the release `vX.Y.Z` in the
+public repository, attach every file in `dist/`, `SHA256SUMS.txt.sig` included (without it the
+app cannot install the release), paste the private draft's notes, update the README table,
+publish.
 
 **What the documentation sync does** (`scripts/publish-docs.mjs`, the same on both paths):
 
@@ -393,8 +439,11 @@ missing.
 
 ## Secrets and variables
 
-All optional. Unset secrets mean an unsigned build. Secrets live in the cloud secret store and
-are copied into the repository's Actions secrets; the workflow never prints them.
+All optional except `UPDATE_SIGNING_KEY` while the app trusts an update key. Unset signing
+certificates mean an unsigned build. Secrets live in the cloud secret store and are copied into
+the repository's Actions secrets, except the two update keys, which exist only in the
+`release-signing` environment (kind `env`, [below](#signed-checksums)); the workflow never
+prints them.
 
 | Name                          | Kind     | Used by         | What it is                                                    |
 | ----------------------------- | -------- | --------------- | ------------------------------------------------------------- |
@@ -407,6 +456,8 @@ are copied into the repository's Actions secrets; the workflow never prints them
 | `WIN_CSC_KEY_PASSWORD`        | secret   | build (Windows) | Its password                                                  |
 | `PUBLIC_RELEASES_TOKEN`       | secret   | publish-public  | Fine-grained token, Contents read and write, public repo only |
 | `PUBLIC_RELEASES_REPO`        | variable | publish-public  | `OWNER/REPO` of the public releases repository                |
+| `UPDATE_SIGNING_KEY`          | env      | sign            | Ed25519 key (PKCS#8 PEM) that signs `SHA256SUMS.txt`          |
+| `UPDATE_SIGNING_KEY_NEXT`     | env      | sign            | Only during a rotation: the next key (a second `.sig` line)   |
 
 The names are electron-builder's own (its `macOptions` notarize documentation and
 `windowsSignToolManager`), so the same variables sign a local build.
@@ -460,19 +511,119 @@ Cut from the first beta, on purpose:
 
 - **Intel Macs.** Only Apple silicon is built and tested.
 - **Per-machine Windows installs.** The installer is per user only.
-- **Automatic updates.** Players download new versions by hand
-  ([design below](#updates-design-only)).
+- **Automatic install on macOS.** Settings › Updates downloads, verifies and shows the disk image;
+  installing it by itself needs a signed app ([below](#signed-checksums)).
 - **Code signing and notarization.** Wired (above) but not provisioned.
 
-## Updates (design only)
+## Signed checksums
 
-Not built. When it is: electron-updater, reading the public releases repository anonymously (the
-app holds no token). The mac `zip` target already exists because Squirrel.Mac needs it. Today the
-app goes online only when the user presses Download for me, Check for updates or Get cover art
-(to GitHub), or looks up games on ScreenScraper, through the main process's own allowlisted client
-([security.md](security.md#network-isolation)). An updater must add its host the same way or
-through the recipe in security.md (both allowlists, a dedicated session), fetch from the main
-process, verify signatures, and so needs signed builds first.
+Settings › Updates installs a new version only from a release whose `SHA256SUMS.txt` carries an
+Ed25519 signature by a key the app trusts
+([decision 68](decisions.md#68-the-app-updates-itself-from-signed-checksums-without-code-signing),
+[security.md](security.md#main-process-requests)).
+Builds stay unsigned; this signs the list.
+
+- **What is signed:** the exact bytes of `SHA256SUMS.txt` as published. `SHA256SUMS.txt.sig` is
+  one line, the 64-byte signature in base64, or two lines during a rotation (one per signing
+  key). The app accepts the file when every line is a canonical signature (no blank line, no
+  third line, no CRLF) and at least one line verifies under a key it trusts; a line by a key it
+  does not trust is the other key's, for copies that trust that one. The app looks its own file
+  up by name in the signed list, and the name carries the version, so the signature binds the
+  version too.
+- **Where:** the `sign` job, after `release`, signs the merged list
+  (`apps/desktop/scripts/update-signature.mjs sign`) with `UPDATE_SIGNING_KEY` and, during a
+  rotation, `UPDATE_SIGNING_KEY_NEXT`. Only that step sees a key. Before anything is signed or
+  verified, the script checks the list is one the app reads (at most 64 KiB, the exact line
+  format, no name twice: the same rules as the app, pinned by an agreement test). The next step runs the positive
+  control (`verify`, and `tamper-check` requires every line to verify on its own against
+  `apps/desktop/src/main/updates/trusted-keys.json`) and the negative controls (a list changed
+  by one byte and a signature by a fresh key must both be refused), with the public keys only. A
+  secret whose key the app does not trust fails the release before any player gets it. The
+  publish-only check and the public copy verify the `.sig` again, and the public release
+  carries it.
+- **Without the secret** the release fails while the app trusts a key: an unsigned release
+  would leave every player unable to update from the app. **Run workflow** with
+  `allow_unsigned` ticked releases it unsigned anyway (a warning in the run); the app then finds
+  it, says "This release can't be installed from here." and offers the release page. Use it only
+  when no signing key is available. On a tag ref the `sign` job still runs and lets the missing
+  key through; on a branch ref it is skipped. It does not rescue a failed sign job: re-run that
+  job on the tag's own run (the table [above](#the-release-workflow)).
+- **An older tag** has no `update-signature.mjs`, so it cannot be signed: re-release from a tag
+  that has the script (a new patch version) to make in-app-installable files
+  ([above](#the-release-workflow)).
+
+**The release-signing environment.** The update keys exist only as secrets of the GitHub
+environment `release-signing`, whose deployment policy admits tag refs matching `v*` only; the
+`sign` job is the only job that names it. What that protects: a run started from a branch (Run
+workflow on `main` or any other branch) never receives the key, and pull requests never run
+this workflow. The job runs on the self-hosted Linux runner, because GitHub-hosted runners are
+not available on this account, and never on the Mac. What it does not protect: that runner is
+shared with pull-request CI, so anything that could run code on it before a `v*` tag job could
+capture the key from the sign step's environment. Mitigations: `.npmrc` sets
+`ignore-scripts=true` (no dependency's install script runs), the job installs no dependencies,
+and the sign step runs Node by its absolute path under `env -i` with only the keys and
+`ALLOW_UNSIGNED` (no `NODE_OPTIONS`, `PATH`, `LD_PRELOAD` or `HOME` reach it). A runner used for
+signing only is the stronger fix. Nor does it protect against anyone who can push a `v*` tag:
+they can run a workflow from that tagged commit, a changed `release.yml` included, and that run
+receives the key. Today the repository is private with a
+single owner. GitHub rulesets and tag protection, which would limit who may push `v*` tags, are
+not available on this plan.
+
+**The keys trusted today.** `trusted-keys.json` holds at most two public keys:
+
+1. `ci-2026-10`, the signing key: made on 2026-10-12 in memory and stored straight into the
+   environment's `UPDATE_SIGNING_KEY`. It was never written to a file, and GitHub secrets cannot
+   be read back, so no copy of it exists: overwriting or deleting that secret loses it.
+2. A **cold backup key**, made by the owner on their own machine and never stored in GitHub, so
+   that losing the signing key costs one secret change rather than a manual install by every
+   player. Until its line is added, the signing key is the only one.
+
+**Making the cold backup key (owner, once).** On your own machine, in a checkout of the source
+repository; the private key never goes into chat, the repository, an issue or a log. Write it to
+a folder no sync or backup reads (`KEYDIR` below): a file in your home folder, Documents or Desktop
+can be copied by iCloud Drive or Time Machine before you delete it, and deleting a file on an SSD
+is not a secure erase. A RAM disk is safest (on macOS, `hdiutil attach -nomount ram://8192` and
+`diskutil erasevolume`; it is gone at the next restart), or a folder you have excluded from both:
+
+```sh
+node apps/desktop/scripts/updater-keygen.mjs \
+  "$KEYDIR/romperoom-update-backup-key.pem" --id cold-2026-10
+```
+
+It writes the private key to a new, owner-only (0600) file (never replacing an existing one, and
+removing a half-written one) and prints the public key line. Add that line to `"keys"` in
+`apps/desktop/src/main/updates/trusted-keys.json`, its value to the allowlist in `.gitleaks.toml`
+(which otherwise reads a public key as a leaked secret) and to `apps/desktop/test/release-keys.ts`,
+and release. Do not store this key as a secret. Put the `.pem` file in your password manager (or
+the cloud secret store), check that the copy opens, then delete the plaintext file (eject the RAM
+disk, or `rm` the file where you wrote it). The script also prints the `gh secret set … --env
+release-signing` commands (POSIX shell, PowerShell, cmd) for the day a key is to sign.
+
+**Rotation.** The planned way is to promote the backup:
+
+1. Store the cold backup key as the environment's `UPDATE_SIGNING_KEY` (the commands the script
+   printed, from the password manager's copy; delete the plaintext file again), and in the same
+   release replace the retired key's line in `trusted-keys.json` (and `release-keys.ts`) with a
+   new cold backup key made as above; in `.gitleaks.toml` and `release-keys.ts` the retired
+   public key moves to the RETIRED list (gitleaks reads the whole history, which keeps it). Every copy that trusts the
+   backup verifies the new signatures at once, so no player is left behind.
+2. To switch to a key no released copy trusts yet (say the cold backup's only copy was lost, so
+   no trusted key can be promoted when the release key is to be retired): add it in place of the key that is not signing, then sign with both, the old key
+   as `UPDATE_SIGNING_KEY` and the new one as `UPDATE_SIGNING_KEY_NEXT`, until the new key has
+   been trusted by the app for at least one full release cycle; only then sign with the new key
+   alone. The app offers the newest release, not the next one, so a copy that trusts only the old
+   key updates from the app only to a release the old key still signs: the longer the overlap,
+   the fewer players left behind, and a copy older than the overlap's end must be updated by hand
+   once.
+
+**A lost key.** Losing the signing key while the cold backup is trusted: promote the backup
+(step 1 above); no player notices. Losing both: make a new key, trust it in the next release,
+and say in that release's notes that players install it by hand once; a copy that trusts only
+lost keys refuses every later release ("This release can't be installed from here."), because
+nothing can sign for those keys any more.
+
+**What this protects against:** a file or checksum list changed on GitHub. Not against theft of
+a private key: that is the same trust as any signing key held in a secret store.
 
 ## Open items
 

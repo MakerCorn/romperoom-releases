@@ -38,7 +38,7 @@ Game databases add three entries to the same folder, never to a library:
 
 | Name                | What it is                                                                                      |
 | ------------------- | ----------------------------------------------------------------------------------------------- |
-| `libretro-pin.json` | The listing "Check for updates" last stored. The newer of it and the shipped listing is used.   |
+| `libretro-pin.json` | The listing "Check game database updates" last stored. The newer of it and the shipped listing is used.   |
 | `network-log.json`  | The newest 500 request attempts (Network activity). Never headers, bodies or library data.      |
 | `downloads/`        | Temporary: each file is downloaded and verified here, then imported. Emptied at every start.    |
 
@@ -51,6 +51,14 @@ git SHAs and its tree SHA), or GitHub's "not found" for it, one file per reposit
 hours so a second review asks GitHub nothing. Failures that may pass (offline, rate limiting, a
 server error, a malformed answer) are never kept. The pictures themselves go into the library's
 own `.romperoom/media` folder.
+
+App updates add `updates/` (owner-only on macOS and Linux): a download while it is verified,
+then the verified file Romperoom showed you, or a Windows installer kept until the next start
+(with `pending.json`, which tells the next start whether the update ran). It is emptied before
+each download and at every start (keeping an installer that did not finish). A link or a Windows
+junction in its place is removed, never followed. With `ROMPEROOM_DATA_DIR` set on Windows (or a
+data folder other users can open on macOS and Linux), Romperoom downloads and verifies an update
+but only shows it: it does not run the installer itself.
 
 ## Environment variables
 
@@ -73,7 +81,7 @@ not list, or if this page lists one the code never mentions.
 | `ROMPEROOM_TEST_DEPLOY_DELAY_MS`         | `src/main/security.ts`                       | Ignored        | Each chunk a deploy writes waits this long (1 to 5000 ms), so a test can cancel mid-copy.                                                                                                                    |
 | `ROMPEROOM_TEST_VOLUME_BYTES`            | `src/main/security.ts`                       | Ignored        | The test volume reports at most this many bytes (from 4096), to fill a small card.                                                                                                                           |
 | `ROMPEROOM_TEST_TIDY_DELAY_MS`           | `src/main/security.ts`                       | Ignored        | Each file a tidy job moves waits this long first (1 to 5000 ms), so a test can cancel or crash mid-run.                                                                                                      |
-| `ROMPEROOM_TEST_DAT_FIXTURES`            | `src/main/security.ts`                       | Ignored        | An absolute folder the game database download and cover art serve from instead of GitHub: `listing.json`, `metadat/`, `api/`, `art/trees/`, `art/raw/` and an optional `hold.json`.                          |
+| `ROMPEROOM_TEST_DAT_FIXTURES`            | `src/main/security.ts`                       | Ignored        | An absolute folder the game database download and cover art serve from instead of GitHub: `listing.json`, `metadat/`, `api/`, `art/trees/`, `art/raw/`, `updates/` (stand-in releases, the trusted key, how the copy installs and whether its updates folder counts as private; install steps are written to `updates/actions.log`, never taken) and an optional `hold.json`.                          |
 | `ROMPEROOM_TEST_OPEN_EXTERNAL`           | `src/main/security.ts`                       | Ignored        | An absolute file the host appends each URL it would open in the browser to, instead of opening it.                                                                                                           |
 | `ROMPEROOM_TEST_FAKE_KEYCHAIN`           | `src/main/security.ts`                       | Ignored        | `1` keeps the ScreenScraper account with a stand-in for the system keychain, so the e2e suite never asks the real one.                                                                                       |
 | `ROMPEROOM_SCREENSCRAPER_DEV`            | `src/main/scraper/client.ts`                 | Ignored        | ScreenScraper's developer details for Romperoom (JSON: `devid`, `devpassword`, `softname`). Secrets issued to the maintainer; never committed or logged. Without them ScreenScraper reads "can't use yet".   |
@@ -115,8 +123,8 @@ Details:
   packaged). It keeps the real URL allowlist, the size and git SHA checks and the real request
   log, and makes no request. The folder holds `listing.json` (the listing the plan uses, in the
   shipped listing's shape), `metadat/<no-intro|redump>/<file name>` (the files raw URLs answer
-  with), `api/branch.json`, `api/no-intro.json` and `api/redump.json` (the answers "Check for
-  updates" gets) and, optionally, `hold.json`: a JSON list of file names held, writing nothing,
+  with), `api/branch.json`, `api/no-intro.json` and `api/redump.json` (the answers "Check game
+  database updates" gets) and, optionally, `hold.json`: a JSON list of file names held, writing nothing,
   until the job is stopped (so a test can stop mid-job without a delay). A missing file answers
   like a 404. It also stands in for GitHub's cover art: `art/trees/<repo>.json` answers a
   repository's whole-tree listing and `art/trees/<repo>/<Named_X>.json` one kind's (a folder per
@@ -190,6 +198,15 @@ These look like variables but are not:
   are real files in `app.asar.unpacked`.
 - `fuses`: the fuse wire read from the running executable matches `src/main/fuse-policy.json`.
 - `dev-tools`: the window would be created with DevTools off and no DevTools menu entry.
+- `update-signature`: signs a sample checksum list with a fresh Ed25519 key and verifies it
+  through the updater's own check, then checks that a list changed by one byte is refused and
+  that the list of public keys the app trusts (`src/main/updates/trusted-keys.json`) loaded:
+  at most two keys, each written one canonical way, none of them a degenerate (small-order)
+  key that anyone could forge a signature for. A key list that does not load never stops
+  Romperoom starting: the app then trusts no key, so every release reads as one that can't be
+  installed from here, and this check fails with the reason. This proves the packaged app's
+  crypto (Electron ships BoringSSL) can check a release before anything is installed. No file,
+  network or key leaves the process.
 
 Checks that only mean something packaged (`app-location`, `fuses`) are skipped in a dev build.
 Chromium's own state goes to a throwaway profile in the system temp folder, removed on exit. On
@@ -237,6 +254,8 @@ Read by the packaging scripts and the release workflow, never by the app
 | `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD`                     | the same                                | Windows signing certificate (`CSC_LINK` is the fallback).                                                  |
 | `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` | electron-builder                        | Notarization of a signed macOS build.                                                                      |
 | `CSC_IDENTITY_AUTO_DISCOVERY`                              | electron-builder                        | `scripts/package.mjs` sets it to `false` for unsigned builds, so no keychain identity is used.             |
+| `UPDATE_SIGNING_KEY`, `UPDATE_SIGNING_KEY_NEXT` | `scripts/update-signature.mjs` (`sign` only) | The update keys (PKCS#8 PEM) that sign `SHA256SUMS.txt`; the second only during a rotation ([release.md](release.md#signed-checksums)). |
+| `ALLOW_UNSIGNED` | `scripts/update-signature.mjs` | `true`: a release without `SHA256SUMS.txt.sig` is accepted although the app trusts a key (the workflow's `allow_unsigned` input). |
 
 ## Chromium switches
 
@@ -256,13 +275,16 @@ The page saves four keys in localStorage:
 
 | Key                            | Value                                                                                 | Default                                   |
 | ------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `romperoom.settings.v1`        | JSON `{ "theme": …, "mode": … }`                                                      | `console-shelf`, `system`                 |
+| `romperoom.settings.v1`        | JSON `{ "theme": …, "mode": …, "checkAtStart": … }`                                   | `console-shelf`, `system`, `false`        |
 | `romperoom.deploy.v1`          | JSON: the card wizard's last device, consoles, region order and options; never a card | Every console of the device, box art only |
 | `romperoom.deploy.packages.v1` | JSON: the card wizard's saved packages, each a name, a device and its choices         | None saved                                |
 | `romperoom.gamesView.v1`       | `list` or `grid`: the games page's view                                               | none: List when most games have no art    |
 
 - `theme` is one of `console-shelf`, `crt-neon` or `clean-modern`.
 - `mode` is one of `light`, `dark` or `system` ("Match my computer").
+- `checkAtStart` is `true` only when the player turned on **Check once when Romperoom starts**
+  (Settings › Updates): Romperoom then checks for a new version once each time it starts (a page
+  that loads again uses the answer the host already has), and never installs anything. Any other value counts as off.
 - A missing or unreadable value falls back to the defaults.
 - The page reads the value synchronously, so `<html>` has its `data-theme` and `data-mode`
   before the first paint (`src/renderer/lib/settings.ts`).

@@ -12,8 +12,9 @@ the newest games, the libraries and the consoles, each with a list or a grid of 
 (everything that looks after the library), which replaced the Library, Health and Tidy up screens
 ([decision 57](decisions.md#57-home-and-fix-up-replace-library-health-and-tidy-up)). Everything
 marked planned is not built yet,
-and plans change as each milestone starts. Next come signing and automatic updates, then the rest of
-Organize. The detailed plans, with their tests, are in the design history
+and plans change as each milestone starts. Next comes code signing (so macOS can install updates
+by itself), then the rest of Organize. The detailed plans, with their tests, are in the design
+history
 (foundation,
 identify,
 game database downloads,
@@ -67,8 +68,8 @@ Tell you which game each file really is.
 - **Getting game databases:** Fix up › Game databases opens the official No-Intro or Redump page in
   your browser and then the file picker in Downloads, or downloads the DATs for the consoles in your
   library from libretro-database on GitHub (CC BY-SA 4.0), pinned to one commit, after you have
-  reviewed the list. Check for updates moves the pin; Network activity lists every request. Nothing
-  goes online until you press a button ([ADR
+  reviewed the list. Check game database updates moves the pin; Network activity lists every
+  request. Nothing goes online until you press a button ([ADR
   40](decisions.md#40-game-databases-can-be-downloaded-from-one-pinned-source-only-when-asked)).
 - **Matching within one system:** exact hashes first (SHA-1, MD5, then CRC32 with the size),
   then headerless hashes for the systems with copier headers, then every entry of a zip against
@@ -261,12 +262,13 @@ against a real card on Windows, and exFAT is not tested on a real file system.
 - **7z and rar games unzipped on copy:** for the R4xMP and the DSpico, `.7z` and `.rar` games are
   left out ("not unzipped yet"); only `.zip` is unzipped. A zip holding several games (a
   multi-game pack) is not split into them either.
-- **Code signing, notarization, automatic updates and Intel Macs** (see
+- **Code signing, notarization, automatic install on macOS and Intel Macs** (see
   [release.md](release.md#not-in-this-release)).
 
 ## Next
 
-1. **Signing and automatic updates** for the beta builds (see [release.md](release.md)).
+1. **Code signing** for the beta builds, which also lets macOS install updates by itself (see
+   [release.md](release.md#signed-checksums)).
 2. **[Milestone 2, Identify](#milestone-2-identify-offline-dat-matching-done):** only if players
    ask for it (owner decision, 2026-10-09), Romperoom registered with ScreenScraper, its developer
    details in the release build, and its answers confirmed live. Until then ScreenScraper stays

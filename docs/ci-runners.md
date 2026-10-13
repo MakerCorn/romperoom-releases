@@ -101,6 +101,11 @@ docker run -d --name romperoom-linux-runner --restart unless-stopped --shm-size=
   `--restart unless-stopped` brings the runner back whenever Docker starts, with no new token.
 - Its label is `romperoom-linux`: `LINUX_RUNNER_LABELS` is
   `["self-hosted","Linux","X64","romperoom-linux"]`.
+- The release workflow's `sign` job runs here too (never on the Mac): it signs `SHA256SUMS.txt`
+  with the `release-signing` environment's key, because hosted runners are not available on this
+  account. It installs no dependencies and runs Node under `env -i` with only the keys; the
+  runner being shared with pull-request CI is the residual risk
+  ([release.md](release.md#signed-checksums)).
 - Building over SSH on Windows: BuildKit cannot reach Docker Desktop's credential helper outside
   the desktop session. Build with `DOCKER_BUILDKIT=0` and `DOCKER_CONFIG` pointing at a folder
   whose `config.json` is `{}` (the base image is public).

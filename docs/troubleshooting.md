@@ -126,27 +126,26 @@ identify has looked at them since (after removing a database, say): press **Iden
 
 ## A game database won't download
 
-Download for me and Check for updates (Fix up › Game databases), and Get cover art (Fix up ›
-Artwork), are
-the only things that take Romperoom online to GitHub (a ScreenScraper lookup goes only to
-ScreenScraper). Each request is listed under
+Download for me and Check game database updates (Fix up › Game databases), and Get cover art
+(Fix up › Artwork), are the only things that take Romperoom online to GitHub for game databases
+and pictures (a ScreenScraper lookup goes only to ScreenScraper). Each request is listed under
 **Network activity**, with its outcome. A file that fails leaves nothing behind: no partial file and
 no change to your databases. The message says what happened:
 
-| The message starts with                     | What to do                                    |
-| ------------------------------------------- | --------------------------------------------- |
-| Romperoom couldn't reach GitHub             | You're offline, or GitHub can't be reached.   |
-| GitHub took too long to answer              | Try again later.                              |
-| Romperoom couldn't make a secure connection | See "Proxies and filtered networks" below.    |
-| GitHub has had too many requests            | Wait until the time it gives, then retry.     |
-| This file isn't at that version any more    | Press **Check for updates**, then review.     |
-| The file didn't match what GitHub listed    | Nothing was kept. Try later, or use the site. |
-| Romperoom couldn't find libretro-database's | Try later, or use the official site.          |
-| GitHub's answer was bigger than expected    | Try again later.                              |
+| The message starts with                     | What to do                                          |
+| ------------------------------------------- | --------------------------------------------------- |
+| Romperoom couldn't reach GitHub             | You're offline, or GitHub can't be reached.         |
+| GitHub took too long to answer              | Try again later.                                    |
+| Romperoom couldn't make a secure connection | See "Proxies and filtered networks" below.          |
+| GitHub has had too many requests            | Wait until the time it gives, then retry.           |
+| This file isn't at that version any more    | Press **Check game database updates**, then review. |
+| The file didn't match what GitHub listed    | Nothing was kept. Try later, or use the site.       |
+| Romperoom couldn't find libretro-database's | Try later, or use the official site.                |
+| GitHub's answer was bigger than expected    | Try again later.                                    |
 
 **Rate limits.** Downloading a file never counts against GitHub's limit for unsigned-in
-requests (60 an hour per address). Check for updates does: it uses 1 request when nothing has
-changed and 4 when there is a newer version. Others on the same network (an office, a school)
+requests (60 an hour per address). Check game database updates does: it uses 1 request when nothing
+has changed and 4 when there is a newer version. Others on the same network (an office, a school)
 share that limit.
 
 **Proxies and filtered networks.** Download for me connects to GitHub directly. It does not use
@@ -158,8 +157,8 @@ it. Use **Get a database from the official site** instead: your browser does the
 ## A console says "not available at this version"
 
 The version of libretro-database Romperoom is using has no file for that console (it may have
-been renamed or removed upstream). Press **Check for updates**; if the console still says so,
-the next Romperoom release will update the mapping. Meanwhile, get its database from the
+been renamed or removed upstream). Press **Check game database updates**; if the console still says
+so, the next Romperoom release will update the mapping. Meanwhile, get its database from the
 official site.
 
 ## Cover art won't download
@@ -192,8 +191,9 @@ results count them under "not available" too, but not in "Saved 5 of 5 pictures"
 only the pictures Romperoom tried.
 
 **Rate limits.** Each console's picture list costs one GitHub request (a very large one, a few
-more), out of the 60 an hour GitHub allows per address without signing in, shared with Check for
-updates and with others on the same network. A second review within a day reuses the lists and
+more), out of the 60 an hour GitHub allows per address without signing in, shared with Check game
+database updates, Check for a new version (and the check as Romperoom starts, if you turned it on)
+and with others on the same network. A second review within a day reuses the lists and
 asks nothing. Downloading the pictures themselves never counts.
 
 **Proxies and filtered networks.** As for game databases, cover art connects to GitHub directly

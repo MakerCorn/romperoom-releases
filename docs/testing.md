@@ -34,6 +34,7 @@ How Romperoom is tested, how to run each layer, and what the tests can and canno
 - [Junk files](#junk-files)
 - [Live merge picture folders run](#live-merge-picture-folders-run)
 - [Live picture conversion run](#live-picture-conversion-run)
+- [Live update run](#live-update-run)
 - [Screenshots](#screenshots)
 - [Fresh-clone gate](#fresh-clone-gate)
 
@@ -146,10 +147,11 @@ support, so run `npm run build` first. There is no browser to install.
 | `foundation.spec.ts`   | First run, persistence across a relaunch, an unreachable folder, an empty folder, the removal guard, unreadable files, keyboard use                                                                                                                                                                                       |
 | `fixup.spec.ts`        | Fix up: the old hashes land on Home and Fix up, a Needs attention line opens its task with focus on its tab, an arrow key and Enter to the next task, every task (once loaded) at 320 px and 200% zoom                                                                                                                    |
 | `junk.spec.ts` | Fix up › Junk files on the fixture: find (read only), what is left alone and why, the list at 320 px and 200% zoom, the confirmation in place of the list, the removal byte for byte (games and a look-alike stay), and History's row |
+| `updates.spec.ts` | Settings › Updates over signed stand-in releases served by the fixture transport (no GitHub): nothing asked before a press, a lying prerelease skipped, the check's requests in Network activity, Install's step for the NSIS installer, the AppImage swap, the disk image and the .deb (written down by the fixture seam, never taken), an installer only shown from a shared updates folder, a stranger's signature refused with the release page, Stop, the opt-in check at start and its notice, and 320 px at 200% zoom |
 | `home.spec.ts`         | Home over 32 real consoles: the bounded console grid, keyboard to a console and a game and back, 320 px at 200% zoom, All games a bounded scroller at 320 px in List and Grid                                                                                                                                             |
 | `security.spec.ts`     | No `require` or `process` in the page, the exact `window.romperoom` keys, `file://` blocked for `fetch` and XHR                                                                                                                                                                                                           |
 | `deploy.spec.ts`       | The card wizard on a test volume: files, game lists, art and hashes on disk, a no-op re-run, a console moved aside, cancel, a full card, make it fit (suggest, keep, apply), Onion box art made 250 pixels wide, R4xMP folders at the card root beside a kernel left byte-identical, DSpico's opt-in consoles unticked and its launcher left byte-identical, a refusal with no path, hostile IPC, zoom, gamepad                                                       |
-| `a11y.spec.ts`         | axe with zero violations on the wizard, Home, All games, drawer and every Fix up task, light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                                                                                 |
+| `a11y.spec.ts`         | axe with zero violations on the wizard, Home, All games, drawer and every Fix up task, and Settings › Updates (offer, confirmation, result), light and dark; focus and the live region while sorting folders; real keys in a picker; "Show all"                                                                           |
 | `layout.spec.ts`       | Small windows at high zoom (up to 400%), forced colours, hostile file names                                                                                                                                                                                                                                               |
 | `resilience.spec.ts`   | WebRTC and DNS probes with positive controls, dropped files, a crashed renderer reloading mid-scan                                                                                                                                                                                                                        |
 | `tidy.spec.ts`         | Fix up's tidy tasks on the fixture: set aside and undo byte for byte, a chosen keeper, a stop part way (finished, or the rest discarded), a crash and recovery, delete forever, busy, keyboard only, 320 px, a file held in two libraries set aside across libraries and put back                                         |
@@ -806,7 +808,8 @@ The procedure, on macOS, with the built app (`npm run build`) and no test transp
    file base name; `downloads/` is empty afterwards; every connection goes to an address
    `raw.githubusercontent.com` resolved to, and Network activity lists exactly those requests.
    Then Identify now, and record the identification rate per console.
-6. **Check for updates.** It adds only `api.github.com`, with 1 request (3 if the head moved).
+6. **Check game database updates.** It adds only `api.github.com`, with 1 request (3 if the head
+   moved).
 7. **Offline.** Without touching the machine's network, run the app alone without a network:
    `sandbox-exec` with a profile that denies outbound IP except loopback, on a separate scratch
    data folder. Chromium's own sandbox cannot start inside another one, so that launch (only)
@@ -838,7 +841,7 @@ What it measured:
 - Identify now named 96% of Game Boy and Game Gear games by hash (1,582 of 1,649 and 488 of
   511); the three PC Engine CD games (CHD images, while Redump lists BIN/CUE tracks) matched by
   name only;
-- Check for updates made 1 request to `api.github.com` and reported "Up to date";
+- Check game database updates made 1 request to `api.github.com` and reported "Up to date";
 - offline (sandboxed) the job stopped with the offline message in 0.25 s, nothing imported,
   `downloads/` empty;
 - the fingerprint of about 15,000 entries was identical before and after.
@@ -2343,6 +2346,75 @@ budget), Windows and Linux.
 
 **Not run yet:** this branch was proven on pictures made in the tests and a scratch library only;
 no real device and no real library art were used.
+
+## Live update run
+
+CI runs the Updates tab over the fake host API in jsdom (`updates.test.tsx`), the host and the
+transport over loopback (`updates-*.test.ts`, `dat-transport.test.ts`), the built app over the
+fixture transport (`updates.spec.ts`) and the release scripts' controls
+(`release-scripts.test.ts`); none reaches GitHub. This run does, with the built app, a scratch
+`ROMPEROOM_DATA_DIR` and an empty scratch card folder (`ROMPEROOM_TEST_VOLUME`, which a packaged
+build ignores). A packaged build refuses Playwright (the inspect fuse is off and the debugging
+switches are refused, [decision 17](decisions.md#17-electron-fuses)), so it is driven by hand.
+
+1. **Up to date:** the unpackaged build at its real version: **Check for a new version**. Expected
+   "Romperoom X is the newest version." when X is the newest published release, and one Network
+   activity line, `api.github.com/repos/MakerCorn/romperoom-releases/releases`. Before the press,
+   Network activity is empty.
+2. **The real redirect and an unsigned release:** a packaged build of the branch with its version
+   lowered below the newest published release (changed by a script that restores it, never
+   committed), started from a terminal with the scratch data folder. Press **Check for a new
+   version** by hand, or, where nothing can press for you, turn on **Check once when Romperoom
+   starts** in the same data folder with the unpackaged build first (that asks nothing), so the
+   packaged window checks as it opens. Expected the offer, "This release can't be installed from
+   here." for a release made before signing, and the lines: the list (200), `SHA256SUMS.txt` on
+   `github.com` (302), the asset host that served it (200) and the `.sig` (404). An asset host
+   outside the two allowlisted names shows as refused: the allowlist must then grow, with a test,
+   before release. Read the lines afterwards from `network-log.json` in the scratch data folder.
+3. **After the signed pair** (a release signed by a trusted key exists): the next two real
+   releases are the pair: the first carries the updater and is installed by hand on each
+   computer (0.14.0 has no updater), then a small patch release proves the update. Press
+   **Install version X** on each platform. Record: on Windows the app closes, the installer runs
+   with no UAC or SmartScreen prompt, the new version starts and the updates folder is empty after
+   its first start; the Linux AppImage at the same path is the new version and starts; the `.deb`
+   command works as shown; on macOS the disk image is shown and the dragged app opens.
+
+What it cannot observe: a real 403 or 429 from GitHub, an IPv6-only network, a network that needs a
+proxy (Romperoom uses none), a release over 512 MiB, a key rotation across real releases.
+
+**Last run: 2026-10-12,** Apple silicon Mac, macOS, Electron 44.5.1. Step 2: the packaged build at
+0.13.0 (`npm run package:dir -w @romperoom/desktop`, Electron from the local cache), checking at
+start; the setting was turned on with the unpackaged build at 0.14.0, whose Network activity said
+"Romperoom hasn't contacted anything." after the tick, and the data folder had no
+`network-log.json` until the packaged window opened. That window's check made exactly four
+requests, all `update-check`:
+
+- `api.github.com` `/repos/MakerCorn/romperoom-releases/releases`: 200 (205,749 bytes);
+- `github.com` `/MakerCorn/romperoom-releases/releases/download/v0.14.0/SHA256SUMS.txt`: 302;
+- `release-assets.githubusercontent.com` `/github-production-release-asset/…`: 200 (588 bytes;
+  the log holds the path only, never GitHub's signed query);
+- `github.com` `/MakerCorn/romperoom-releases/releases/download/v0.14.0/SHA256SUMS.txt.sig`: 404
+  (`not-found`).
+
+The asset host is one of the two allowlisted names. Ending the app added no request, and no
+`updates/` folder was made (nothing was downloaded). The tab's words were not observed (the
+session could neither see nor capture the screen); by the code, that outcome is the offer for
+0.14.0 with "This release can't be installed from here." and "It isn't signed, so Romperoom can't
+check it." **Not run:** step 1 (the unpackaged build checking the real repository), the offline
+cell, and step 3 (no signed release exists before this branch ships).
+
+**Not evaluated yet:**
+
+- a real Windows silent upgrade (NSIS `/S --updated --force-run` installing in place, closing the
+  running app, starting the new one, no UAC or SmartScreen prompt): CI proves only the detached
+  spawn, with Node standing in for the installer;
+- an AppImage replaced on a real Linux desktop (CI proves the swap over a temporary file), and a
+  real `.deb` install with the shown command;
+- the macOS flow with a signed release (the disk image shown, the dragged app opening);
+- the signed pair itself, and so a real upgrade from one release to the next;
+- the packaged Windows and Linux builds' `update-signature` self-check, until CI's packaged legs
+  run on this change;
+- the Updates tab with a screen reader (axe and the jsdom announcer tests only).
 
 ## Screenshots
 

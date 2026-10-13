@@ -55,14 +55,16 @@ flowchart TB
   and file access: `connect-src 'none'`, no frames, no workers. WebRTC, which CSP does not
   govern, gets no UDP (the IP handling policy) and no TCP (the session's dead proxy). No
   hostname is ever looked up inside Chromium (the process-wide host resolver rules; the main
-  process resolves its three allowed hosts, two GitHub names and ScreenScraper's, through Node,
+  process resolves its allowed hosts (two GitHub names for the game databases and cover art,
+  ScreenScraper's, and for app updates `github.com` with GitHub's two asset hosts) through Node,
   see
   [security.md](security.md#main-process-requests)), and every session, the ones
   made later included, gets the same proxy and permission denials.
 - `window.romperoom` exposes exactly the channels in `apps/desktop/src/shared/ipc.ts`, plus
-  nine push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
+  ten push listeners (`onScanProgress`, `onDeployProgress`, `onTidyProgress`,
   `onIdentifyProgress`, `onDatsProgress`, `onArtProgress`, `onSyncProgress`,
-  `onStandardiseProgress` and `onJunkProgress`). The type check pins the channel list to the `RendererApi` type in
+  `onStandardiseProgress`, `onJunkProgress` and `onUpdatesProgress`). The type check pins the
+  channel list to the `RendererApi` type in
   both directions.
 - Every handler resolves to `{ ok, value }` or `{ ok: false, error: { name, message } }`. A stack
   never crosses the bridge. `contextBridge` keeps only an Error's message, so the preload writes
@@ -1329,6 +1331,59 @@ flowchart LR
   you looked" (a stale plan), which offers "Refresh list" (it asks the catalog again and never
   reads a drive; decision 62).
 
+## App updates
+
+Settings › Updates asks the updates host (`apps/desktop/src/main/updates-host.ts`) to check and to
+install. The host uses the game database transport (one socket module, one allowlist, one request
+log) and verifies everything before anything runs
+([decision 68](decisions.md#68-the-app-updates-itself-from-signed-checksums-without-code-signing)).
+
+```mermaid
+flowchart LR
+  subgraph Page["Settings › Updates"]
+    C["Check for a new version"] --> I["Install version X"]
+  end
+  subgraph Host["updates-host.ts"]
+    S["service.ts<br/>list · sums · signature"] --> V["verify.ts<br/>Ed25519 · names"]
+    I2["download<br/>one redirect · SHA-256"] --> B["busy check<br/>again"]
+    B --> N["install.ts"]
+  end
+  C --> S
+  I --> I2
+  S --> G[("api.github.com<br/>github.com<br/>asset host")]
+  I2 --> G
+  N --> W["Windows<br/>NSIS, quit"]
+  N --> A["AppImage<br/>swap, relaunch"]
+  N --> R["macOS · deb · zip<br/>show the file"]
+```
+
+- **Check** (`updates/service.ts`): the release list from `api.github.com`, one request
+  (`?per_page=20`); the newest plain (published, not prerelease) release newer than this build
+  (`updates/releases.ts`, strict `X.Y.Z` in `updates/version.ts`); its `SHA256SUMS.txt` and
+  `.sig` from `github.com`, each through one redirect to GitHub's asset host; the signature first
+  (one or two lines, any line verifying under any trusted key), then the list
+  (`updates/verify.ts`, at most two keys in `updates/trusted-keys.json`); the file for this
+  computer by name (`Romperoom-<version>-<os>-<arch>.<ext>`), sized by the release. A build that
+  trusts no key asks for neither file.
+- **Install**: the file is streamed into `<dataDir>/updates/` (owner-only on macOS and Linux)
+  under a random part name, exactly its size, its SHA-256 checked while streaming and again
+  before it runs or is shown; the busy check runs at the press and after the download (the
+  engine's held library locks, `heldLockKinds()`, a junk removal on a card, the deploy and tidy
+  slots, and calls of a channel that starts work still running); then `updates/install.ts`: for
+  the NSIS installer, the engine closed (`closeForInstall`), the installer spawned detached with
+  `/S --updated --force-run`, then `app.exit(0)` (a `pending.json` lets the next start tell
+  whether it ran); for the AppImage, a copy beside the running one, checked again and renamed
+  over it, then the close, the restart from that file and the exit; or the file shown in its
+  folder. The installer runs and the AppImage is replaced only when the updates folder is private
+  to this user (`isPrivateFolder`); otherwise the verified file is shown, with the reason. Every
+  step that starts a process, quits or opens a file manager is an `InstallSeams` call.
+- **Closing**: from the start of an automatic install, `UpdatesHost.closing()` makes the 36
+  channels in `WORK_STARTS` (`src/main/handlers.ts`) refuse with "Romperoom is closing to install
+  an update"; once the result is `restarting`, every `updates:` channel but the status refuses
+  too.
+- **Version**: `APP_VERSION`, apps/desktop/package.json's, bundled at build time
+  (`updates/app-version.ts`).
+
 ## The renderer's screens and routes
 
 Hash routes keep the app on the one page the app:// handler serves
@@ -1571,7 +1626,7 @@ flowchart LR
   P -- "dats:* IPC" --> H
   H --> SV --> T
   T --> RAW["raw.githubusercontent.com<br/>file bytes at a commit"]
-  T --> API["api.github.com<br/>Check for updates only"]
+  T --> API["api.github.com<br/>Check game database updates only"]
   T --> L
   SV --> I
   H -- "fixed URL" --> X["shell.openExternal"] --> B["Browser<br/>No-Intro · Redump"]
@@ -1589,14 +1644,14 @@ the page was opened, where the platform supports that (macOS: not measured yet).
 
 **Download for me.** The download service (`main/dat-download/service.ts`) works from a listing
 of libretro-database's `metadat/no-intro` and `metadat/redump` folders at one commit: the
-listing shipped in `packages/profiles/data/libretro.json`, or the later one a "Check for updates"
-stored in `<dataDir>/libretro-pin.json` (the later commit date wins). A plan needs no request.
-A job runs only against the commit the user reviewed, one file at a time: the file is streamed
-into a temporary folder under `<dataDir>/downloads/`, its size and git blob SHA-1 are checked
-against the listing, and it goes through the same two-phase import as a picked file, with an
+listing shipped in `packages/profiles/data/libretro.json`, or the later one a "Check game database
+updates" stored in `<dataDir>/libretro-pin.json` (the later commit date wins). A plan needs no
+request. A job runs only against the commit the user reviewed, one file at a time: the file is
+streamed into a temporary folder under `<dataDir>/downloads/`, its size and git blob SHA-1 are
+checked against the listing, and it goes through the same two-phase import as a picked file, with an
 explicit source label and a `dat_origin` row. The folder is then removed, whatever the
-outcome. "Check for updates" asks `api.github.com` for the branch head (one request) and, only
-when it moved, for the two folder listings and the `dat` folder's listing (four in all).
+outcome. "Check game database updates" asks `api.github.com` for the branch head (one request) and,
+only when it moved, for the two folder listings and the `dat` folder's listing (four in all).
 
 **The transport** (`main/dat-download/transport.ts`) is the only code that opens a socket.
 It uses `node:https` from the main process, so the renderer's guards (CSP, the dead proxy, the
@@ -1607,7 +1662,7 @@ a connection is made. Redirects are refused, sizes and times are capped, and no 
 sent; the only credentials sent are ScreenScraper's (Romperoom's developer details and the
 player's account), in a lookup's query (see below), never to GitHub. Every attempt is appended to `<dataDir>/network-log.json` (the newest 500),
 which Network activity shows. Nothing calls the transport on boot, on a timer or after a scan:
-only "Download N files" and "Check for updates" do, and cover art's "Get cover art", its
+only "Download N files" and "Check game database updates" do, and cover art's "Get cover art", its
 review's "Download" and a ScreenScraper lookup ([Cover art](#cover-art)).
 
 **BIOS checksums.** The listing also records libretro's `dat/System.dat` (`system` in
@@ -1616,8 +1671,8 @@ review's "Download" and a ScreenScraper lookup ([Cover art](#cover-art)).
 `{ bios: true }`. The file is checked like a DAT, read by `readSystemDat`
 (`packages/engine/src/bios/system-dat.ts`: one `game` block, sections from its comment lines,
 names of up to eight path parts, unsafe names skipped and counted) and stored whole by
-`engine.bios.importList` (migration 21), with the outcome `listed`. "Check for updates" makes four
-requests (the branch head, the two folders and `dat`).
+`engine.bios.importList` (migration 21), with the outcome `listed`. "Check game database updates"
+makes four requests (the branch head, the two folders and `dat`).
 
 ## Cover art
 

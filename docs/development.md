@@ -20,6 +20,7 @@ verified platform. CI passes on Windows and Linux too, but only on CI runners (s
 - [Native modules (better-sqlite3)](#native-modules-better-sqlite3)
 - [Desktop renderer](#desktop-renderer)
 - [Changing the IPC surface](#changing-the-ipc-surface)
+- [Trying app updates locally](#trying-app-updates-locally)
 - [Platforms](#platforms)
 - [Known limitations](#known-limitations)
 
@@ -226,6 +227,23 @@ and to the unpacked files `verify:package` expects
 Every channel is listed in `src/shared/ipc.ts`, and the handlers and the preload are built from
 it. Adding an engine method touches several pinned lists on purpose; the steps are in
 [security.md](security.md#ipc-channels).
+
+## Trying app updates locally
+
+An unpackaged build never installs an update (Settings › Updates says this copy can't update
+itself), and its check reads the real releases repository. To try the whole flow without GitHub,
+run the end-to-end spec: it serves signed stand-in releases through the fixture transport and
+writes each install step to a log instead of taking it.
+
+```sh
+npm run build -w @romperoom/desktop
+npx playwright test -c apps/desktop/e2e/playwright.config.ts updates.spec.ts
+```
+
+`e2e/update-fixtures.ts` makes the stand-in release under the fixture folder's `updates/`: the
+release list, every file, `SHA256SUMS.txt` and a `.sig` made with a key generated for the run,
+`key.json` (the key the app trusts while the fixture runs) and `install.json` (how the copy
+installs). No private key is ever committed.
 
 ## Platforms
 

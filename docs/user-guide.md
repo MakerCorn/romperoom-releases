@@ -432,11 +432,11 @@ already up to date, or why one failed — with **Identify now** offered when som
 | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | ![Download results](screenshots/databases-results-console-shelf-light.png) | ![Download results, dark](screenshots/databases-results-console-shelf-dark.png) |
 
-**Check for updates** looks for a newer version of libretro-database's listing and says so next
-to the button, or says why it couldn't check. **Network activity**, below both sections, lists
+**Check game database updates** looks for a newer version of libretro-database's listing and says so
+next to the button, or says why it couldn't check. **Network activity**, below both sections, lists
 every request Romperoom has made for this feature — when, where to, what happened and how many
 bytes — so you can see for yourself that it only ever goes to GitHub, or to ScreenScraper for a
-lookup, and only when you pressed Download, Check for updates, Get cover art or Look up N
+lookup, and only when you pressed Download, Check game database updates, Get cover art or Look up N
 games. A ScreenScraper line shows its host and path only, never your account or a checksum. It is
 also in **Settings** › **Network activity**.
 
@@ -561,11 +561,12 @@ changes your files. Press **Try again** to read every one of them again now.
 
 ## Settings and themes
 
-**Settings** (top right) has three tabs: **Appearance**, **ScreenScraper**, where you save your
+**Settings** (top right) has four tabs: **Appearance**, **ScreenScraper**, where you save your
 own ScreenScraper account for [Look up on ScreenScraper](#look-up-on-screenscraper) (your user
 name and password go into your computer's keychain, and the tab then only says that an account
-is saved, with **Forget the account**), and **Network activity**: every request Romperoom has
-made, newest first. Appearance changes how Romperoom looks:
+is saved, with **Forget the account**), **Network activity**: every request Romperoom has
+made, newest first, and **Updates** ([Updates](#updates)). Appearance changes how Romperoom
+looks:
 
 - **Theme:** Console shelf (warm and cosy), CRT neon (glowing arcade colours) or Clean modern
   (quiet, so the cover art stands out).
@@ -585,6 +586,67 @@ Your choice is remembered.
 | CRT neon, dark                                              | Clean modern, dark                                                  |
 | ----------------------------------------------------------- | ------------------------------------------------------------------- |
 | ![Home, CRT neon theme](screenshots/home-crt-neon-dark.png) | ![Home, Clean modern theme](screenshots/home-clean-modern-dark.png) |
+
+### Updates
+
+**Settings › Updates** shows the version you have, and checks for a new one when you press
+**Check for a new version**: it asks GitHub for the public list of releases (and, when there is a
+newer one, its checksum list and signature), and downloads nothing else yet. When there is a
+newer version it shows what is new, the download size and **Install version X**. Before anything
+happens Romperoom says what it will do, and it never says "installing" when it will only show you
+the file. Then it downloads the file, checks its signature and its checksum (a file that fails
+either is removed, and nothing runs), and then:
+
+- **Windows:** Romperoom is designed to close, install the new version over the old one (no
+  questions, no administrator rights) and start it. This is first proven by the first real update
+  (see [what has not been tried yet](#what-has-not-been-tried-yet)). If the install does not
+  finish, Updates says so the next time, with **Show in folder** for the installer.
+- **Linux AppImage:** the new AppImage takes the old one's place, at the same path, and Romperoom
+  starts it again (also first proven by the first real update). If the AppImage or its folder
+  can't be written to, Romperoom says so, and **Show in folder** has the new one.
+- **Linux .deb:** installing a .deb needs administrator rights, so Romperoom shows the file and the
+  exact command to run in a terminal, `sudo apt install '…/Romperoom-X-linux-amd64.deb'`, in a
+  field that selects the whole command when you move into it, ready to copy. apt may say the
+  download is "performed unsandboxed as root" (the folder is private to you); that is expected,
+  and it still installs.
+- **macOS:** the disk image is shown in Finder: open it and drag Romperoom into Applications,
+  replacing the old one.
+
+A file Romperoom only shows you stays until Romperoom starts again (it empties its updates folder
+then), so install it before you close Romperoom. Its result, with the command, stays on the tab
+when you switch tabs or close Settings, with **Show in folder** and **Download again** (Install is
+not offered again while the file is kept). On Windows and with an AppImage, Romperoom
+installs by itself only when it keeps its files in a folder other users can't change. With
+`ROMPEROOM_DATA_DIR` set on Windows, or on macOS and Linux a data folder where its updates folder
+can't be made yours alone (on a drive without file permissions, for example), it downloads and
+checks the file, then shows it, and says why.
+
+**Stop** stops a download, and nothing is kept. Romperoom never installs without your press,
+never installs an older or a test (prerelease) version, and waits while a copy to a card, a Tidy
+up or Standardise run, a scan or a junk file removal runs (it says which). A release it cannot
+check says "This release can't be installed from here." with **Open the release page**, where
+every download is. Once Romperoom is closing to install an update, anything else you start is
+refused with "Romperoom is closing to install an update".
+
+**Check once when Romperoom starts** (off until you turn it on) checks once each time Romperoom
+starts and, when there is a new version, shows a note at the top (and says so) that opens this
+tab; **Hide the update notice** (×) puts it away until Romperoom starts again. It never installs
+anything.
+
+The first version with the Updates tab is installed by hand, once; after that Romperoom can
+update itself.
+
+#### What has not been tried yet
+
+The updater is tested on every system with stand-in releases, but these have not happened on a
+real computer yet ([testing.md](testing.md#live-update-run)): a real Windows update installing
+itself, an AppImage replaced and restarted on a Linux desktop, a real `.deb` install with the
+shown command, the macOS flow with a signed release, and an update from one real release to the
+next.
+
+| Light                                                              | Dark                                                                    |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| ![Settings › Updates](screenshots/updates-console-shelf-light.png) | ![Settings › Updates, dark](screenshots/updates-console-shelf-dark.png) |
 
 ## Put games on an SD card
 
@@ -1454,10 +1516,15 @@ Cover art never changes a game file: it only adds pictures to the library's own
 `.romperoom/media` folder when you ask, and removes only the ones it added.
 
 **Does it go online?**
-Only if you ask. Under Fix up › Game databases, Download for me and Check for updates contact
-GitHub, and so do Get cover art and its Download in Fix up › Artwork; Network activity lists every
-request. Everything else, importing art from an SD card included, works offline. See
-[security.md](security.md).
+Only if you ask. Under Fix up › Game databases, Download for me and Check game database updates
+contact GitHub, and so do Get cover art and its Download in Fix up › Artwork, and Check for a new
+version and Install in Settings › Updates; Network activity lists every request. If you turn on
+**Check once when Romperoom starts**, it also checks once as it opens. Everything else, importing
+art from an SD card included, works offline. See [security.md](security.md).
+
+**How do I update Romperoom?**
+Settings › Updates ([Updates](#updates)). The first version with that tab is installed by hand
+from the release page; after that Romperoom checks and installs new versions when you ask.
 
 **Where does it keep its data?**
 In a folder of its own, not in your ROM folder (see

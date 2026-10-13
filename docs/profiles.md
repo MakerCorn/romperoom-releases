@@ -337,9 +337,9 @@ Rules, each pinned by a test in `packages/profiles/test/libretro.test.ts`:
 **Who records it:** a maintainer runs `npm run record:libretro` before each release (never CI,
 never a test). It asks `api.github.com` for the branch head and both folder listings with the
 maintainer's own network, through `listingFromApi` (the one place that shape is derived; the
-desktop app's own "Check for updates" calls the same function), replaces `listing` and keeps
-`systems`, then reports the old and new commit, the counts per folder, and any mapping problems
-against the mapping it just kept.
+desktop app's own "Check game database updates" calls the same function), replaces `listing` and
+keeps `systems`, then reports the old and new commit, the counts per folder, and any mapping
+problems against the mapping it just kept.
 
 ## thumbnails.json
 

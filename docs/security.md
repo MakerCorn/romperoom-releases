@@ -8,8 +8,10 @@ The short version:
 
 - Scans are read-only.
 - The window cannot reach the network.
-- Romperoom itself goes online only when you press Download for me, Check for updates or Get
-  cover art (two GitHub hosts), or Look up N games (ScreenScraper's API host).
+- Romperoom itself goes online only when you press Download for me, Check game database updates
+  or Get cover art (GitHub), Look up N games (ScreenScraper's API host), or Check for a new version
+  and Install in Settings › Updates (GitHub's API, `github.com` and GitHub's two asset hosts), or,
+  if you turn it on, once as it opens to check for a new version.
 - The page has no Node.js and no file access.
 - Every call from the page to the host goes through one checked, typed list of channels.
 - Only Fix up moves games and artwork in a library: into its set-aside folder after a preview, or,
@@ -234,9 +236,10 @@ both handlers.
 ## IPC channels
 
 The page reaches the host only through `window.romperoom`. That object has one function per
-channel in the `IPC` table (`src/shared/ipc.ts`), plus nine push listeners (`onScanProgress`,
+channel in the `IPC` table (`src/shared/ipc.ts`), plus ten push listeners (`onScanProgress`,
 `onDeployProgress`, `onTidyProgress`, `onIdentifyProgress`, `onDatsProgress`,
-`onArtProgress`, `onSyncProgress`, `onStandardiseProgress` and `onJunkProgress`). Raw
+`onArtProgress`, `onSyncProgress`, `onStandardiseProgress`, `onJunkProgress` and
+`onUpdatesProgress`). Raw
 `ipcRenderer` and IPC event objects never cross the bridge. `IPC_MATCHES_API` makes the type
 check fail unless the table and the `RendererApi` type list the same names, both ways. A docs
 test checks that this table lists exactly the channels in `IPC`.
@@ -346,6 +349,13 @@ test checks that this table lists exactly the channels in `IPC`.
 | `junk:remove`               | page → host | Removes a look's files for good, each checked again first; the look's id only; a library's removal holds its lock and is listed in History                                                              | library or card (junk files only), catalog (History)                                                                                             |
 | `junk:cancel`               | page → host | Stops this window's look or removal (a removal finishes or puts back the file in hand first)                                                                                                            | no                                                                                                                                               |
 | `junk:progress`             | host → page | How far this window's look (entries looked at) or removal (files done of all) is                                                                                                                        | no                                                                                                                                               |
+| `updates:status` | page → host | The running version, how this copy installs, the last check and this window's install (a reloaded page adopts it) | no |
+| `updates:check` | page → host | Asks GitHub for the newest release (one API request) and, for a newer one, verifies its `SHA256SUMS.txt` signature | no |
+| `updates:install` | page → host | Downloads, verifies and installs (Windows, AppImage) or shows (macOS, .deb, Windows zip) the version the last check offered; the version string only | data folder (`updates/`); on Windows and AppImage, the installed app |
+| `updates:cancel` | page → host | Stops this window's update download | no |
+| `updates:showFile` | page → host | Shows the verified file in the system file manager | no |
+| `updates:openReleasePage` | page → host | Opens the offered release's page, or the releases page, in the browser | no |
+| `updates:progress` | host → page | Update download progress, then the result, to the window that started it | no |
 
 `engine:gameLetters`, like `engine:listGames`, takes no path: only a console id (checked by the
 engine's `systemIdArg`) and a search string of bounded length, under the same filter
@@ -385,6 +395,46 @@ wrote), and a look id bound to the window that made it; never a path. Every mess
 through `pageText`, so a card or folder is named, never shown by its path. What a removal may
 touch is the engine's rule: [Junk files](#junk-files).
 
+The `updates:` channels are handled by the updates host (`src/main/updates-host.ts`). The page
+sends nothing but, to `updates:install`, back the version string the last check offered (at most
+32 characters, compared with the host's own record, else `UpdatesArgumentError`); never a URL, a
+path, a file name or a hash. The host chose the file by name from the verified checksum list.
+One check and one install run at a time (`UpdateBusyError`); an install binds to the window that
+started it, its progress and result go only to that window, only it can stop it, and closing it
+or quitting stops the download (the partial file is removed; a Stop that lands while the file
+is being checked removes the checked file too). While a copy to a card, a Tidy or Standardise
+run, a scan, a junk removal or any other job holding a library runs, an install is refused with
+the reason, at the press and again after the download, before anything runs. The re-check also
+sees work that was pressed and has not taken its lock yet: the deploy and tidy hosts' slots, and
+every call of a channel that starts work while it runs (`WorkTracker` in
+`src/main/handlers.ts`). A download refused there is removed. Show in folder hashes the kept
+file again first and removes it, rather than show it, when it changed.
+
+From the moment an automatic install (the Windows installer, the AppImage swap) is decided, just
+before the busy re-check, the app is closing for it (`UpdatesHost.closing()`): every channel that
+starts work (a copy or its dry run, a Tidy plan, run or undo, a Standardise run or undo, a scan,
+identify, a game database download or check, a cover art download, a card sync, a junk look or
+removal, a library change: the 36 in `WORK_STARTS` in `src/main/handlers.ts`) is refused with
+"Romperoom is closing to install an update" before its host sees it. The pure setters (the BIOS
+folder, the ScreenScraper account) and every read stay open. Then the order is fixed: every host
+is stopped and the engine closed (the quit's own bounded close, `closeForInstall`), the installer
+is hashed once more and started (or the AppImage's restart set up from the new file on disk,
+with this process's arguments), and the process exits at once (`app.exit(0)`), so the
+installer's check for a running Romperoom never races the engine's close. Once the result is
+`restarting` that is final: a second Install, a check, Stop, Show in folder and the release page
+are all refused (the status still answers). A failure before the close ends it, and work may
+start again; after the close nothing is reopened, so work stays refused and the tab says to
+close Romperoom and open it again.
+
+Romperoom runs the installer or swaps the AppImage itself only when the `updates/` folder is
+private to this user (`isPrivateFolder` in `src/main/updates/install.ts`). On macOS and Linux:
+a real folder owned by this user, with no group or other access (0700). On Windows, which has no
+mode bits (the folder inherits its parent's access list): only the app's own per-user data
+folder, never one `ROMPEROOM_DATA_DIR` moved (a stick, or a folder on `C:\` other users can
+write). Otherwise the file is downloaded and verified, then shown in its folder as on macOS
+(`reason: 'not-private'`): "Romperoom is keeping its files somewhere other users could change, so
+it will not run the installer for you."
+
 The `dats:` channels are handled by the dats host (`src/main/dats-host.ts`). `dats:download`
 and `dats:openLink` take no URL or path from the page. `dats:openLink` takes a key of the closed
 `DAT_LINKS` map. `dats:download` takes 1 to 79 distinct console ids and the commit the page was
@@ -392,11 +442,11 @@ shown in the plan; the host accepts the commit only as exactly 40 lower-case hex
 (anything else is refused before the service sees it) and uses it only to compare with the pin,
 so a job runs only against what was reviewed: never to build a URL or a path. Which consoles
 may be fetched is the service's check (mapped, in the library, not up to date). One job runs at a
-time and binds to the window that started it; a second, or "Check for updates" while one runs,
-is refused with `DatDownloadBusyError`. Quitting or closing that window stops the job; each DAT
-already imported stays. `identify:importDat` also takes `inDownloads` (a boolean): the picker then
-opens in the Downloads folder, preselecting the newest `.dat`, `.zip` or `.xml` modified since an
-official page was opened (`main/downloads.ts`: `lstat` only, no link followed, at most 2,000
+time and binds to the window that started it; a second, or "Check game database updates" while one
+runs, is refused with `DatDownloadBusyError`. Quitting or closing that window stops the job; each
+DAT already imported stays. `identify:importDat` also takes `inDownloads` (a boolean): the picker
+then opens in the Downloads folder, preselecting the newest `.dat`, `.zip` or `.xml` modified since
+an official page was opened (`main/downloads.ts`: `lstat` only, no link followed, at most 2,000
 entries looked at). It never passes an origin from the page to the engine.
 
 The `art:` channels are handled by the art host (`src/main/art-host.ts`). The page sends console
@@ -470,9 +520,11 @@ Adding a channel: add the `Engine` method and its `IPC` entry together, since
 
 ## Network isolation
 
-Romperoom makes no network request unless the user presses Download for me or Check for updates
-under Fix up › Game databases, or Get cover art in Fix up › Artwork (and then Download in its
-review), or Look up N games in a ScreenScraper review, and the page cannot make one at all. The CSP
+Romperoom makes no network request unless the user presses Download for me or Check game database
+updates under Fix up › Game databases, or Get cover art in Fix up › Artwork (and then Download in
+its review), or Look up N games in a ScreenScraper review, or Check for a new version or Install in
+Settings › Updates (or, when the player turned it on, one check as the window opens), and the page
+cannot make one at all. The CSP
 stops `fetch`, XHR and sockets. Three more layers cover what CSP does not govern.
 
 WebRTC is outside CSP: `connect-src 'none'` does not stop a peer connection. Also, any
@@ -534,9 +586,11 @@ rules (ADR 40).
 
 `main/dat-download/transport.ts` is the only module that opens a socket (enforced twice: the
 import list and the lint rules under "Static tests" and "Lint rules" below). It requests nothing
-on its own: its only callers are the game database download, "Check for updates", Get cover
-art (its listings, then its review's Download) and a ScreenScraper lookup, each started by a
-press. Cover art and ScreenScraper share the game database download's one transport, so the
+on its own: its only callers are the game database download, "Check game database updates", Get
+cover art (its listings, then its review's Download), a ScreenScraper lookup and the app updater
+(Settings › Updates), each started by a press (the updater's opt-in check at start is the
+page's, once per app start: a page that loads again uses the host's answer). Cover art, ScreenScraper and the updater share the game database
+download's one transport, so the
 allowlist, the transport rules and the request log below apply to them unchanged.
 
 **Allowlist** (`main/dat-download/allowlist.ts`). `checkDatUrl` runs before every request; a
@@ -546,8 +600,10 @@ these hold:
 - the URL is exactly its canonical serialization: a spelling the parser would normalise (upper
   case, `:443`, a backslash, a tab, dot segments, full-width letters) is refused, not rewritten;
 - `https:`, no username or password, no port, no fragment;
-- the parsed host is exactly `raw.githubusercontent.com`, `api.github.com` or
-  `api.screenscraper.fr` (string equality: no suffix, prefix, trailing dot or wildcard);
+- the parsed host is exactly `raw.githubusercontent.com`, `api.github.com`,
+  `api.screenscraper.fr` or `github.com` (string equality: no suffix, prefix, trailing dot or
+  wildcard), or, as a release file's redirect only, `release-assets.githubusercontent.com` or
+  `objects.githubusercontent.com`;
 - on `raw.githubusercontent.com`: the path is
   `/libretro/libretro-database/<40 lower-case hex>/metadat/(no-intro|redump)/<name>.dat`, the
   name is a safe DAT name in the exact encoding the app builds (no `%2F`, no `..`, no
@@ -571,6 +627,17 @@ these hold:
   `/libretro-thumbnails/<repo>/<branch>/Named_(Boxarts|Snaps|Titles)/<name>`, with no query,
   where `<name>` is one safe picture name (one segment, no `..`, no separator or control
   character, `.png`, at most 255 bytes) in exactly the percent-encoding the app builds.
+- for app updates, on `api.github.com`: exactly
+  `/repos/MakerCorn/romperoom-releases/releases?per_page=20` (the release list);
+- for app updates, on `github.com`: exactly
+  `/MakerCorn/romperoom-releases/releases/download/v<version>/<name>` with no query, where the
+  version is `X.Y.Z` (no leading zero, no prerelease) and the name is `SHA256SUMS.txt`,
+  `SHA256SUMS.txt.sig` or `Romperoom-<the same version>-` followed by `win-x64.exe`,
+  `win-x64.zip`, `linux-x86_64.AppImage`, `linux-amd64.deb` or `mac-arm64.dmg`;
+- a release file's one redirect (`checkReleaseAssetUrl`): https, one of the two asset hosts
+  exactly, no username, password, port, fragment, dot segment, space, control or non-ASCII
+  character, at most 8 KiB. Its query is GitHub's signature: sent as received, never logged or
+  shown in a refusal. `checkDatUrl` refuses the asset hosts, so nothing else reaches them.
 
 In both cover art shapes, `<repo>` and `<branch>` must be a pair from the shipped measured list
 (`packages/profiles/data/thumbnails.json`, 131 repositories): each repository's branch is the
@@ -578,10 +645,15 @@ one that list records for it (`master`, or `main` for 12), never taken from the 
 listing. A repository with the right shape but not on the list, or a listed repository at the
 other branch, is refused. `thumbnails.libretro.com` is never contacted.
 
-The four web pages the app may open in the browser (DAT-o-MATIC, Redump, the CC BY-SA 4.0 deed
-and the repository) are a separate closed map, `DAT_LINKS`. The browser requests those, never
-Romperoom. All are https except Redump's download page, which is plain http because Redump serves
+The four web pages the app may open in the browser for game databases (DAT-o-MATIC, Redump, the
+CC BY-SA 4.0 deed and the repository) are a separate closed map, `DAT_LINKS`; the updater opens
+two more through the same `openExternal`: the releases page and one release's page
+(`RELEASES_PAGE`, `releasePageUrl` of a version the check verified as `X.Y.Z`). The browser
+requests those, never Romperoom. All are https except Redump's download page, which is plain http because Redump serves
 no https; the host allows http for that one exact URL and refuses any other non-https link.
+The test reads the main process's sources as code: Electron's `shell` appears in exactly one
+`shell.openExternal(…)` call and one `shell.showItemInFolder(…)` call (the updater's Show in
+folder), and nowhere else (no alias, no destructuring, no other member; a comment never counts).
 
 **Transport rules.**
 
@@ -610,11 +682,26 @@ no https; the host allows http for that one exact URL and refuses any other non-
   password and the player's user name and password, in that request's query as ScreenScraper's
   API requires: the request log and every error message take the host and path only, and a
   refused ScreenScraper URL is logged without its query.
-- No redirect is followed: any `3xx` ends the request with reason `redirect`.
-- Timeouts: 20 s to the response headers, 30 s without a byte, 300 s for a whole response. Each
+- No redirect is followed, with one exception: a release file's first request (`github.com`) may
+  answer one `3xx` whose `Location` passes the rule above; that hop is logged on its own, and any
+  further `3xx` ends the download with reason `redirect`.
+- Timeouts: 20 s to the response headers, 30 s without a byte, 300 s for a whole response (an
+  hour for a release's update file, `UPDATE_TOTAL_MS`, one total shared by its redirect and the
+  asset request). Each
   destroys the request with reason `timeout`.
 - Caps: API answers at most 1 MiB, except thumbnail tree listings, at most 32 MiB
   (`MAX_TREE_JSON_BYTES`; a whole repository's recursive tree can pass 1 MiB).
+- A release's `SHA256SUMS.txt` is at most 64 KiB and its `.sig` 1 KiB; a build that trusts no
+  key asks for neither. The `.sig` is one or two lines (two during a key rotation, one per
+  signing key), each a 64-byte signature in canonical base64, LF only, no blank or repeated
+  line; it is accepted when at least one line verifies under a trusted key
+  ([release.md](release.md#signed-checksums)). An update file must be exactly the size the release lists, at most
+  512 MiB; it is created new (`wx`, owner-only 0600 on POSIX) under a random name in the data
+  folder's `updates/`, its SHA-256 computed while streaming and compared with the verified list,
+  and removed on any failure.
+- The releases repository is fixed. If it were renamed or moved, GitHub would answer its
+  downloads with a redirect from `github.com` to `github.com`, which the rule above refuses:
+  updates then fail closed (the release page still opens) until a build names the new place.
 - A game database file must be exactly its listed size: a `content-length` over it ends the
   request before the body, and a body that passes it is aborted at that byte. The git blob
   SHA-1 is computed while streaming and must match the listing; a file that fails any check is
@@ -626,16 +713,18 @@ no https; the host allows http for that one exact URL and refuses any other non-
   git blob SHA-1 is computed while streaming and must match the listing, and the bytes must
   start with the PNG signature before the engine sees them.
 - Every request takes an `AbortSignal`; cancel destroys the socket. No telemetry, no analytics,
-  no update ping.
+  no update ping: the updater asks only when pressed, or once as Romperoom starts when the player
+  turned that on.
 - One rate reading. The transport keeps the `x-ratelimit-*` headers of the last `api.github.com`
   answer, whichever feature asked. GitHub allows 60 unauthenticated API requests an hour per
-  address, shared by "Check for updates" and Get cover art, so a cover art review lists only as
-  many consoles as that reading says fit, and says when the rest can continue. Pictures come
+  address, shared by "Check game database updates", Get cover art and the updater's check (one
+  request, pressed or as Romperoom starts), so a cover art review lists
+  only as many consoles as that reading says fit, and says when the rest can continue. Pictures come
   from `raw.githubusercontent.com` and use none of it.
 
 **Request log** (`main/dat-download/request-log.ts`). Every attempt, refused and cancelled ones
-included: time, purpose (`check`, `download`, `art-listing`, `art-download`, `scrape-lookup` or
-`scrape-download`), host, path (never a query), the
+included: time, purpose (`check`, `download`, `art-listing`, `art-download`, `scrape-lookup`,
+`scrape-download`, `update-check` or `update-download`), host, path (never a query), the
 address connected to, outcome, HTTP status, bytes received, duration and failure reason. Never
 headers, bodies or anything about the library. The newest 500 are kept in
 `<dataDir>/network-log.json`, written to a temporary file and renamed; an unreadable log is
@@ -732,12 +821,33 @@ for the download (the official-site path still works).
 - **Game database files** (see [configuration.md](configuration.md#data-folder)):
   `network-log.json` keeps the newest 500 request attempts (time, purpose, host, path, address,
   outcome, status, bytes, duration, reason; never headers, bodies or library data).
-  `libretro-pin.json` holds the listing "Check for updates" last stored. `downloads/` holds a
-  file only while it is downloaded and verified, and is emptied at every start.
+  `libretro-pin.json` holds the listing "Check game database updates" last stored. `downloads/`
+  holds a file only while it is downloaded and verified, and is emptied at every start.
   `art-listings/` keeps each console's last thumbnail listing (names, sizes, git SHAs and the
   tree SHA), or GitHub's 404 for it in its own strict shape, for 24 hours, one file per
   repository named only from the shipped list. Transient failures are never kept, and a file in
   neither shape is ignored with a warning.
+  `updates/` (owner-only, 0700, on macOS and Linux; on Windows it has the data folder's access
+  list) holds an update file only while it is downloaded and verified, then the verified file
+  the app showed, or a Windows installer and its `pending.json` until the next start (removed
+  there once the new version runs). It is emptied before each download and at every start.
+  Before anything is done in it, it must be a real folder whose real path is the data folder's
+  own `updates`: a file, a symbolic link or a Windows junction in its place is removed itself
+  (never followed) and a fresh folder made, and the sweep removes each entry by its own name,
+  never following a link. The start-up sweep never stops Romperoom starting: an entry it cannot
+  remove (a Windows installer still running) is logged by name and left. `pending.json` is
+  trusted only in a folder private to this user by the install's own rule (`isPrivateFolder`),
+  judged before the folder is tightened (Romperoom never writes a marker into a folder that is
+  not private, so one found there is someone else's, and it is removed with everything beside
+  it), and only exactly as written: three keys, the installer named for its version, a regular
+  file no larger than an update may be (512 MiB, checked before it is read), whose streamed
+  SHA-256 matches; anything else is ignored.
+- **The installer's last moment.** The file that runs is the one this process created (`wx`,
+  random name, then renamed into place); it is hashed against the signed list after the
+  download and again immediately before the spawn. What remains is the instant between that
+  last hash and the operating system opening the file, with no handle held across it: only a
+  process of the same user could change the file then (the folder is private, else nothing
+  runs), and such a process could change the installed app as easily.
 
 ## Filesystem safety
 
@@ -945,12 +1055,24 @@ The card writer ([architecture.md](architecture.md#card-writer)) adds its own ru
   scans the engine source and the desktop main and preload code for disk-destroying commands and
   APIs (`diskutil eraseDisk`, `mkfs`, `newfs`, `diskpart`, `Format-Volume`, `dd if=` and
   others); its positive control proves each pattern matches.
-- **One file runs programs, and only listing ones.** `deploy/volumes.ts` is the only source that
-  imports `child_process`. It runs `diskutil` (by absolute path), PowerShell with a fixed script,
+- **One file runs programs, and only listing ones** (and the app updater, below).
+  `deploy/volumes.ts` is the only engine source that imports `child_process`. It runs `diskutil` (by absolute path), PowerShell with a fixed script,
   `lsblk` and `findmnt`, through `execFile` with `shell: false`, fixed arguments, a timeout and
   an output cap. `deploy/folder-network.ts` runs `/sbin/mount` with no arguments through the same
   function; a folder's path is matched against the output, never passed to a command. No argument
-  comes from the page. The test pins both lists.
+  comes from the page. The test pins both lists. The only other importer is the app updater's
+  `src/main/updates/install.ts`: one `spawn`, with `shell: false`, which starts a downloaded
+  Windows installer detached only after its signed checksum and size verified and it was hashed
+  again where it runs from. The test reads every source of the app and its packages as code
+  (the TypeScript parser, so comments never count): exactly these two files name
+  `child_process`, each once, in one static import of `execFile` and of `spawn` respectively;
+  nothing else reaches it (an import without `node:`, `import()`, `require`, or a
+  `createRequire` used to load); `spawn` is used once, called directly, with an options object
+  written in place saying `shell: false` and `detached: true` and no spread. Each of those
+  bypasses is fed to the guard in the test and must fail it. The guard is about
+  `child_process`; Electron's `utilityProcess`, `shell.openPath` and Node's `process.execve`
+  also start programs, and none is used anywhere: the guard fails if the updater's code
+  (`src/main/updates/`, `updates-host.ts`) names any of them, with a bypass row for each.
 - **A listing that fails is not an empty list.** It returns `ok: false` with the reason, and a
   deploy to a volume is then refused. Output that cannot be parsed is refused too; the plist
   reader refuses entity declarations and caps size, depth and nodes.
@@ -1225,8 +1347,8 @@ somehow became markup.
   words stop accidents, not script. Only files a tidy run set aside, unchanged since (same
   SHA1, a regular file inside the quarantine folder by real path), can be deleted.
 - Make the app list cover art pictures on GitHub (spending GitHub's hourly budget of 60 API
-  requests, shared with "Check for updates"), and download the pictures a review found for the
-  library's own gaps into `.romperoom/media`. It can import pictures from a card the host lists,
+  requests, shared with "Check game database updates"), and download the pictures a review found for
+  the library's own gaps into `.romperoom/media`. It can import pictures from a card the host lists,
   and remove the pictures cover art added that are unchanged.
 - Standardise a library it has added to a device profile it names: rename and merge the
   console folders and rename the identified games its review offered, with their art, saves, cue
@@ -1280,10 +1402,12 @@ somehow became markup.
 
 It can also make the host download mapped DATs from `raw.githubusercontent.com` at the current
 pin and import them (which can replace a same-named DAT and so revert its matches, as an import
-from the picker can today), run "Check for updates" (one API request, or four when there is a
-newer listing), open one of four fixed web pages in the browser, and read the network log.
+from the picker can today), run "Check game database updates" (one API request, or four when there
+is a newer listing), open one of four fixed web pages in the browser, and read the network log.
 
-The app's requests go only to the three allowlisted hosts, at fixed paths, with fixed headers.
+The app's requests go only to the four allowlisted hosts (`raw.githubusercontent.com`,
+`api.github.com`, `api.screenscraper.fr`, `github.com`), and to GitHub's two asset hosts only as a
+release file's one redirect, at fixed paths, with fixed headers.
 GitHub's requests carry no data from the library. Those requests are not invisible, though.
 GitHub (and anyone who can see the connection's metadata) learns which consoles' DATs and
 pictures were fetched, from which address, and when, as it would for any download. Picture names
@@ -1295,6 +1419,15 @@ ScreenScraper, under the player's saved account or one it saved itself. It still
 the host, the path, a key or any value's shape (the allowlist checks every one), cannot pick
 games outside the host's review, and learns nothing back but the counts the run reports. If a
 future feature opens another network path, that feature must be reviewed against this list.
+
+The app updater is such a path, reviewed here. A page can make the host list the public
+releases (one API request), fetch a newer release's `SHA256SUMS.txt` and `.sig` from
+`github.com`, and, when they verify against a compiled-in key, download that release's file for
+this computer and install or show it. It cannot choose the repository, the release, the file,
+the URL or the hash, cannot install an older or a prerelease version, an unsigned release or one
+whose file does not match the signed list, and cannot install while work runs. The requests carry
+no library data. On Windows and AppImage an install quits and restarts the app: a page can force
+that restart, once, to the newest signed release only; from its start no other work can begin.
 
 ## Deploying to a card
 
@@ -1484,6 +1617,38 @@ example) are in [development.md](development.md#known-limitations).
   game swapped for a link after its check is hashed through it; only a hash is learned, and the
   copy reads the card itself, no-follow, and must match that hash
   ([decision 42](decisions.md#42-card-sync-writes-into-a-library-and-onto-a-card)).
+- **The update signing keys.** A release is trusted when its `SHA256SUMS.txt` carries a signature
+  by a key compiled into the app. `ci-2026-10` is the release key (the `UPDATE_SIGNING_KEY` secret
+  of the `release-signing` environment, of which no other copy exists); a cold backup key
+  (`cold-2026-10`, generated by the owner offline, never stored in GitHub) is added as the second
+  trusted key in a later release; the first updater release trusts only `ci-2026-10`.
+  <!-- second-key-pending -->
+  Whoever holds a trusted private key can sign a release that every Windows and Linux copy
+  installs when its player presses Install. There is no code
+  signing behind it, and no revocation but a release that drops the key
+  ([release.md](release.md#signed-checksums)).
+- **Anyone who can push a `v*` tag can sign.** The `release-signing` environment admits tag
+  refs matching `v*` only, so branch runs and pull requests never see the key, but a pushed tag
+  runs the workflow at that commit, a changed `release.yml` included. GitHub's tag protection
+  rulesets are not available on the repository's plan; the repository is private, with a single
+  owner ([release.md](release.md#signed-checksums)).
+- **Signing runs on a shared runner.** GitHub-hosted runners are not available on this account,
+  so the `sign` job runs on the self-hosted Linux runner, which pull-request CI also uses (never
+  on the Mac). Anything that could run code on that runner before a `v*` tag job could capture
+  the key from the sign step's environment. Mitigated by `.npmrc` `ignore-scripts=true`, no
+  dependency install in the job, the tag-only environment, a single-owner repository, and Node
+  run by its absolute path under `env -i` with only the keys; a runner used for signing only is
+  the stronger fix ([release.md](release.md#signed-checksums)).
+- **Updates carry no download mark.** A file Romperoom writes has no "from the internet" mark
+  (Windows' Zone.Identifier, macOS quarantine), so SmartScreen and Gatekeeper do not prompt for
+  the installer or the dragged app: the signature and checksum checks stand in for them.
+- **The installer is hashed, then started.** Between the last hash and the operating system
+  opening the installer no handle is held, so a process of the same user that changed it in that
+  instant would have it run; such a process could change the installed app as easily
+  ([the installer's last moment](#data-at-rest)).
+- **No proxy for updates.** Like the game database download, the updater uses no system proxy or
+  private certificate authority; behind one, the check fails as offline or TLS, and the release
+  page still works in the browser.
 
 ## Packaging checklist
 
